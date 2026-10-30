@@ -9,6 +9,7 @@ import { handleRecordResponse, handleRequestCallback, handleRequestDoctor, handl
 import { advanceSimulation, scenario } from "@/lib/simulator";
 import { getAttempts, getReferral } from "@/lib/repo";
 import type { ReferralInput } from "@/lib/orchestrator";
+import { DEFAULT_ORG_ID } from "@/lib/types";
 import { IDS, fakeClock, freshDb } from "./helpers";
 
 const KRAIT = scenario.referral as unknown as ReferralInput;
@@ -52,7 +53,7 @@ async function completeCall(executionId: string, extracted: unknown = null) {
 describe("matching on seed data", () => {
   it("returns the six demo hospitals in ETA order", async () => {
     const ranked = await rankEligible(
-      { lat: 13.0707, lng: 77.7982, radius_km: 40, needs: ["icu_bed", "ventilator"], origin_id: IDS.hoskote },
+      { lat: 13.0707, lng: 77.7982, radius_km: 40, needs: ["icu_bed", "ventilator"], origin_id: IDS.hoskote, org_id: DEFAULT_ORG_ID },
       ["ICU bed", "Ventilator"],
     );
     expect(ranked.map((r) => r.name.replace(/ \(Demo\)$/, "").split(" ")[0])).toEqual([

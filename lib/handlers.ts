@@ -1,6 +1,7 @@
 import "server-only";
-import { CALLBACK_MAX_MIN } from "./config";
-import { addMinutes, now } from "./clock";
+import { CALLBACK_MAX_MIN, LOST_TRACK_AFTER_S, POLL_EVERY_S, STALE_AFTER_S } from "./config";
+import { getExecution, isSimulatedExecution } from "./bolna";
+import { addMinutes, now, secondsBetween } from "./clock";
 import { one, q } from "./db";
 import { addEvent } from "./events";
 import { clean, cleanParams, normalizeBedType, normalizeOutcome, normalizePhone, normalizeReferralCode, normalizeYesNo, parseMinutes } from "./normalize";
@@ -12,13 +13,14 @@ import {
   getReferral, getReferralByCode, getReferrer, logRaw, updateAttempt,
 } from "./repo";
 import { canTransition, isTerminal, mapBolnaStatus } from "./statusMap";
+import { checkPortalMismatch } from "./portal";
 import { spokenName } from "./summary";
 import type { Attempt, AvailabilityOutcome } from "./types";
 
 // Bolna webhook and custom-function logic. The HTTP routes and the simulator both call these, so a simulated
 // referral exercises exactly the same code as a real one (docs/02-architecture.md §10).
 
-export type Source = "function" | "simulation";
+export type Source = "function" | "simulation" | "whatsapp";
 type FollowUp = () => Promise<void>;
 const noop: FollowUp = async () => {};
 
@@ -87,10 +89,14 @@ export async function handleRecordResponse(raw: Record<string, unknown>, source:
       if (r) await markFirstAcceptance(r, updated); // the board turns green while the call is still live
     }
   }
+  const portalCheck = updated ? () => checkPortalMismatch(updated).then(() => undefined) : async () => {};
 
   const doc = await doctorName(attempt.referral_id);
   let instruction: string;
-  let followUp: FollowUp = async () => { await evaluateReferral(attempt.referral_id); };
+  let followUp: FollowUp = async () => {
+    await portalCheck();
+    await evaluateReferral(attempt.referral_id);
+  };
   switch (outcome) {
     case "accepted":
     case "conditional":
@@ -103,6 +109,7 @@ export async function handleRecordResponse(raw: Record<string, unknown>, source:
       if (alternate && updated) {
         instruction = "Thank them, say you will call that number now, and end the call.";
         followUp = async () => {
+          await portalCheck();
           const contactId = await addContact(attempt.facility_id, alternate, "other");
           const r = await getReferral(attempt.referral_id);
           if (r) await redial(await loadCtx(r), updated, { to_number: alternate, contact_id: contactId }, "redirected");
@@ -300,6 +307,7 @@ async function reconcileAvailability(a: Attempt, body: Record<string, unknown>):
     const r = await getReferral(a.referral_id);
     if (r) await markFirstAcceptance(r, updated);
   }
+  await checkPortalMismatch(updated);
 }
 
 async function reconcileOnTerminal(a: Attempt, body: Record<string, unknown>): Promise<FollowUp> {
@@ -416,11 +424,67 @@ export async function handleWebhook(body: unknown, opts: { log?: boolean } = {})
 /** Last webhook and function call seen, for the Demo page. */
 export async function lastBolnaContact(): Promise<{ last_webhook_at: string | null; last_function_at: string | null }> {
   const [w] = await q<{ at: Date | null }>(
-    `select max(received_at) as at from bolna_webhook_log where status is null or status not like 'function:%'`,
+    `select max(received_at) as at from bolna_webhook_log
+     where status is null or (status not like 'function:%' and status not like 'poll:%' and status not like 'inbound_%')`,
   );
   const [f] = await q<{ at: Date | null }>(`select max(received_at) as at from bolna_webhook_log where status like 'function:%'`);
   return {
     last_webhook_at: w?.at ? new Date(w.at).toISOString() : null,
     last_function_at: f?.at ? new Date(f.at).toISOString() : null,
   };
+}
+
+// ------------------------------------------------------------------ missed-webhook recovery
+
+/**
+ * Asks Bolna for the status of real calls whose status hasn't moved for a while (a webhook may have been lost),
+ * and feeds the answer through the normal webhook handler. Safe to run from every tick and the cron.
+ */
+export async function recoverStaleAttempts(referralId: string | null = null): Promise<number> {
+  const t = now();
+  const candidates = await q<Attempt>(
+    `select * from call_attempts
+     where status in ('queued','dialing','ringing','in_progress','wrapping_up')
+       and bolna_execution_id is not null
+       and ($1::uuid is null or referral_id = $1)
+       and (last_polled_at is null or last_polled_at < $2)
+     order by updated_at limit 50`,
+    [referralId, new Date(t.getTime() - POLL_EVERY_S * 1000)],
+  );
+  let recovered = 0;
+  for (const a of candidates) {
+    if (isSimulatedExecution(a.bolna_execution_id)) continue;
+    if (secondsBetween(a.updated_at, t) < (STALE_AFTER_S[a.status] ?? 120)) continue;
+    // Claim the poll so concurrent ticks don't both call Bolna.
+    const claimed = await one(
+      `update call_attempts set last_polled_at = $2 where id = $1 and last_polled_at is not distinct from $3 returning id`,
+      [a.id, t, a.last_polled_at],
+    );
+    if (!claimed) continue;
+    try {
+      const execution = await getExecution(a.bolna_execution_id!);
+      await logRaw(a.bolna_execution_id, `poll:${String(execution.status ?? "")}`, execution);
+      const res = await handleWebhook({ ...execution, id: a.bolna_execution_id }, { log: false });
+      await res.followUp();
+      if (res.applied) {
+        recovered++;
+        await addEvent(a.referral_id, "status_recovered", { facility_id: a.facility_id, status: execution.status ?? null }, a.id);
+      }
+    } catch (err) {
+      // Bolna can't tell us either. After long enough, stop showing the call as live.
+      if (secondsBetween(a.dispatched_at ?? a.created_at, t) > LOST_TRACK_AFTER_S) {
+        const failed = await updateAttempt(a.id, { status: "failed", termination_reason: "lost_track", ended_at: t }, { status: a.status });
+        if (failed) {
+          await addEvent(a.referral_id, "alert", {
+            kind: "lost_track",
+            facility_id: a.facility_id,
+            message: "Lost track of a call: no status from Bolna for 15 minutes. Check it in the Bolna dashboard.",
+          }, a.id);
+          await evaluateReferral(a.referral_id);
+        }
+      }
+      console.error("[haazir] status poll failed", err instanceof Error ? err.message : err);
+    }
+  }
+  return recovered;
 }

@@ -1,21 +1,33 @@
 import { ArrowRight } from "lucide-react";
 import Link from "next/link";
+import { DraftsList } from "@/components/DraftsList";
 import { ReferralForm } from "@/components/ReferralForm";
 import { PageHeader, ReferralStatusPill, SimBadge } from "@/components/ui";
 import { env } from "@/lib/config";
 import { one, q } from "@/lib/db";
+import { getDraft, listDrafts } from "@/lib/intake";
 import type { Capability, CaseTemplate } from "@/lib/types";
 import { mmss } from "@/lib/ui";
+import { pageSession } from "@/lib/session";
 import { listReferrals } from "@/lib/view";
 
 export const dynamic = "force-dynamic";
 
-export default async function NewReferralPage() {
-  const [templates, capabilities, referrer, recent] = await Promise.all([
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+export default async function NewReferralPage({ searchParams }: { searchParams: Promise<{ draft?: string }> }) {
+  const s = await pageSession();
+  const draftId = (await searchParams).draft;
+  const [templates, capabilities, referrer, recent, drafts, draft] = await Promise.all([
     q<CaseTemplate>(`select * from case_templates order by case when case_type = 'other' then 1 else 0 end, label`),
     q<Capability>(`select * from capabilities order by category, label`),
-    one<{ id: string }>(`select id from referrers order by created_at limit 1`),
-    listReferrals(6),
+    one<{ id: string }>(
+      `select id from referrers where org_id = $1 and ($2::uuid is null or id = $2) order by created_at limit 1`,
+      [s.org, s.rid],
+    ),
+    listReferrals(s.org, 6),
+    listDrafts(s.org),
+    draftId && UUID.test(draftId) ? getDraft(s.org, draftId) : Promise.resolve(null),
   ]);
   const bolnaReady = !!env.bolnaApiKey && !!env.agentId("availability");
 
@@ -29,7 +41,10 @@ export default async function NewReferralPage() {
         title="New referral"
         description="Haazir phones every capable hospital nearby at once, in their language, and shows you who says yes."
       />
+      {!draft && <DraftsList initial={drafts} />}
       <ReferralForm
+        key={draft?.id ?? "new"}
+        draft={draft ? { id: draft.id, parsed: draft.parsed } : null}
         referrerId={referrer.id}
         templates={templates}
         capabilities={capabilities}

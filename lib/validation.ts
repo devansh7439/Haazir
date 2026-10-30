@@ -21,6 +21,7 @@ export const ReferralBody = z.object({
   origin_lat: z.number().min(-90).max(90).optional(),
   origin_lng: z.number().min(-180).max(180).optional(),
   simulate: z.boolean().optional(),
+  draft_id: z.string().uuid().optional(),
   patient: z
     .object({
       patient_name: optionalText(120),
@@ -32,7 +33,7 @@ export const ReferralBody = z.object({
 });
 export type ReferralBodyT = z.infer<typeof ReferralBody>;
 
-export const PreviewBody = ReferralBody.omit({ patient: true, simulate: true });
+export const PreviewBody = ReferralBody.omit({ patient: true, simulate: true, draft_id: true });
 
 export const SelectBody = z.object({ attempt_id: z.string().uuid(), force: z.boolean().default(false) });
 
@@ -121,3 +122,8 @@ export const AssignNumbersBody = z.object({
 export const TestCallBody = z.object({ facility_id: z.string().uuid(), consented_test: z.boolean().default(false) });
 
 export const DemoRunBody = z.object({ simulate: z.boolean().default(true) });
+
+export const LoginBody = z.union([
+  z.object({ passcode: z.string().max(200) }),
+  z.object({ email: z.string().trim().toLowerCase().email().max(200), password: z.string().min(1).max(200) }),
+]);

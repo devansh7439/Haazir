@@ -1,18 +1,25 @@
 import { NextResponse } from "next/server";
 import { handle, parseBody } from "@/lib/api";
 import { createReferral } from "@/lib/orchestrator";
+import { markDraftUsed } from "@/lib/intake";
+import { requireSession } from "@/lib/session";
 import { ReferralBody } from "@/lib/validation";
 import { listReferrals } from "@/lib/view";
 
 export async function GET() {
-  return handle(async () => NextResponse.json({ referrals: await listReferrals() }));
+  return handle(async () => {
+    const s = await requireSession();
+    return NextResponse.json({ referrals: await listReferrals(s.org) });
+  });
 }
 
 export async function POST(req: Request) {
   return handle(async () => {
+    const s = await requireSession();
     const body = await parseBody(req, ReferralBody);
-    const { simulate, ...input } = body;
-    const { referral, attempts } = await createReferral(input, { simulate });
+    const { simulate, draft_id, ...input } = body;
+    const { referral, attempts } = await createReferral(input, { simulate, orgId: s.org });
+    if (draft_id) await markDraftUsed(s.org, draft_id);
     return NextResponse.json(
       {
         id: referral.id,
@@ -29,4 +36,3 @@ export async function POST(req: Request) {
     );
   });
 }
-

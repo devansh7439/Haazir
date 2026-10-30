@@ -2,6 +2,7 @@ import { Plus } from "lucide-react";
 import Link from "next/link";
 import { PageHeader, ReferralStatusPill, SimBadge, Stat } from "@/components/ui";
 import { mmss } from "@/lib/ui";
+import { pageSession } from "@/lib/session";
 import { listReferrals } from "@/lib/view";
 
 export const dynamic = "force-dynamic";
@@ -14,7 +15,8 @@ function median(xs: number[]): number | null {
 }
 
 export default async function HistoryPage() {
-  const rows = await listReferrals(200);
+  const s = await pageSession();
+  const rows = await listReferrals(s.org, 200);
   const real = rows.filter((r) => !r.is_simulated);
   const realTtfas = real.map((r) => r.ttfa_seconds).filter((x): x is number => x !== null);
   const realTtfa = median(realTtfas);

@@ -192,6 +192,14 @@ export function eventText(e: EventLike, facilityName: (id: unknown) => string): 
       return `Referral cancelled${p.reason ? `: ${p.reason}` : ""}`;
     case "referral_closed":
       return `Referral closed: ${String(p.reason).replace(/_/g, " ")}`;
+    case "portal_mismatch":
+      return `${f()}: desk said ${p.desk_outcome}, but ${p.detail} (${p.source})`;
+    case "bed_request_sent":
+      return `WhatsApp bed request to ${f()}: ${p.status}`;
+    case "family_call_dispatched":
+      return p.reason === "missed_call" ? "Family gave a missed call: calling them back with the update" : "Calling the family with the update";
+    case "status_recovered":
+      return `${f()}: call status recovered from Bolna (missed webhook)`;
     case "alert":
       return String(p.message ?? p.kind);
     default:

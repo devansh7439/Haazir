@@ -81,3 +81,23 @@ export function holdConfirmUserData(
 export function releaseUserData(ctx: CallContext, c: { case_summary_short: string }): Record<string, string> {
   return { ...base(ctx), case_summary_short: c.case_summary_short };
 }
+
+/**
+ * Family update call (C1). This call goes to the attendant themselves, so their name is used; it never goes to a
+ * hospital. No patient name is sent.
+ */
+export function familyUserData(
+  ctx: CallContext,
+  c: { attendant_name: string | null; hospital_area: string; eta_minutes: number | null },
+): Record<string, string> {
+  return {
+    attempt_id: ctx.attempt_id,
+    attendant_name: c.attendant_name ?? "",
+    doctor_name: spokenName(ctx.doctor_name),
+    hospital_name: spokenName(ctx.facility_name),
+    hospital_area: c.hospital_area,
+    referral_code_spoken: spokenCode(ctx.referral_code),
+    eta_minutes: String(c.eta_minutes ?? ""),
+    timezone: TIMEZONE,
+  };
+}

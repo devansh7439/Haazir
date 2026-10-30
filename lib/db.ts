@@ -91,10 +91,7 @@ async function connectPglite(dir: string): Promise<Db> {
       await pglite.close();
     },
   };
-  const [{ exists }] = await db.query<{ exists: boolean }>(
-    "select to_regclass('public.referrals') is not null as exists",
-  );
-  if (!exists) await applySchema(db, { seed: true });
+  await migrate(db); // creates and seeds an empty embedded database; brings an existing one up to date
   return db;
 }
 
@@ -113,9 +110,39 @@ export function migrationFiles(): string[] {
     .map((f) => `supabase/migrations/${f}`);
 }
 
+/**
+ * Applies every migration not yet recorded in haazir_migrations, in order. A database created before migrations
+ * were tracked is detected from its tables. The seed runs on a fresh database, or when `seed` is true (it is idempotent).
+ */
+export async function migrate(db: Db, opts: { seed?: boolean } = {}): Promise<string[]> {
+  await db.exec(readSql("supabase/local/00_roles.sql"));
+  const [{ fresh }] = await db.query<{ fresh: boolean }>("select to_regclass('public.referrals') is null as fresh");
+  await db.exec(
+    "create table if not exists haazir_migrations (name text primary key, applied_at timestamptz not null default now())",
+  );
+  let applied = new Set((await db.query<{ name: string }>("select name from haazir_migrations")).map((r) => r.name));
+  if (applied.size === 0 && !fresh) {
+    // Legacy database: infer what was applied before tracking existed.
+    const [legacy] = await db.query<{ app_settings: boolean; organisations: boolean }>(
+      "select to_regclass('public.app_settings') is not null as app_settings, to_regclass('public.organisations') is not null as organisations",
+    );
+    const inferred = ["0001_init.sql", ...(legacy.app_settings ? ["0002_guards.sql"] : []), ...(legacy.organisations ? ["0003_orgs_and_reliability.sql"] : [])];
+    for (const name of inferred) await db.query("insert into haazir_migrations (name) values ($1) on conflict do nothing", [name]);
+    applied = new Set(inferred);
+  }
+  const ran: string[] = [];
+  for (const file of migrationFiles()) {
+    const name = path.basename(file);
+    if (applied.has(name)) continue;
+    await db.exec(readSql(file));
+    await db.query("insert into haazir_migrations (name) values ($1)", [name]);
+    ran.push(name);
+  }
+  if (fresh || opts.seed) await db.exec(readSql("supabase/seed.sql"));
+  return ran;
+}
+
 /** Roles (plain Postgres only), every migration in order, then optionally the seed. */
 export async function applySchema(db: Db, opts: { seed: boolean }): Promise<void> {
-  await db.exec(readSql("supabase/local/00_roles.sql"));
-  for (const file of migrationFiles()) await db.exec(readSql(file));
-  if (opts.seed) await db.exec(readSql("supabase/seed.sql"));
+  await migrate(db, { seed: opts.seed });
 }

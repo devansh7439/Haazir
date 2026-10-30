@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import { AppShell } from "@/components/AppShell";
 import { env } from "@/lib/config";
 import { one } from "@/lib/db";
+import { getSession } from "@/lib/session";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -13,12 +14,22 @@ export const viewport: Viewport = { width: "device-width", initialScale: 1, them
 
 export const dynamic = "force-dynamic";
 
-async function currentDoctor() {
+async function currentUser() {
   try {
+    const s = await getSession();
+    if (!s) return null;
     const row = await one<{ name: string; facility: string | null }>(
-      `select r.name, f.name as facility from referrers r left join facilities f on f.id = r.facility_id order by r.created_at limit 1`,
+      `select r.name, f.name as facility from referrers r left join facilities f on f.id = r.facility_id
+       where r.org_id = $1 and ($2::uuid is null or r.id = $2) order by r.created_at limit 1`,
+      [s.org, s.rid],
     );
-    return row ? { name: row.name.replace(/\s*\(Demo\)/i, ""), facility: row.facility?.replace(/\s*\(Demo\)/i, "") ?? null } : null;
+    const strip = (x: string | null | undefined) => x?.replace(/\s*\(Demo\)/i, "") ?? null;
+    return {
+      name: s.name || strip(row?.name) || "Console",
+      facility: strip(row?.facility),
+      signOut: env.authMode === "users" || !!env.demoPasscode,
+      isAdmin: s.role === "admin",
+    };
   } catch {
     return null;
   }
@@ -29,7 +40,7 @@ export default async function RootLayout({ children }: Readonly<{ children: Reac
   return (
     <html lang="en">
       <body className="min-h-screen">
-        <AppShell doctor={await currentDoctor()} mode={live ? "live" : "simulation"}>
+        <AppShell user={await currentUser()} mode={live ? "live" : "simulation"}>
           {children}
         </AppShell>
       </body>

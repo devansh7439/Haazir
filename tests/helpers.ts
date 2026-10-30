@@ -21,8 +21,11 @@ export async function freshDb(): Promise<Db> {
 
 export { applySchema };
 
-/** A controllable clock starting at a fixed instant. */
-export function fakeClock(start = new Date("2026-10-30T20:30:00Z")) {
+/**
+ * A controllable clock. It starts at real "now" because Postgres triggers (updated_at) stamp real time,
+ * as they do in production, so the two stay comparable.
+ */
+export function fakeClock(start = new Date()) {
   let t = start.getTime();
   setClock(() => new Date(t));
   return {

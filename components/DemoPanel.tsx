@@ -1,6 +1,6 @@
 "use client";
 
-import { CheckCircle2, Circle, Loader2, Phone, PlayCircle, Radio, RotateCcw, Webhook, XCircle } from "lucide-react";
+import { CheckCircle2, Circle, Database, Loader2, Phone, PlayCircle, Radio, RotateCcw, Webhook, XCircle } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import type { demoStatus } from "@/lib/demo";
@@ -98,6 +98,12 @@ export function DemoPanel({ initial }: { initial: Status }) {
               await refresh();
             }}>
               {busy === "reset" ? <Loader2 aria-hidden className="size-4 animate-spin" /> : <RotateCcw aria-hidden className="size-4" />} Reset demo
+            </button>
+            <button className="btn btn-secondary" disabled={!!busy} title="Fictional portal readings that contradict two desks, to show the mismatch flags" onClick={async () => {
+              const d = await call("portal", "/api/demo/portal-sample", {});
+              if (d) setMsg({ ok: true, text: `Loaded ${d.inserted} sample portal readings. Run a referral to see the flags.` });
+            }}>
+              {busy === "portal" ? <Loader2 aria-hidden className="size-4 animate-spin" /> : <Database aria-hidden className="size-4" />} Sample portal data
             </button>
             <button className="btn btn-secondary" disabled={!!busy} onClick={async () => {
               const d = await call("sim", "/api/demo/run", { simulate: true });

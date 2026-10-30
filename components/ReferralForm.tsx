@@ -3,6 +3,7 @@
 import { AudioLines, ChevronDown, Info, Loader2, Lock, MapPin, ShieldCheck, Sparkles } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
+import type { ParsedIntake } from "@/lib/intakeParse";
 import type { Capability, CaseTemplate } from "@/lib/types";
 import { LANGUAGE_LABEL, shortName } from "@/lib/ui";
 import { cx } from "./ui";
@@ -24,6 +25,8 @@ interface Preview {
   eligible: Eligible[];
   suggestions: string[];
   wave_size?: number;
+  skipped_far?: number;
+  max_eta_minutes?: number | null;
 }
 
 const FEATURED = ["snakebite_neuro", "head_injury", "stemi", "stroke", "preterm_newborn", "obstetric_bleed"];
@@ -62,18 +65,20 @@ export function ReferralForm(props: {
   capabilities: Capability[];
   defaultSimulate: boolean;
   bolnaReady: boolean;
+  draft?: { id: string; parsed: ParsedIntake } | null;
 }) {
+  const d = props.draft?.parsed;
   const router = useRouter();
   const capByCode = useMemo(() => new Map(props.capabilities.map((c) => [c.code, c])), [props.capabilities]);
-  const [caseType, setCaseType] = useState<string>("");
-  const [needs, setNeeds] = useState<string[]>([]);
+  const [caseType, setCaseType] = useState<string>(d?.case_type ?? "");
+  const [needs, setNeeds] = useState<string[]>(d?.required_capabilities ?? []);
   const [showAllCases, setShowAllCases] = useState(false);
   const [showAllNeeds, setShowAllNeeds] = useState(false);
-  const [acuity, setAcuity] = useState<"critical" | "serious" | "stable" | "">("");
-  const [age, setAge] = useState<string>("");
-  const [ageUnit, setAgeUnit] = useState<"years" | "months" | "days">("years");
-  const [sex, setSex] = useState<"male" | "female" | "other" | "unknown">("unknown");
-  const [note, setNote] = useState("");
+  const [acuity, setAcuity] = useState<"critical" | "serious" | "stable" | "">(d?.acuity ?? "");
+  const [age, setAge] = useState<string>(d?.age_value != null ? String(d.age_value) : "");
+  const [ageUnit, setAgeUnit] = useState<"years" | "months" | "days">(d?.age_unit ?? "years");
+  const [sex, setSex] = useState<"male" | "female" | "other" | "unknown">(d?.sex ?? "unknown");
+  const [note, setNote] = useState(d?.note ?? "");
   const [radius, setRadius] = useState(40);
   const [showPatient, setShowPatient] = useState(false);
   const [patient, setPatient] = useState({ patient_name: "", attendant_name: "", attendant_phone: "", attendant_language: "en" });
@@ -165,6 +170,7 @@ export function ReferralForm(props: {
         body: JSON.stringify({
           ...body,
           simulate,
+          draft_id: props.draft?.id,
           patient: showPatient || patient.patient_name || patient.attendant_phone ? patient : undefined,
         }),
       });
@@ -188,6 +194,15 @@ export function ReferralForm(props: {
   return (
     <form onSubmit={submit} className="grid grid-cols-1 items-start gap-6 xl:grid-cols-[minmax(0,1fr)_440px]">
       <section aria-label="Referral details" className="card overflow-hidden">
+        {props.draft && (
+          <div className="flex items-start gap-3 border-b border-brand-100 bg-brand-50/60 px-5 py-3.5 text-sm sm:px-6">
+            <Sparkles aria-hidden className="mt-0.5 size-4 shrink-0 text-brand-600" />
+            <p className="text-brand-950">
+              Filled from your WhatsApp {props.draft.parsed.matched.length ? `(${props.draft.parsed.matched.join(", ")})` : "message"}. Check every field before you start.
+              {props.draft.parsed.note_dropped && " The note was left out because it may contain a name or number."}
+            </p>
+          </div>
+        )}
         <Section title="Case" description="Picking a case pre-fills what the patient needs. You can change it.">
           <div className="flex flex-wrap gap-2">
             {casesShown.map((t) => (
@@ -395,6 +410,11 @@ export function ReferralForm(props: {
               <h2 className="text-sm font-semibold">Hospitals to call</h2>
               <span className="text-xs text-zinc-500">{willCall.length} in parallel · {radius} km</span>
             </div>
+            {!!preview.skipped_far && (
+              <p className="border-b border-line bg-zinc-50 px-5 py-2 text-xs text-zinc-600">
+                {preview.skipped_far} more {preview.skipped_far === 1 ? "hospital is" : "hospitals are"} over {preview.max_eta_minutes} min away and left out for a {acuity || "this"} patient.
+              </p>
+            )}
             <ol className="divide-y divide-line">
               {preview.eligible.map((e, i) => (
                 <li key={e.facility_id} className={cx("flex gap-3 px-5 py-3", !e.will_call && "opacity-55")}>

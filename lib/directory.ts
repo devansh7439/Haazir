@@ -16,13 +16,14 @@ export interface FacilityListItem extends Facility {
   last_called_at: string | null;
 }
 
-export async function listFacilities(): Promise<FacilityListItem[]> {
+export async function listFacilities(orgId: string): Promise<FacilityListItem[]> {
   const [facilities, caps, contacts, stats] = await Promise.all([
-    q<Facility>(`select * from facilities order by is_demo desc, name`),
+    q<Facility>(`select * from facilities where org_id = $1 order by is_demo desc, name`, [orgId]),
     q<{ facility_id: string; capability_code: string }>(
-      `select facility_id, capability_code from facility_capabilities where status in ('declared','confirmed') order by capability_code`,
+      `select facility_id, capability_code from facility_capabilities where org_id = $1 and status in ('declared','confirmed') order by capability_code`,
+      [orgId],
     ),
-    q<Contact>(`select * from facility_contacts order by priority, created_at`),
+    q<Contact>(`select * from facility_contacts where org_id = $1 order by priority, created_at`, [orgId]),
     q<{ facility_id: string; availability_calls: number; answered: number; accepted: number; last_called_at: Date | null }>(
       `select facility_id, availability_calls::int, answered::int, accepted::int, last_called_at from facility_stats`,
     ),
@@ -48,16 +49,16 @@ function requirePhone(raw: string | null | undefined, field: string): string {
   return p;
 }
 
-export async function createFacility(b: {
+export async function createFacility(orgId: string, b: {
   name: string; kind: string; ownership: string; address: string | null; city: string | null; district: string | null;
   lat: number; lng: number; call_language: string; whatsapp_number: string | null;
 }): Promise<Facility> {
   const wa = b.whatsapp_number ? requirePhone(b.whatsapp_number, "WhatsApp number") : null;
   const t = now();
   const row = await one<Facility>(
-    `insert into facilities (name, kind, ownership, address, city, district, lat, lng, call_language, whatsapp_number, created_at, updated_at)
-     values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $11) returning *`,
-    [b.name, b.kind, b.ownership, b.address, b.city, b.district, b.lat, b.lng, b.call_language, wa, t],
+    `insert into facilities (name, kind, ownership, address, city, district, lat, lng, call_language, whatsapp_number, created_at, updated_at, org_id)
+     values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $11, $12) returning *`,
+    [b.name, b.kind, b.ownership, b.address, b.city, b.district, b.lat, b.lng, b.call_language, wa, t, orgId],
   );
   return row!;
 }

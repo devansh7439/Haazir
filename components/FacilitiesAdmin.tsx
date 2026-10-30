@@ -29,7 +29,7 @@ function Rate({ n, d }: { n: number; d: number }) {
   );
 }
 
-export function FacilitiesAdmin({ initial, capabilities }: { initial: FacilityListItem[]; capabilities: Capability[] }) {
+export function FacilitiesAdmin({ initial, capabilities, canEdit }: { initial: FacilityListItem[]; capabilities: Capability[]; canEdit: boolean }) {
   const [rows, setRows] = useState(initial);
   const [openId, setOpenId] = useState<string | null>(null);
   const [query, setQuery] = useState("");
@@ -115,7 +115,7 @@ export function FacilitiesAdmin({ initial, capabilities }: { initial: FacilityLi
         </div>
         {rows.length === 0 && <p className="p-10 text-center text-sm text-zinc-500">Add the hospitals you refer to most.</p>}
       </div>
-      {open && <FacilityDrawer key={open.id} f={open} capabilities={capabilities} onClose={() => setOpenId(null)} onSaved={reload} />}
+      {open && canEdit && <FacilityDrawer key={open.id} f={open} capabilities={capabilities} onClose={() => setOpenId(null)} onSaved={reload} />}
     </div>
   );
 }

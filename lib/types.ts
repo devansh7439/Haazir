@@ -24,6 +24,7 @@ export type AgeUnit = "days" | "months" | "years";
 
 export interface Facility {
   id: string;
+  org_id: string;
   name: string;
   kind: string;
   ownership: string;
@@ -55,6 +56,7 @@ export interface Contact {
 
 export interface Referral {
   id: string;
+  org_id: string;
   code: string;
   status: ReferralStatus;
   referrer_id: string;
@@ -106,7 +108,7 @@ export interface Attempt {
   bolna_status: string | null;
   termination_reason: string | null;
   outcome: Outcome | null;
-  outcome_source: "function" | "extraction" | "manual" | "simulation" | null;
+  outcome_source: "function" | "extraction" | "manual" | "simulation" | "whatsapp" | null;
   extraction_outcome: string | null;
   needs_review: boolean;
   bed_type: string | null;
@@ -124,6 +126,7 @@ export interface Attempt {
   answered_at: Date | string | null;
   outcome_at: Date | string | null;
   ended_at: Date | string | null;
+  last_polled_at: Date | string | null;
   created_at: Date | string;
   updated_at: Date | string;
 }
@@ -154,8 +157,11 @@ export interface CaseTemplate {
 
 export interface Referrer {
   id: string;
+  org_id: string;
   name: string;
   phone_e164: string;
   facility_id: string | null;
   languages: string[];
 }
+
+export const DEFAULT_ORG_ID = "00000000-0000-4000-8000-000000000001";

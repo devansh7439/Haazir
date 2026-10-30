@@ -1,6 +1,6 @@
 "use client";
 
-import { Building2, FlaskConical, History, PlusCircle, Radio } from "lucide-react";
+import { BarChart3, Building2, FlaskConical, History, LogOut, PlusCircle, Radio } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import type { ReactNode } from "react";
@@ -10,13 +10,27 @@ const NAV = [
   { href: "/", label: "New referral", icon: PlusCircle, match: (p: string) => p === "/" || p.startsWith("/referrals") },
   { href: "/history", label: "Referrals", icon: History, match: (p: string) => p.startsWith("/history") },
   { href: "/facilities", label: "Hospitals", icon: Building2, match: (p: string) => p.startsWith("/facilities") },
+  { href: "/analytics", label: "Analytics", icon: BarChart3, match: (p: string) => p.startsWith("/analytics") },
   { href: "/demo", label: "Demo console", icon: FlaskConical, match: (p: string) => p.startsWith("/demo") },
 ];
 
-export function AppShell(props: { children: ReactNode; doctor: { name: string; facility: string | null } | null; mode: "live" | "simulation" }) {
+interface ShellUser {
+  name: string;
+  facility: string | null;
+  signOut: boolean;
+  isAdmin: boolean;
+}
+
+async function signOut() {
+  await fetch("/api/logout", { method: "POST" });
+  window.location.href = "/login";
+}
+
+export function AppShell(props: { children: ReactNode; user: ShellUser | null; mode: "live" | "simulation" }) {
   const pathname = usePathname();
   if (pathname === "/login") return <main className="min-h-screen">{props.children}</main>;
-  const initials = (props.doctor?.name ?? "Dr")
+  const nav = NAV.filter((n) => n.href !== "/demo" || props.user?.isAdmin);
+  const initials = (props.user?.name ?? "Dr")
     .replace(/^Dr\.?\s*/i, "")
     .split(/\s+/)
     .slice(0, 2)
@@ -30,7 +44,7 @@ export function AppShell(props: { children: ReactNode; doctor: { name: string; f
           <Link href="/" aria-label="Haazir home"><Logo /></Link>
         </div>
         <nav aria-label="Main" className="flex-1 space-y-0.5 px-3 py-2">
-          {NAV.map((n) => {
+          {nav.map((n) => {
             const active = n.match(pathname);
             return (
               <Link
@@ -58,13 +72,18 @@ export function AppShell(props: { children: ReactNode; doctor: { name: string; f
             <Radio aria-hidden className="size-3.5" />
             {props.mode === "live" ? "Live calling enabled" : "Simulation mode"}
           </div>
-          {props.doctor && (
+          {props.user && (
             <div className="flex items-center gap-3">
-              <span className="grid size-9 place-items-center rounded-full bg-zinc-100 text-xs font-semibold text-zinc-700">{initials}</span>
-              <div className="min-w-0 text-sm">
-                <div className="truncate font-medium text-zinc-900">{props.doctor.name}</div>
-                {props.doctor.facility && <div className="truncate text-xs text-zinc-500">{props.doctor.facility}</div>}
+              <span className="grid size-9 shrink-0 place-items-center rounded-full bg-zinc-100 text-xs font-semibold text-zinc-700">{initials}</span>
+              <div className="min-w-0 flex-1 text-sm">
+                <div className="truncate font-medium text-zinc-900">{props.user.name}</div>
+                {props.user.facility && <div className="truncate text-xs text-zinc-500">{props.user.facility}</div>}
               </div>
+              {props.user.signOut && (
+                <button aria-label="Sign out" title="Sign out" className="btn btn-ghost min-h-9 px-2" onClick={signOut}>
+                  <LogOut aria-hidden className="size-4" />
+                </button>
+              )}
             </div>
           )}
         </div>
@@ -79,7 +98,7 @@ export function AppShell(props: { children: ReactNode; doctor: { name: string; f
           </span>
         </div>
         <nav aria-label="Main" className="flex gap-1 overflow-x-auto px-3 pb-2">
-          {NAV.map((n) => {
+          {nav.map((n) => {
             const active = n.match(pathname);
             return (
               <Link

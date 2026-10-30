@@ -7,9 +7,10 @@ import { BolnaError, makeCall, stopCall } from "./bolna";
 import { addMinutes, now, secondsBetween } from "./clock";
 import { one, q } from "./db";
 import { addEvent, addEventOnce } from "./events";
-import { ELIGIBLE_SQL, chooseContact, rankFacilities, type EligibleRow, type RankedFacility } from "./matching";
-import { doctorConfirmation, familyMessage, preArrivalNote, type HandoffFacts } from "./messages";
-import { normalizePhone } from "./normalize";
+import { ELIGIBLE_SQL, applyEtaCap, chooseContact, rankFacilities, type EligibleRow, type RankedFacility } from "./matching";
+import { bedRequestMessage, doctorConfirmation, familyMessage, preArrivalNote, type HandoffFacts } from "./messages";
+import { maskPhone, normalizePhone } from "./normalize";
+import { checkPortalMismatch } from "./portal";
 import {
   AppError, casAttemptStatus, getAttempt, getAttempts, getCapabilities, getCaseTemplate, getContact,
   getContactsByFacility, getFacility, getReferral, getReferrer, insertAttempt, updateAttempt, updateReferral,
@@ -19,7 +20,7 @@ import { buildShortSummary, buildSpokenSummary, checkNote, describeWho, joinSpok
 import type {
   Acuity, AgeUnit, Attempt, Capability, CaseTemplate, Contact, Facility, Referral, Referrer, Sex,
 } from "./types";
-import { availabilityUserData, holdConfirmUserData, releaseUserData, type CallContext } from "./userData";
+import { availabilityUserData, familyUserData, holdConfirmUserData, releaseUserData, type CallContext } from "./userData";
 import { sendWhatsApp } from "./whatsapp";
 
 // ============================================================ context
@@ -61,10 +62,11 @@ export interface MatchParams {
   radius_km: number;
   needs: string[];
   origin_id: string | null;
+  org_id: string;
 }
 
 export async function rankEligible(p: MatchParams, needLabels: string[]): Promise<RankedFacility[]> {
-  const rows = await q<EligibleRow>(ELIGIBLE_SQL, [p.lat, p.lng, p.radius_km, p.needs, p.origin_id]);
+  const rows = await q<EligibleRow>(ELIGIBLE_SQL, [p.lat, p.lng, p.radius_km, p.needs, p.origin_id, p.org_id]);
   if (rows.length === 0) return [];
   const contacts = await getContactsByFacility(rows.map((r) => r.id));
   return rankFacilities(rows, contacts, needLabels);
@@ -112,11 +114,13 @@ interface Prepared {
   spoken_summary: string;
   warnings: string[];
   ranked: RankedFacility[];
+  skipped_far: number;
 }
 
-async function prepare(input: ReferralInput): Promise<Prepared> {
+async function prepare(input: ReferralInput, orgId?: string): Promise<Prepared> {
   const referrer = await getReferrer(input.referrer_id);
-  if (!referrer) throw new AppError(422, "UNKNOWN_REFERRER", "Referrer not found");
+  // A referrer from another organisation is reported exactly like a missing one.
+  if (!referrer || (orgId && referrer.org_id !== orgId)) throw new AppError(422, "UNKNOWN_REFERRER", "Referrer not found");
   const origin = referrer.facility_id ? await getFacility(referrer.facility_id) : null;
   const lat = origin?.lat ?? input.origin_lat;
   const lng = origin?.lng ?? input.origin_lng;
@@ -150,17 +154,20 @@ async function prepare(input: ReferralInput): Promise<Prepared> {
     radius_km: input.search_radius_km ?? DEFAULT_RADIUS_KM,
     needs: codes,
     origin_id: origin?.id ?? null,
+    org_id: referrer.org_id,
   };
-  const ranked = await rankEligible(params, needs.map((n) => n.label));
-  return { referrer, origin, template, needs, params, spoken_summary, warnings: noteCheck.warnings, ranked };
+  const { kept: ranked, skipped } = applyEtaCap(await rankEligible(params, needs.map((n) => n.label)), env.maxEtaMinutes(input.acuity));
+  return { referrer, origin, template, needs, params, spoken_summary, warnings: noteCheck.warnings, ranked, skipped_far: skipped };
 }
 
-export async function previewReferral(input: ReferralInput) {
-  const p = await prepare(input);
+export async function previewReferral(input: ReferralInput, opts: { orgId?: string } = {}) {
+  const p = await prepare(input, opts.orgId);
   return {
     spoken_summary: p.spoken_summary,
     warnings: p.warnings,
     wave_size: WAVE_SIZE,
+    skipped_far: p.skipped_far,
+    max_eta_minutes: env.maxEtaMinutes(input.acuity) || null,
     suggestions: p.ranked.length === 0 ? await suggestionsFor(p.params, p.needs) : [],
     eligible: p.ranked.map((f, i) => ({
       facility_id: f.facility_id,
@@ -174,8 +181,8 @@ export async function previewReferral(input: ReferralInput) {
   };
 }
 
-export async function createReferral(input: ReferralInput, opts: { simulate?: boolean } = {}) {
-  const p = await prepare(input);
+export async function createReferral(input: ReferralInput, opts: { simulate?: boolean; orgId?: string } = {}) {
+  const p = await prepare(input, opts.orgId);
   if (p.ranked.length === 0) {
     throw new AppError(409, "NO_ELIGIBLE_FACILITIES", "No eligible hospital in range", {
       suggestions: await suggestionsFor(p.params, p.needs),
@@ -237,10 +244,16 @@ export async function dispatchWave(ctx: ReferralCtx, wave: number, ranked?: Rank
   const r = ctx.referral;
   const existing = await getAttempts(r.id);
   const called = new Set(existing.filter((a) => a.purpose === "availability").map((a) => a.facility_id));
-  const pool = ranked ?? (await rankEligible(
-    { lat: r.origin_lat, lng: r.origin_lng, radius_km: r.search_radius_km, needs: r.required_capabilities, origin_id: r.origin_facility_id },
-    ctx.needs.map((n) => n.label),
-  ));
+  const pool = ranked ?? applyEtaCap(
+    await rankEligible(
+      {
+        lat: r.origin_lat, lng: r.origin_lng, radius_km: r.search_radius_km, needs: r.required_capabilities,
+        origin_id: r.origin_facility_id, org_id: r.org_id,
+      },
+      ctx.needs.map((n) => n.label),
+    ),
+    env.maxEtaMinutes(r.acuity),
+  ).kept;
   const pick = pool.filter((f) => !called.has(f.facility_id) && f.contact).slice(0, WAVE_SIZE);
   if (pick.length === 0) return [];
   const offset = called.size;
@@ -264,7 +277,33 @@ export async function dispatchWave(ctx: ReferralCtx, wave: number, ranked?: Rank
   await addEvent(r.id, "wave_dispatched", { wave, facility_ids: inserted.map((a) => a.facility_id) });
   // One failed dispatch (e.g. a 400 on a bad number) must not block the rest.
   await Promise.allSettled(inserted.map((a) => dispatchCall(ctx, a)));
+  if (env.whatsappAvailabilityPing) await sendBedRequests(ctx, inserted);
   return inserted;
+}
+
+/**
+ * C6: the same bed request on WhatsApp, for desks that prefer to reply there ("YES R-4821").
+ * Sent after the calls are placed, so it never delays them. Carries no patient identifiers.
+ */
+async function sendBedRequests(ctx: ReferralCtx, attempts: Attempt[]): Promise<void> {
+  const facilities = await q<Facility>(`select * from facilities where id = any($1::uuid[])`, [attempts.map((a) => a.facility_id)]);
+  const rendered = bedRequestMessage({
+    code: ctx.referral.code,
+    doctor_name: ctx.referrer.name.replace(/\s*\(Demo\)/i, ""),
+    referring_facility: (ctx.origin?.name ?? "").replace(/\s*\(Demo\)/i, ""),
+    case_summary: ctx.referral.spoken_summary,
+  });
+  for (const f of facilities.filter((x) => x.whatsapp_number)) {
+    await sendWhatsApp({
+      referral_id: ctx.referral.id,
+      audience: "availability_ping",
+      to: f.whatsapp_number,
+      rendered,
+      simulated: ctx.referral.is_simulated,
+      eventType: "bed_request_sent",
+      facilityId: f.id,
+    });
+  }
 }
 
 /** Places one Bolna call for an attempt. Returns false (attempt marked failed) if dispatch fails. */
@@ -285,6 +324,7 @@ export async function dispatchCall(
     consented_test: opts.consented_test,
   };
   let userData: Record<string, string>;
+  let recipient = attempt.to_number;
   if (attempt.purpose === "availability") {
     userData = availabilityUserData(callCtx, {
       case_summary: r.spoken_summary,
@@ -299,6 +339,17 @@ export async function dispatchCall(
       accepted_by: accepted?.contact_person ?? null,
       eta_minutes: attempt.eta_minutes,
     });
+  } else if (attempt.purpose === "family_update") {
+    const patient = await one<{ attendant_name: string | null; attendant_phone_e164: string | null }>(
+      `select attendant_name, attendant_phone_e164 from patient_details where referral_id = $1`, [r.id],
+    );
+    // The attendant's real number stays in patient_details; the attempt row only holds a masked copy.
+    recipient = patient?.attendant_phone_e164 ?? "";
+    userData = familyUserData(callCtx, {
+      attendant_name: patient?.attendant_name ?? null,
+      hospital_area: [facility?.address, facility?.city].filter((x) => x && x !== "Demo address").join(", ") || (facility?.name ?? ""),
+      eta_minutes: attempt.eta_minutes,
+    });
   } else {
     userData = releaseUserData(callCtx, { case_summary_short: shortSummary(ctx, false) });
   }
@@ -308,7 +359,7 @@ export async function dispatchCall(
     const res = await makeCall(
       {
         agent_id: agentId,
-        recipient_phone_number: attempt.to_number,
+        recipient_phone_number: recipient,
         from_phone_number: env.bolnaFromNumber || undefined,
         user_data: userData,
         agent_data: { language: attempt.call_language },
@@ -587,7 +638,7 @@ function holdUntil(etaMinutes: number | null): Date {
 export async function applyHoldResult(
   hold: Attempt,
   result: { confirmed: "yes" | "no"; contact_person: string | null; whatsapp_number: string | null; notes: string | null },
-  source: "function" | "extraction" | "simulation",
+  source: "function" | "extraction" | "simulation" | "whatsapp",
 ): Promise<() => Promise<void>> {
   const outcome = result.confirmed === "yes" ? "hold_confirmed" : "hold_declined";
   const changed = await one<Attempt>(
@@ -717,6 +768,7 @@ export async function sendHandoff(referralId: string): Promise<void> {
     bed_type: selected.bed_type,
     conditions: selected.conditions,
     hold_until_time: formatTime(r.hold_expires_at ?? now()),
+    aapat_setu_url: env.aapatSetuUrl ? env.aapatSetuUrl.replace("{code}", encodeURIComponent(r.code)) : null,
   };
   const simulated = r.is_simulated;
   await sendWhatsApp({ referral_id: r.id, audience: "receiving_facility", to: facility.whatsapp_number, rendered: preArrivalNote(facts), simulated });
@@ -730,7 +782,39 @@ export async function sendHandoff(referralId: string): Promise<void> {
       rendered: familyMessage(facts, patient.attendant_language),
       simulated,
     });
+    if (env.familyCalls) await dispatchFamilyCall(r, "handoff");
   }
+}
+
+/**
+ * C1: a voice call to the attendant in their language after the bed is confirmed (and again on a missed call, C3).
+ * Live calls need BOLNA_AGENT_ID_FAMILY; simulated referrals always place one. At most one every 10 minutes.
+ */
+export async function dispatchFamilyCall(r: Referral, reason: "handoff" | "missed_call"): Promise<Attempt | null> {
+  if (!r.is_simulated && !env.agentId("family_update")) return null;
+  if (!r.selected_attempt_id) return null;
+  const patient = await one<{ attendant_phone_e164: string | null; attendant_language: string }>(
+    `select attendant_phone_e164, attendant_language from patient_details where referral_id = $1`, [r.id],
+  );
+  if (!patient?.attendant_phone_e164) return null;
+  const recent = await one(
+    `select 1 from call_attempts where referral_id = $1 and purpose = 'family_update' and created_at > $2`,
+    [r.id, new Date(now().getTime() - 10 * 60_000)],
+  );
+  if (recent) return null;
+  const selected = await getAttempt(r.selected_attempt_id);
+  const a = await insertAttempt({
+    referral_id: r.id,
+    facility_id: r.selected_facility_id,
+    purpose: "family_update",
+    eta_minutes: selected?.eta_minutes ?? null,
+    to_number: maskPhone(patient.attendant_phone_e164),
+    call_language: patient.attendant_language,
+  });
+  if (!a) return null;
+  await addEvent(r.id, "family_call_dispatched", { reason }, a.id);
+  await dispatchCall(await loadCtx(r), a);
+  return a;
 }
 
 // ============================================================ cancel, close, manual actions
@@ -799,6 +883,7 @@ export async function recordManualOutcome(attemptId: string, m: ManualOutcome) {
   }, a.id);
   const r = await getReferral(a.referral_id);
   if (r && updated && isAcceptance(updated)) await markFirstAcceptance(r, updated);
+  if (updated) await checkPortalMismatch(updated);
   await evaluateReferral(a.referral_id);
   return updated;
 }

@@ -8,7 +8,7 @@ import dynamic from "next/dynamic";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { browserSupabase } from "@/lib/supabaseBrowser";
+import { authorizeRealtime, browserSupabase } from "@/lib/supabaseBrowser";
 import { BED_LABEL, LANGUAGE_LABEL, TONE, attemptDisplay, clock, eventText, mmss, shortName, type Group } from "@/lib/ui";
 import type { AttemptView, ReferralView } from "@/lib/view";
 import type { MapPin as Pin } from "./BoardMap";
@@ -85,6 +85,7 @@ export function LiveBoard({ initial }: { initial: ReferralView }) {
   useEffect(() => {
     const sb = browserSupabase();
     if (!sb) return;
+    let cancelled = false;
     let pending: ReturnType<typeof setTimeout> | null = null;
     const bump = () => {
       if (pending) return;
@@ -93,15 +94,22 @@ export function LiveBoard({ initial }: { initial: ReferralView }) {
         void refresh();
       }, 150);
     };
-    const channel = sb
-      .channel(`referral:${id}`)
-      .on("postgres_changes", { event: "*", schema: "public", table: "call_attempts", filter: `referral_id=eq.${id}` }, bump)
-      .on("postgres_changes", { event: "UPDATE", schema: "public", table: "referrals", filter: `id=eq.${id}` }, bump)
-      .on("postgres_changes", { event: "INSERT", schema: "public", table: "events", filter: `referral_id=eq.${id}` }, bump)
-      .subscribe((status) => {
-        if (status === "SUBSCRIBED") void refresh();
-      });
+    const channel = sb.channel(`referral:${id}`);
+    // Re-authorise before the hour-long token expires.
+    const reauth = setInterval(() => void authorizeRealtime(sb), 50 * 60_000);
+    void authorizeRealtime(sb).then((ok) => {
+      if (!ok || cancelled) return;
+      channel
+        .on("postgres_changes", { event: "*", schema: "public", table: "call_attempts", filter: `referral_id=eq.${id}` }, bump)
+        .on("postgres_changes", { event: "UPDATE", schema: "public", table: "referrals", filter: `id=eq.${id}` }, bump)
+        .on("postgres_changes", { event: "INSERT", schema: "public", table: "events", filter: `referral_id=eq.${id}` }, bump)
+        .subscribe((status) => {
+          if (status === "SUBSCRIBED") void refresh();
+        });
+    });
     return () => {
+      cancelled = true;
+      clearInterval(reauth);
       if (pending) clearTimeout(pending);
       void sb.removeChannel(channel);
     };
@@ -273,6 +281,7 @@ export function LiveBoard({ initial }: { initial: ReferralView }) {
                     nowMs={nowMs}
                     referralStatus={r.status}
                     isSelected={r.selected_attempt_id === a.id}
+                    portalFlag={view.portal_flags[a.id] ?? null}
                     onSelect={() => setSelecting(a)}
                     post={post}
                   />
@@ -378,6 +387,7 @@ function AttemptCard(props: {
   nowMs: number;
   referralStatus: string;
   isSelected: boolean;
+  portalFlag: ReferralView["portal_flags"][string] | null;
   onSelect: () => void;
   post: Post;
 }) {
@@ -444,6 +454,12 @@ function AttemptCard(props: {
         {a.needs_review && (
           <p className="mt-3 rounded-xl bg-orange-50 px-3 py-2 text-sm text-orange-900">
             The answer is unclear (call: {a.outcome ?? "none"}, transcript: {a.extraction_outcome ?? "none"}). Listen to the recording before selecting.
+          </p>
+        )}
+        {props.portalFlag && (
+          <p className="mt-3 flex items-start gap-2 rounded-xl bg-amber-50 px-3 py-2 text-sm text-amber-950 ring-1 ring-inset ring-amber-200">
+            <TriangleAlert aria-hidden className="mt-0.5 size-4 shrink-0 text-amber-600" />
+            <span>Desk and portal disagree: {props.portalFlag.detail} at {clock(props.portalFlag.observed_at)} ({props.portalFlag.source}).</span>
           </p>
         )}
         {a.contact_is_ivr && <p className="mt-2 text-xs text-amber-800">Phone menu line only. A direct desk number works better.</p>}
@@ -693,6 +709,25 @@ function HoldPanel(props: {
                 ))}
               </div>
             )}
+          </div>
+        )}
+
+        {view.attempts.some((a) => a.purpose === "family_update") && (
+          <div className="px-5 py-3">
+            <div className="eyebrow mb-2">Family</div>
+            <ul className="space-y-1.5">
+              {view.attempts.filter((a) => a.purpose === "family_update").map((a) => {
+                const done = a.outcome === "family_informed";
+                const failed = ["no_answer", "busy", "failed"].includes(a.status);
+                return (
+                  <li key={a.id} className="flex items-center gap-2 text-sm">
+                    <PhoneCall aria-hidden className="size-4 text-zinc-400" />
+                    <span className="flex-1 text-zinc-800">Update call to the family <span className="text-zinc-400">({LANGUAGE_LABEL[a.call_language] ?? a.call_language})</span></span>
+                    <StatusPill size="sm" tone={done ? "green" : failed ? "dark" : "amber"} text={done ? "Informed" : failed ? "No answer" : "Calling"} icon={done ? "check" : failed ? "ban" : "oncall"} />
+                  </li>
+                );
+              })}
+            </ul>
           </div>
         )}
 

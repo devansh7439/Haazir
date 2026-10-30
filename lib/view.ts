@@ -38,6 +38,7 @@ export interface ReferralView {
   events: EventRow[];
   messages: Array<{ audience: string; to_masked: string; status: string; preview_redacted: string; created_at: string }>;
   alerts: Alert[];
+  portal_flags: Record<string, { detail: string; source: string; observed_at: string }>;
   tick_interval_ms: number;
   server_time: string;
 }
@@ -96,8 +97,15 @@ export async function getReferralView(id: string): Promise<ReferralView | null> 
       };
     });
 
+  const portal_flags: ReferralView["portal_flags"] = {};
+  for (const e of events.filter((x) => x.type === "portal_mismatch" && x.attempt_id)) {
+    const p = e.payload as { detail: string; source: string; observed_at: string };
+    portal_flags[e.attempt_id!] = { detail: p.detail, source: p.source, observed_at: p.observed_at };
+  }
+
   return {
     referral,
+    portal_flags,
     case_label: ctx.template.label,
     needs: ctx.needs.map((n) => ({ code: n.code, label: n.label })),
     referrer: { name: ctx.referrer.name, facility_name: ctx.origin?.name ?? null },
@@ -125,17 +133,17 @@ export interface ReferralListItem {
   close_reason: string | null;
 }
 
-export async function listReferrals(limit = 50): Promise<ReferralListItem[]> {
+export async function listReferrals(orgId: string, limit = 50): Promise<ReferralListItem[]> {
   const rows = await q<ReferralListItem>(
     `select r.id, r.code, r.status, t.label as case_label, r.acuity, r.is_simulated, r.created_at, r.close_reason,
             m.ttfa_seconds, m.time_to_confirmed_seconds, m.calls_total::int as calls_total
      from referrals r
      join case_templates t on t.case_type = r.case_type
      join referral_metrics m on m.id = r.id
-     where coalesce(r.close_reason, '') <> 'test_call'
+     where r.org_id = $2 and coalesce(r.close_reason, '') <> 'test_call'
      order by r.created_at desc
      limit $1`,
-    [limit],
+    [limit, orgId],
   );
   return rows.map((r) => ({ ...r, created_at: new Date(r.created_at).toISOString() }));
 }

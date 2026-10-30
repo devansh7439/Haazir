@@ -82,11 +82,11 @@ export function etaMinutes(distanceKm: number, roadFactor = 1.4, speedKmph = 30)
   return Math.round(((distanceKm * roadFactor) / speedKmph) * 60);
 }
 
-/** Parameters: $1 lat, $2 lng, $3 radius_km, $4 needs text[], $5 origin facility id (nullable). */
+/** Parameters: $1 lat, $2 lng, $3 radius_km, $4 needs text[], $5 origin facility id (nullable), $6 organisation id. */
 export const ELIGIBLE_SQL = `
 with params as (
   select $1::float8 as lat, $2::float8 as lng, $3::int as radius_km,
-         $4::text[] as needs, $5::uuid as origin_id
+         $4::text[] as needs, $5::uuid as origin_id, $6::uuid as org_id
 ),
 caps as (
   select facility_id, array_agg(capability_code) as codes
@@ -114,9 +114,21 @@ left join caps c on c.facility_id = d.id
 left join facility_stats s on s.facility_id = d.id
 cross join params p
 where d.active
+  and d.org_id = p.org_id
   and (p.origin_id is null or d.id <> p.origin_id)
   and coalesce(c.codes, '{}') @> p.needs
   and d.distance_km <= p.radius_km
   and exists (select 1 from facility_contacts fc where fc.facility_id = d.id and fc.active)
 order by eta_minutes
 `;
+
+/**
+ * Max ETA by acuity (C8): skip hospitals further than `maxMinutes` unless nothing nearer is eligible.
+ * 0 disables the cap.
+ */
+export function applyEtaCap<T extends { eta_minutes: number }>(ranked: T[], maxMinutes: number): { kept: T[]; skipped: number } {
+  if (!maxMinutes) return { kept: ranked, skipped: 0 };
+  const near = ranked.filter((f) => f.eta_minutes <= maxMinutes);
+  if (near.length === 0) return { kept: ranked, skipped: 0 };
+  return { kept: near, skipped: ranked.length - near.length };
+}

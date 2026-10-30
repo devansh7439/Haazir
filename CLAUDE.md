@@ -34,6 +34,9 @@ ngrok http 3000      # public URL for Bolna callbacks; put it in APP_BASE_URL an
 - **Server data access is raw SQL** through `lib/db.ts` (`DATABASE_URL`: Supabase pooler, any Postgres, or `pglite:` for tests and zero-setup dev). The browser uses Supabase only for Realtime (anon key). Reason: the tested eligibility query and the atomic wave claim run unchanged, and integration tests run on a real Postgres.
 - `supabase/migrations/0002_guards.sql` adds unique indexes so concurrent `evaluateReferral` runs can't double-dispatch redials, releases or once-only events, plus a server-only `app_settings` table.
 - All timestamps come from `lib/clock.ts` (never SQL `now()`), so tests drive time.
+- **Organisations.** Every console route calls `requireSession()` and loads rows through `lib/scope.ts` (`referralFor`, `attemptFor`, `facilityFor`, `contactFor`); list queries filter by `s.org`. New tables that the console reads need an `org_id` (children inherit it by trigger; see migration 0003). Bolna, cron, WhatsApp and trigger routes authenticate with their own secrets or signatures.
+- Migrations are tracked in `haazir_migrations`; `npm run db:setup` (and the embedded DB on connect) applies only new files.
+- `recoverStaleAttempts` (lib/handlers.ts) re-reads stuck calls from Bolna; `runCronTick` (lib/maintenance.ts) is the background loop.
 - Handlers return `{ instruction, followUp }`; routes run `followUp` with `after()`, the simulator awaits it.
 - No shadcn/ui: a small in-house design system instead. Tokens and component classes (`btn`, `card`, `input`, `chip`, `tag`) live in `app/globals.css` (violet `brand-*` accent, zinc neutrals, `line` hairline border, Inter). Primitives are in `components/ui.tsx` (`StatusPill`, `PageHeader`, `Stat`, `SectionTitle`, `Logo`), with `lucide-react` line icons. Never use emoji as icons; every status shows an icon or dot plus text.
 
@@ -61,6 +64,11 @@ ngrok http 3000      # public URL for Bolna callbacks; put it in APP_BASE_URL an
 | `lib/handlers.ts` | Webhook + function logic shared by routes and the simulator |
 | `lib/simulator.ts` | Scenario replay through the handlers |
 | `lib/view.ts` | Browser-safe referral view (no identifiers, redacted message previews) |
+| `lib/session.ts`, `lib/scope.ts`, `lib/gate.ts` | Sign-in, sessions, org isolation |
+| `lib/maintenance.ts` | Cron tick, retention purge |
+
+## Unverified against live services
+Bolna's v2 agent payload (`lib/bolnaAgents.ts`), the execution-polling response shape, Sarvam speech-to-text (`lib/stt.ts`), and Meta/Twilio WhatsApp sends were written without access to those docs or accounts. Each file says so; test them before relying on them.
 
 ## Tests to write first
 - `summary.ts`: the krait-bite example produces exactly the string in `docs/02-architecture.md` §8; a note with 10 digits is rejected.
