@@ -1,0 +1,42 @@
+{
+  "name": "report_inbound_callback",
+  "description": "Use on an inbound call when a hospital is calling back about a referral, once you know which hospital it is and what they want to tell the doctor.",
+  "pre_call_message": "Thank you, passing this to the doctor.",
+  "parameters": {
+    "type": "object",
+    "properties": {
+      "hospital_name": {
+        "type": "string",
+        "description": "The hospital they are calling from."
+      },
+      "referral_code": {
+        "type": "string",
+        "description": "The reference if they have it, like R4821. Leave empty if not given."
+      },
+      "message": {
+        "type": "string",
+        "description": "Their message for the doctor, in a few words."
+      },
+      "from_number": {
+        "type": "string",
+        "description": "The caller's number. Filled in automatically; never ask for it."
+      }
+    },
+    "required": ["hospital_name", "message"]
+  },
+  "key": "custom_task",
+  "value": {
+    "method": "POST",
+    "param": {
+      "hospital_name": "%(hospital_name)s",
+      "referral_code": "%(referral_code)s",
+      "message": "%(message)s",
+      "from_number": "%(from_number)s"
+    },
+    "url": "https://YOUR_APP_URL/api/bolna/functions/inbound-callback",
+    "api_token": "Bearer YOUR_BOLNA_FUNCTION_SECRET",
+    "headers": {
+      "Content-Type": "application/json"
+    }
+  }
+}

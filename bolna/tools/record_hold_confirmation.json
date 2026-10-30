@@ -1,0 +1,52 @@
+{
+  "name": "record_hold_confirmation",
+  "description": "Record whether the hospital will keep the bed ready for this patient. Call this once, after they have answered and confirmed your read-back.",
+  "pre_call_message": "Thank you, noting that.",
+  "parameters": {
+    "type": "object",
+    "properties": {
+      "attempt_id": {
+        "type": "string",
+        "description": "Internal attempt reference from the call context. Filled in automatically; never ask for it and never say it."
+      },
+      "confirmed": {
+        "type": "string",
+        "description": "yes if they will keep the bed ready, no if they can no longer take the patient."
+      },
+      "contact_person": {
+        "type": "string",
+        "description": "Name or role the ambulance team should ask for."
+      },
+      "whatsapp_number": {
+        "type": "string",
+        "description": "Optional WhatsApp number for the pre-arrival note, digits only. Leave empty if not given."
+      },
+      "notes": {
+        "type": "string",
+        "description": "Anything else they said that the doctor should know, in a few words. If confirmed is no, the reason."
+      },
+      "to_number": {
+        "type": "string",
+        "description": "The number you called. Filled in automatically; never ask for it."
+      }
+    },
+    "required": ["attempt_id", "confirmed"]
+  },
+  "key": "custom_task",
+  "value": {
+    "method": "POST",
+    "param": {
+      "attempt_id": "%(attempt_id)s",
+      "confirmed": "%(confirmed)s",
+      "contact_person": "%(contact_person)s",
+      "whatsapp_number": "%(whatsapp_number)s",
+      "notes": "%(notes)s",
+      "to_number": "%(to_number)s"
+    },
+    "url": "https://YOUR_APP_URL/api/bolna/functions/record-hold",
+    "api_token": "Bearer YOUR_BOLNA_FUNCTION_SECRET",
+    "headers": {
+      "Content-Type": "application/json"
+    }
+  }
+}

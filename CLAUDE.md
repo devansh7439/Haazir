@@ -1,0 +1,63 @@
+# CLAUDE.md · Haazir
+
+Instructions for AI coding assistants (Claude Code, Cursor, Codex) working in this repo. Put this file at the repo root.
+
+## What this is
+An emergency referral router. A doctor submits a referral; we phone capable hospitals **in parallel** through Bolna voice agents; hospitals' answers are written to our database **mid-call** through Bolna custom functions; a live board shows outcomes; the doctor selects a hospital; we confirm the hold, send a WhatsApp handoff and release the others.
+
+Read first: `docs/01-product-blueprint.md` (what and why), `docs/02-architecture.md` (how), `docs/04-api-spec.md` (contracts), `docs/05-voice-agents.md` (Bolna).
+
+## Stack
+Next.js App Router + TypeScript (strict) · Tailwind + shadcn/ui · Supabase Postgres + Realtime (`@supabase/supabase-js`) · zod · react-leaflet with OpenStreetMap tiles · Vercel.
+
+## Commands
+```bash
+npm run dev          # local app on :3000
+npm run lint && npm run typecheck && npm test
+ngrok http 3000      # public URL for Bolna callbacks; put it in APP_BASE_URL and in the DEV agents
+```
+
+## Non-negotiable rules
+1. **No patient identifiers** in availability-call `user_data`, `events.payload`, logs, or any response to the browser. Identifiers live only in `patient_details` and `messages`, which are server-only.
+2. **Monotonic statuses.** Never move a `call_attempts.status` backwards. Read transcript, recording and `extracted_data` only at Bolna status `completed`.
+3. **Function routes (`/api/bolna/functions/*`) always return 200 with an `instruction` string**, even on internal errors, and respond fast. Auth: `Authorization: Bearer ${BOLNA_FUNCTION_SECRET}`.
+4. In function payloads, treat `""`, `"None"`, `"null"`, `"undefined"` and unreplaced `%(name)s` as missing. Every value arrives as a string.
+5. Dispatch a wave only after the **atomic claim**: `update referrals set current_wave = current_wave + 1 … where id = $1 and current_wave = $2 returning …`.
+6. The spoken case summary is built **deterministically** in `lib/summary.ts`, never by an LLM.
+7. Server-only secrets: `BOLNA_API_KEY`, `SUPABASE_SERVICE_ROLE_KEY`, `BOLNA_WEBHOOK_SECRET`, `BOLNA_FUNCTION_SECRET`. Never import server modules into client components.
+8. Simulation runs through the **same handlers** as real webhooks and functions (`lib/simulator.ts`), with `outcome_source = 'simulation'`.
+9. Validate every route body with zod.
+10. Never record `accepted` from ambiguous data. When the function result and extraction disagree, set `needs_review`.
+
+## Bolna essentials
+- Base URL `https://api.bolna.ai`; header `Authorization: Bearer <BOLNA_API_KEY>`.
+- `POST /call` → `{ status: "queued", execution_id }`. Body: `agent_id`, `recipient_phone_number`, `from_phone_number?`, `user_data`, `agent_data.language`, `bypass_call_guardrails: true`. Don't use `retry_config` or `scheduled_at` (minute-level delays; `scheduled_at` rounds up to 10 minutes).
+- `POST /call/{execution_id}/stop` works only for queued or scheduled calls.
+- `GET /executions/{execution_id}` recovers a missed webhook.
+- Statuses: `queued, initiated, ringing, in-progress, call-disconnected, completed, no-answer, busy, failed, canceled, stopped, error, balance-low` (also `scheduled`, `rescheduled`).
+- Webhooks and function calls come from `13.203.39.153`, `13.126.9.249`, `13.202.133.53`.
+- Custom function `param` values use `%(name)s`; POST sends `param` as a JSON body. Prompt variables passed in `user_data` (like `attempt_id`) are auto-filled into `param`.
+- `POST /v2/agent` returns 201 with `state` (not `status`); `toolchain.pipelines` is an array of arrays.
+- Full gotchas: https://www.bolna.ai/docs/AGENTS.md · Bolna Skills: `npx skills add bolna-ai/skills -a claude-code`.
+
+## Where things are
+| Path | What |
+|---|---|
+| `supabase/migrations/0001_init.sql`, `supabase/seed.sql` | Schema (tested on Postgres 16) and demo data |
+| `bolna/prompts/*.md`, `bolna/tools/*.json`, `bolna/extractions.md` | Agent prompts, tool definitions, extraction setup |
+| `scenarios/demo-krait-bite.json` | Simulation and stage-demo script |
+| `lib/orchestrator.ts` | `dispatchWave`, `evaluateReferral` (pseudo-code in `docs/02-architecture.md` §6.3) |
+| `lib/matching.ts` | Eligibility SQL plus scoring (`docs/02-architecture.md` §7) |
+| `lib/statusMap.ts` | Bolna → internal status, monotonic ranks |
+| `lib/summary.ts` | Spoken summary and identifier guard |
+
+## Tests to write first
+- `summary.ts`: the krait-bite example produces exactly the string in `docs/02-architecture.md` §8; a note with 10 digits is rejected.
+- `statusMap.ts`: out-of-order and duplicate webhooks never move an attempt backwards.
+- Function payload normaliser: `%(bed_type)s`, `"None"` and `""` become `null`.
+- Matching on seed data returns Tamarind, Banyan, Neem, Jasmine, Mango Grove, Lotus, in that order, with ETAs 18, 35, 37, 46, 55, 74.
+- Privacy: availability `user_data` never contains `patient_name`, `attendant_name` or `attendant_phone`.
+- Integration: a simulated `demo-krait-bite` referral reaches `confirmed`, with exactly two release calls (Banyan, Mango Grove).
+
+## Style
+Small modules; pure functions for logic (matching, summary, status map) with unit tests; thin route handlers. Server components for data loading; client components only for realtime, the map and forms.
