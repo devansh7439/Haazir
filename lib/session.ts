@@ -34,7 +34,8 @@ export async function sessionFromCookies(get: (name: string) => string | undefin
     return { uid: claims.uid, org: user.org_id, role: user.role, rid: user.referrer_id, name: claims.name, email: claims.email };
   }
   const passcode = env.demoPasscode;
-  if (!passcode) return PASSCODE_SESSION;
+  // No passcode is only acceptable on a developer's machine; a production deploy without one stays closed.
+  if (!passcode) return process.env.NODE_ENV === "production" ? null : PASSCODE_SESSION;
   return get(GATE_COOKIE) === (await gateToken(passcode)) ? PASSCODE_SESSION : null;
 }
 

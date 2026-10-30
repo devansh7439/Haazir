@@ -97,6 +97,8 @@ export interface ReferralInput {
   search_radius_km?: number;
   origin_lat?: number;
   origin_lng?: number;
+  /** Same id = same press of "Find a bed"; a double-click or retry returns the first referral instead of calling twice. */
+  client_request_id?: string;
   patient?: {
     patient_name?: string | null;
     attendant_name?: string | null;
@@ -181,8 +183,24 @@ export async function previewReferral(input: ReferralInput, opts: { orgId?: stri
   };
 }
 
-export async function createReferral(input: ReferralInput, opts: { simulate?: boolean; orgId?: string } = {}) {
+async function findByRequestId(orgId: string, requestId: string | undefined) {
+  if (!requestId) return null;
+  const existing = await one<Referral>(`select * from referrals where org_id = $1 and client_request_id = $2`, [orgId, requestId]);
+  return existing ? { referral: existing, attempts: await getAttempts(existing.id), duplicate: true as const } : null;
+}
+
+/** Cap on live referrals placing calls at once per organisation (a runaway client can't phone every hospital in town). */
+function maxActiveLive(): number {
+  return Number(process.env.MAX_ACTIVE_LIVE_REFERRALS) || 10;
+}
+
+export async function createReferral(
+  input: ReferralInput,
+  opts: { simulate?: boolean; orgId?: string } = {},
+): Promise<{ referral: Referral; attempts: Attempt[]; duplicate?: true }> {
   const p = await prepare(input, opts.orgId);
+  const repeat = await findByRequestId(p.referrer.org_id, input.client_request_id);
+  if (repeat) return repeat;
   if (p.ranked.length === 0) {
     throw new AppError(409, "NO_ELIGIBLE_FACILITIES", "No eligible hospital in range", {
       suggestions: await suggestionsFor(p.params, p.needs),
@@ -192,6 +210,16 @@ export async function createReferral(input: ReferralInput, opts: { simulate?: bo
   if (!simulated && (!env.bolnaApiKey || !env.agentId("availability"))) {
     throw new AppError(422, "BOLNA_NOT_CONFIGURED", "Live calls need BOLNA_API_KEY and BOLNA_AGENT_ID_AVAILABILITY. Run it as a simulation instead.");
   }
+  if (!simulated) {
+    const [active] = await q<{ n: number }>(
+      `select count(*)::int as n from referrals
+       where org_id = $1 and not is_simulated and status in ('searching','confirming') and created_at > $2`,
+      [p.referrer.org_id, new Date(now().getTime() - 2 * 3600_000)],
+    );
+    if (active.n >= maxActiveLive()) {
+      throw new AppError(429, "TOO_MANY_ACTIVE_REFERRALS", `${active.n} referrals are already calling hospitals. Finish or cancel one first.`);
+    }
+  }
   const attendantPhone = input.patient?.attendant_phone ? normalizePhone(input.patient.attendant_phone) : null;
   if (input.patient?.attendant_phone && !attendantPhone) {
     throw new AppError(422, "INVALID_ATTENDANT_PHONE", "The attendant's phone number doesn't look right. Use a 10-digit mobile number.");
@@ -200,17 +228,24 @@ export async function createReferral(input: ReferralInput, opts: { simulate?: bo
   const referral = await one<Referral>(
     `insert into referrals
        (status, referrer_id, origin_facility_id, origin_lat, origin_lng, case_type, acuity, age_value, age_unit, sex,
-        note, required_capabilities, spoken_summary, transport, search_radius_km, is_simulated, is_demo, created_at, updated_at)
-     values ('searching', $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11::text[], $12, $13, $14, $15, $16, $17, $17)
+        note, required_capabilities, spoken_summary, transport, search_radius_km, is_simulated, is_demo, created_at, updated_at,
+        client_request_id)
+     values ('searching', $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11::text[], $12, $13, $14, $15, $16, $17, $17, $18)
+     on conflict (org_id, client_request_id) where client_request_id is not null do nothing
      returning *`,
     [
       p.referrer.id, p.origin?.id ?? null, p.params.lat, p.params.lng, input.case_type, input.acuity,
       input.age_value ?? null, input.age_unit ?? "years", input.sex ?? "unknown", input.note?.trim() || null,
       p.params.needs, p.spoken_summary, input.transport ?? "ambulance", p.params.radius_km, simulated,
-      p.origin?.is_demo ?? false, t,
+      p.origin?.is_demo ?? false, t, input.client_request_id ?? null,
     ],
   );
-  if (!referral) throw new AppError(500, "INSERT_FAILED", "Could not create the referral");
+  if (!referral) {
+    // Lost a race with the same request (a double-click): hand back the referral the other request created.
+    const raced = await findByRequestId(p.referrer.org_id, input.client_request_id);
+    if (raced) return raced;
+    throw new AppError(500, "INSERT_FAILED", "Could not create the referral");
+  }
 
   // Identifiers live apart from the referral, server-only.
   const pt = input.patient;
@@ -463,6 +498,7 @@ function planRedial(
   const altTarget = alternate ? { to_number: alternate.phone_e164, contact_id: alternate.id } : null;
 
   if (a.outcome === "callback_later" && a.callback_due_at) {
+    if (redials >= MAX_REDIALS_PER_FACILITY) return null; // handled at request time: the desk is handed to the doctor
     return {
       attempt: a,
       target: { to_number: a.to_number, contact_id: a.contact_id },
@@ -589,7 +625,7 @@ export async function markFirstAcceptance(r: Referral, attempt: Attempt): Promis
   const updated = await one<Referral>(
     `update referrals set first_acceptance_at = $2, updated_at = $3,
        status = case when status in ('searching','exhausted') then 'options_ready' else status end
-     where id = $1 and first_acceptance_at is null returning *`,
+     where id = $1 and first_acceptance_at is null and status not in ('cancelled','closed') returning *`,
     [r.id, at, now()],
   );
   if (!updated) return false;
@@ -1000,4 +1036,26 @@ export async function widenReferral(referralId: string, radiusKm: number) {
   await updateReferral(r.id, { status: "closed", closed_at: now(), close_reason: `widened to ${radiusKm} km: ${created.referral.code}` });
   await addEvent(r.id, "referral_closed", { reason: "widened", next_referral_id: created.referral.id });
   return created.referral;
+}
+
+/**
+ * A desk said yes after the patient was placed (or the referral was cancelled). The agent tells them on the same call,
+ * so record that as their release instead of phoning them again a minute later.
+ */
+export async function recordInCallRelease(acceptor: Attempt): Promise<void> {
+  const rel = await insertAttempt({
+    referral_id: acceptor.referral_id,
+    facility_id: acceptor.facility_id,
+    contact_id: acceptor.contact_id,
+    parent_attempt_id: acceptor.id,
+    purpose: "release",
+    wave: acceptor.wave,
+    rank: acceptor.rank,
+    to_number: acceptor.to_number,
+    call_language: acceptor.call_language,
+  });
+  if (!rel) return; // already released
+  const t = now();
+  await updateAttempt(rel.id, { status: "completed", bolna_status: "in_call", outcome: "release_ack", outcome_source: "function", outcome_at: t, ended_at: t });
+  await addEvent(acceptor.referral_id, "release_dispatched", { facility_id: acceptor.facility_id, in_call: true }, rel.id);
 }

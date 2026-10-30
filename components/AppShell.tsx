@@ -37,9 +37,9 @@ export function AppShell(props: { children: ReactNode; user: ShellUser | null; m
     .map((w) => w[0])
     .join("");
   return (
-    <div className="min-h-screen lg:pl-64">
+    <div className="min-h-screen lg:pl-64 print:pl-0">
       {/* Sidebar (desktop) */}
-      <aside className="fixed inset-y-0 left-0 z-[1100] hidden w-64 flex-col border-r border-line bg-white lg:flex">
+      <aside className="fixed inset-y-0 left-0 z-[1100] hidden w-64 flex-col border-r border-line bg-white lg:flex print:hidden">
         <div className="flex h-16 items-center px-5">
           <Link href="/" aria-label="Haazir home"><Logo /></Link>
         </div>
@@ -90,7 +90,7 @@ export function AppShell(props: { children: ReactNode; user: ShellUser | null; m
       </aside>
 
       {/* Top bar (mobile and tablet) */}
-      <header className="border-b border-line bg-white lg:hidden">
+      <header className="border-b border-line bg-white lg:hidden print:hidden">
         <div className="flex h-14 items-center justify-between px-4">
           <Link href="/" aria-label="Haazir home"><Logo /></Link>
           <span className={cx("rounded-full px-2 py-0.5 text-[11px] font-semibold", props.mode === "live" ? "bg-emerald-50 text-emerald-800" : "bg-amber-50 text-amber-900")}>

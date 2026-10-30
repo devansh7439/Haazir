@@ -10,6 +10,7 @@ export async function POST(req: Request) {
   return handle(async () => {
     const s = await requireSession();
     const input = await parseBody(req, PreviewBody);
+    if (s.role === "doctor" && s.rid) input.referrer_id = s.rid;
     try {
       return NextResponse.json(await previewReferral(input, { orgId: s.org }));
     } catch (err) {

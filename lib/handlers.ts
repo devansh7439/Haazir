@@ -1,12 +1,12 @@
 import "server-only";
-import { CALLBACK_MAX_MIN, LOST_TRACK_AFTER_S, POLL_EVERY_S, STALE_AFTER_S } from "./config";
+import { CALLBACK_MAX_MIN, LOST_TRACK_AFTER_S, MAX_REDIALS_PER_FACILITY, POLL_EVERY_S, STALE_AFTER_S } from "./config";
 import { getExecution, isSimulatedExecution } from "./bolna";
 import { addMinutes, now, secondsBetween } from "./clock";
 import { one, q } from "./db";
 import { addEvent } from "./events";
 import { clean, cleanParams, normalizeBedType, normalizeOutcome, normalizePhone, normalizeReferralCode, normalizeYesNo, parseMinutes } from "./normalize";
 import {
-  addContact, applyHoldResult, evaluateReferral, holdUnconfirmed, isAcceptance, markFirstAcceptance, redial, loadCtx,
+  addContact, applyHoldResult, evaluateReferral, holdUnconfirmed, isAcceptance, markFirstAcceptance, recordInCallRelease, redial, loadCtx,
 } from "./orchestrator";
 import {
   bumpContactStats, casAttemptStatus, findAttemptByExecution, findOpenAttemptByNumber, getAttempt, getFacility,
@@ -36,7 +36,8 @@ const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 async function resolveAttempt(attemptId: string | null, toNumber: string | null, purposes: string[]): Promise<Attempt | null> {
   if (attemptId && UUID.test(attemptId)) {
     const a = await getAttempt(attemptId);
-    if (a) return a;
+    // An id for the wrong kind of call (e.g. a hold call's id sent to record_hospital_response) is never applied.
+    if (a) return purposes.includes(a.purpose) ? a : null;
   }
   // Fallback when Bolna didn't fill %(attempt_id)s: the latest open attempt to the number it called.
   const phone = normalizePhone(toNumber);
@@ -61,6 +62,10 @@ export async function handleRecordResponse(raw: Record<string, unknown>, source:
   if (!attempt) return { result: "not_found", instruction: SAFE_END, followUp: noop };
 
   const outcome: AvailabilityOutcome = normalizeOutcome(p.outcome);
+  // "none" is a real bed_type answer ("no bed"), unlike Python's "None" for a missing value, which clean() drops.
+  const bedType = String(raw.bed_type ?? "").trim() === "none" ? "none" : normalizeBedType(p.bed_type);
+  // "Yes, but no bed" contradicts itself: keep the answer, but a human must check it before anyone relies on it.
+  const contradictory = (outcome === "accepted" || outcome === "conditional") && bedType === "none";
   const alternate = outcome === "redirected" ? normalizePhone(p.alternate_number) : null;
   const t = now();
   // Compare-and-set on the outcome: a repeated call with the same answer changes nothing.
@@ -68,12 +73,12 @@ export async function handleRecordResponse(raw: Record<string, unknown>, source:
     `update call_attempts set
        outcome = $2, outcome_source = $3, bed_type = $4, specialist_available = $5, ready_in_minutes = $6,
        contact_person = $7, conditions = $8, decline_reason = $9, alternate_number = $10,
-       outcome_at = $11, answered_at = coalesce(answered_at, $11), updated_at = $11
+       outcome_at = $11, answered_at = coalesce(answered_at, $11), updated_at = $11, needs_review = $12
      where id = $1 and outcome is distinct from $2
      returning *`,
     [
-      attempt.id, outcome, source, normalizeBedType(p.bed_type), p.specialist_available, parseMinutes(p.ready_in_minutes),
-      p.contact_person, p.conditions, p.decline_reason, alternate ?? p.alternate_number, t,
+      attempt.id, outcome, source, bedType, p.specialist_available, parseMinutes(p.ready_in_minutes),
+      p.contact_person, p.conditions, p.decline_reason, alternate ?? p.alternate_number, t, contradictory,
     ],
   );
   if (updated) {
@@ -84,7 +89,11 @@ export async function handleRecordResponse(raw: Record<string, unknown>, source:
       ready_in_minutes: updated.ready_in_minutes,
       source,
     }, attempt.id);
-    if (isAcceptance(updated)) {
+    if (contradictory) {
+      await addEvent(attempt.referral_id, "needs_review", {
+        facility_id: attempt.facility_id, function_outcome: outcome, extraction_outcome: "no bed available",
+      }, attempt.id);
+    } else if (isAcceptance(updated)) {
       const r = await getReferral(attempt.referral_id);
       if (r) await markFirstAcceptance(r, updated); // the board turns green while the call is still live
     }
@@ -97,10 +106,24 @@ export async function handleRecordResponse(raw: Record<string, unknown>, source:
     await portalCheck();
     await evaluateReferral(attempt.referral_id);
   };
+  // A yes that arrives after the patient was placed elsewhere (or the referral was cancelled) is answered on the
+  // same call, so the desk doesn't hold a bed and doesn't get a second "release" call a minute later.
+  const ref = await getReferral(attempt.referral_id);
+  const placedElsewhere = !!ref && ["confirmed", "closed"].includes(ref.status) && ref.selected_attempt_id !== attempt.id;
+  const noLongerNeeded = !!ref && ref.status === "cancelled";
   switch (outcome) {
     case "accepted":
     case "conditional":
-      instruction = `Thank them, say ${doc}'s team will confirm within a few minutes if they send the patient, and end the call.`;
+      if (contradictory) {
+        instruction = `Thank them, say ${doc}'s team will call back to check the bed, and end the call.`;
+      } else if (placedElsewhere || noLongerNeeded) {
+        instruction = placedElsewhere
+          ? "Thank them warmly and tell them the patient has already been placed at another hospital, so they don't need to keep a bed. Then end the call."
+          : "Thank them warmly and tell them the patient no longer needs a transfer, so they don't need to keep a bed. Then end the call.";
+        if (updated) await recordInCallRelease(updated);
+      } else {
+        instruction = `Thank them, say ${doc}'s team will confirm within a few minutes if they send the patient, and end the call.`;
+      }
       break;
     case "declined":
       instruction = "Thank them for their time and end the call.";
@@ -164,6 +187,18 @@ export async function handleRequestCallback(raw: Record<string, unknown>, source
   const p = cleanParams({ attempt_id: raw.attempt_id, minutes: raw.minutes, contact_person: raw.contact_person, to_number: raw.to_number });
   const attempt = await resolveAttempt(p.attempt_id, p.to_number, ["availability"]);
   if (!attempt) return { result: "not_found", instruction: SAFE_END, followUp: noop };
+  const redials = await one<{ n: number }>(
+    `select count(*)::int as n from call_attempts
+     where referral_id = $1 and facility_id is not distinct from $2 and purpose = 'availability' and parent_attempt_id is not null`,
+    [attempt.referral_id, attempt.facility_id],
+  );
+  if ((redials?.n ?? 0) >= MAX_REDIALS_PER_FACILITY) {
+    // Respect the desk: after two callbacks the doctor calls them directly.
+    return handleRequestDoctor(
+      { attempt_id: attempt.id, reason: "asked to be called back again", contact_person: p.contact_person, to_number: p.to_number },
+      source,
+    );
+  }
   const minutes = Math.min(Math.max(parseMinutes(p.minutes) ?? 5, 1), CALLBACK_MAX_MIN);
   const due = addMinutes(now(), minutes);
   const updated = await one<Attempt>(
@@ -285,7 +320,7 @@ async function reconcileAvailability(a: Attempt, body: Record<string, unknown>):
   let outcome: AvailabilityOutcome;
   const fields: Partial<Attempt> = {};
   if (voicemail || exOutcome === "ivr_blocked") outcome = "ivr_blocked";
-  else if (exOutcome && ex.confident) {
+  else if (exOutcome && ex.confident && !(yes(exOutcome) && normalizeBedType(extraction(data, "Referral outcome", "bed_type").value) === "none")) {
     outcome = exOutcome;
     fields.bed_type = normalizeBedType(extraction(data, "Referral outcome", "bed_type").value);
     fields.ready_in_minutes = parseMinutes(extraction(data, "Referral outcome", "ready_in_minutes").value);
@@ -386,8 +421,9 @@ export async function handleWebhook(body: unknown, opts: { log?: boolean } = {})
   if (mapped.status === "in_progress" && !attempt.answered_at) fields.answered_at = t;
   if (mapped.status === "wrapping_up") fields.ended_at = t;
   if (isTerminal(mapped.status) && !attempt.ended_at) fields.ended_at = t;
-  if (mapped.status === "completed") {
-    // Final fields are only reliable at `completed`.
+  if (mapped.status === "completed" && attempt.purpose !== "family_update") {
+    // Final fields are only reliable at `completed`. The family call is never stored: it names the attendant and
+    // discusses the patient, and call_attempts is readable by the console.
     fields.transcript = typeof b.transcript === "string" ? b.transcript : null;
     fields.recording_url = clean(telephony.recording_url);
     fields.extracted_data = b.extracted_data ?? null;

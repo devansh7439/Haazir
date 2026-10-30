@@ -18,7 +18,9 @@ export async function POST(req: Request) {
     const s = await requireSession();
     const body = await parseBody(req, ReferralBody);
     const { simulate, draft_id, ...input } = body;
-    const { referral, attempts } = await createReferral(input, { simulate, orgId: s.org });
+    // A doctor always refers as themselves; only an admin may pick another referrer in their organisation.
+    if (s.role === "doctor" && s.rid) input.referrer_id = s.rid;
+    const { referral, attempts, duplicate } = await createReferral(input, { simulate, orgId: s.org });
     if (draft_id) await markDraftUsed(s.org, draft_id);
     return NextResponse.json(
       {
@@ -32,7 +34,7 @@ export async function POST(req: Request) {
           call_language: a.call_language, status: a.status, rank_reasons: a.rank_reasons,
         })),
       },
-      { status: 201 },
+      { status: duplicate ? 200 : 201 },
     );
   });
 }

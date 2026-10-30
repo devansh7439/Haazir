@@ -67,6 +67,8 @@ export function LiveBoard({ initial }: { initial: ReferralView }) {
 
   // Tick: drives wave 2, callbacks, hold expiry and (when simulated) the scenario.
   const live = r.status !== "closed" && (r.status !== "cancelled" || view.attempts.some((a) => !TERMINAL.includes(a.status)));
+  // Bed held and every call finished: only the hold-expiry check is left, so tick every 30 s instead of every few seconds.
+  const idle = r.status === "confirmed" && view.attempts.every((a) => TERMINAL.includes(a.status));
   useEffect(() => {
     if (!live) return;
     let stop = false;
@@ -78,14 +80,14 @@ export function LiveBoard({ initial }: { initial: ReferralView }) {
       } catch {
         // Network blip: try again next tick.
       }
-      if (!stop) timer = setTimeout(loop, view.tick_interval_ms);
+      if (!stop) timer = setTimeout(loop, idle ? 30_000 : view.tick_interval_ms);
     };
     timer = setTimeout(loop, 300);
     return () => {
       stop = true;
       clearTimeout(timer);
     };
-  }, [id, live, refresh, view.tick_interval_ms]);
+  }, [id, live, idle, refresh, view.tick_interval_ms]);
 
   // Realtime: any change to this referral's rows triggers a refetch of the (redacted) view.
   useEffect(() => {

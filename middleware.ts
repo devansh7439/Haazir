@@ -11,7 +11,7 @@ async function signedIn(req: NextRequest): Promise<boolean> {
     return !!(await verifySession(req.cookies.get(SESSION_COOKIE)?.value, (process.env.SESSION_SECRET ?? "").trim()));
   }
   const passcode = process.env.DEMO_PASSCODE?.trim();
-  if (!passcode) return true;
+  if (!passcode) return process.env.NODE_ENV !== "production"; // fail closed when a deploy forgot the passcode
   return req.cookies.get(GATE_COOKIE)?.value === (await gateToken(passcode));
 }
 

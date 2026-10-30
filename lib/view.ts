@@ -61,6 +61,14 @@ export async function getReferralView(id: string): Promise<ReferralView | null> 
     q<EventRow>(`select * from events where referral_id = $1 order by created_at desc, id desc limit 200`, [id]),
   ]);
   const events = [...eventsDesc].reverse();
+  // Defence in depth: the family call is never shown, even if a transcript was stored before this rule existed.
+  for (const a of attempts) {
+    if (a.purpose === "family_update") {
+      a.transcript = null;
+      a.recording_url = null;
+      a.extracted_data = null;
+    }
+  }
 
   const dismissed = new Set(
     events.filter((e) => e.type === "alert_dismissed").map((e) => Number((e.payload as { event_id?: number }).event_id)),

@@ -26,6 +26,8 @@ The product thinking, architecture and contracts are in [`docs/`](docs/README.md
 | `npm run bolna:agents`: builds the five agents from `bolna/` (dry run by default) | ✅ (verify payload shape before `--apply`) |
 | C1 family voice call · C2 WhatsApp text/voice-note intake · C3 missed-call callback · C4 portal-vs-desk flags · C5 analytics · C6 WhatsApp quick reply · C7 Aapat Setu link · C8 max ETA | ✅ |
 | Simulation through the same handlers, SIMULATED badge, Demo console | ✅ |
+| Demo tools: presenter **run sheet** (script, fallback ladder, 20 hard questions from `docs/08`, measured numbers filled in), printable **judge cards** with assigned phones, **voice test-matrix** tracker (20 scenarios × 2 passes, demo-ready gate) | ✅ |
+| Hardening: sign-in throttling, fail-closed production gate, safe post-login redirect, JSON-only console bodies, one referral per "Find a bed" press, live-referral cap per org, doctors refer as themselves | ✅ |
 
 ## Run it locally (no accounts needed)
 
@@ -43,7 +45,7 @@ Open http://localhost:3000, pick **Snakebite – neurotoxic signs**, set **Criti
 npm run lint && npm run typecheck && npm test
 ```
 
-69 tests, including the ones `CLAUDE.md` asks for: the exact krait-bite spoken summary, the 10-digit note guard, monotonic statuses under replayed/out-of-order webhooks, the `%(x)s`/`None` normaliser, matching order on the seed (Tamarind 18 → Lotus 74 min), no identifiers in availability `user_data`, and an end-to-end simulated referral that reaches `confirmed` with exactly two release calls (Banyan, Mango Grove). Integration tests run on an in-memory Postgres (PGlite) with the real migrations. Route tests call the actual route handlers: Bolna auth and the always-200 contract, the IP allowlist, cron auth, passcode and user sign-in, organisation isolation, missed calls, signed WhatsApp webhooks, missed-webhook recovery, portal flags and the retention purge.
+95 tests, including the ones `CLAUDE.md` asks for: the exact krait-bite spoken summary, the 10-digit note guard, monotonic statuses under replayed/out-of-order webhooks, the `%(x)s`/`None` normaliser, matching order on the seed (Tamarind 18 → Lotus 74 min), no identifiers in availability `user_data`, and an end-to-end simulated referral that reaches `confirmed` with exactly two release calls (Banyan, Mango Grove). Integration tests run on an in-memory Postgres (PGlite) with the real migrations. Route tests call the actual route handlers: Bolna auth and the always-200 contract, the IP allowlist, cron auth, passcode and user sign-in, organisation isolation, missed calls, signed WhatsApp webhooks, missed-webhook recovery, portal flags and the retention purge.
 
 ## Deploy (Supabase + Vercel + Bolna)
 

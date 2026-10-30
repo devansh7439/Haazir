@@ -5,7 +5,7 @@ const nextConfig: NextConfig = {
   serverExternalPackages: ["@electric-sql/pglite", "pg"],
   // Migrations and seed are read from disk (embedded DB bootstrap, demo reset).
   outputFileTracingIncludes: {
-    "/**": ["./supabase/**/*.sql"],
+    "/**": ["./supabase/**/*.sql", "./docs/08-demo-and-pitch.md"],
   },
 };
 

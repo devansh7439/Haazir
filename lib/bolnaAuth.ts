@@ -12,11 +12,15 @@ function same(a: string, b: string): boolean {
   return x.length === y.length && timingSafeEqual(x, y);
 }
 
-/** The caller's IP as Vercel (or any proxy) reports it: the first entry of x-forwarded-for. */
+/**
+ * The caller's IP. x-real-ip is set by Vercel from the connection and can't be forged by the client; otherwise the
+ * rightmost x-forwarded-for hop (added by our own proxy). The leftmost entry is whatever the client chose to send.
+ */
 export function clientIp(req: Request): string {
-  const fwd = req.headers.get("x-forwarded-for");
-  if (fwd) return fwd.split(",")[0].trim();
-  return (req.headers.get("x-real-ip") ?? "").trim();
+  const real = (req.headers.get("x-real-ip") ?? "").trim();
+  if (real) return real;
+  const hops = (req.headers.get("x-forwarded-for") ?? "").split(",").map((s) => s.trim()).filter(Boolean);
+  return hops[hops.length - 1] ?? "";
 }
 
 /** Optional extra check (BOLNA_IP_ALLOWLIST=on): requests must come from Bolna's documented IPs. Never the only check. */

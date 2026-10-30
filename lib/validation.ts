@@ -22,6 +22,7 @@ export const ReferralBody = z.object({
   origin_lng: z.number().min(-180).max(180).optional(),
   simulate: z.boolean().optional(),
   draft_id: z.string().uuid().optional(),
+  client_request_id: z.string().uuid().optional(),
   patient: z
     .object({
       patient_name: optionalText(120),
@@ -33,7 +34,7 @@ export const ReferralBody = z.object({
 });
 export type ReferralBodyT = z.infer<typeof ReferralBody>;
 
-export const PreviewBody = ReferralBody.omit({ patient: true, simulate: true, draft_id: true });
+export const PreviewBody = ReferralBody.omit({ patient: true, simulate: true, draft_id: true, client_request_id: true });
 
 export const SelectBody = z.object({ attempt_id: z.string().uuid(), force: z.boolean().default(false) });
 

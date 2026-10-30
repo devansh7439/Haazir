@@ -105,8 +105,10 @@ describe("Bolna routes", () => {
   it("optional IP allowlist only admits Bolna's addresses", async () => {
     vi.stubEnv("BOLNA_IP_ALLOWLIST", "on");
     const body = { id: "x", status: "ringing" };
-    expect((await webhookRoute.POST(req("/api/bolna/webhook?token=whsec", { body, headers: { "x-forwarded-for": "1.2.3.4" } }))).status).toBe(401);
-    expect((await webhookRoute.POST(req("/api/bolna/webhook?token=whsec", { body, headers: { "x-forwarded-for": "13.203.39.153, 10.0.0.1" } }))).status).toBe(200);
+    expect((await webhookRoute.POST(req("/api/bolna/webhook?token=whsec", { body, headers: { "x-real-ip": "1.2.3.4" } }))).status).toBe(401);
+    // A forged leftmost x-forwarded-for entry doesn't help; the proxy-reported address is what counts.
+    expect((await webhookRoute.POST(req("/api/bolna/webhook?token=whsec", { body, headers: { "x-forwarded-for": "13.203.39.153, 1.2.3.4" } }))).status).toBe(401);
+    expect((await webhookRoute.POST(req("/api/bolna/webhook?token=whsec", { body, headers: { "x-real-ip": "13.203.39.153" } }))).status).toBe(200);
   });
 });
 

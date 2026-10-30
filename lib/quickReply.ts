@@ -7,7 +7,8 @@ export interface QuickReply {
   condition: string | null;
 }
 
-const YES = /^(yes|y|ok|okay|haan|haa|ha|ji haan|houdu|hoo|accept(?:ed)?|confirmed?)\b/i;
+// Only words that mean "we accept". "ok", "okay", "y" or "confirmed" can just mean "message received".
+const YES = /^(yes|haan|haa|ji haan|houdu|accept(?:ed)?|we accept)\b/i;
 const NO = /^(no|n|nahi|nahin|illa|decline[d]?|full|cannot|can't|cant)\b/i;
 
 export function parseQuickReply(text: string): QuickReply | null {

@@ -37,6 +37,16 @@ const ACUITY = [
   { value: "stable", label: "Stable", dot: "bg-emerald-500" },
 ] as const;
 
+function newRequestId(): string {
+  if (typeof crypto.randomUUID === "function") return crypto.randomUUID();
+  // crypto.randomUUID needs a secure context (https or localhost); fall back to getRandomValues elsewhere.
+  const b = crypto.getRandomValues(new Uint8Array(16));
+  b[6] = (b[6] & 0x0f) | 0x40;
+  b[8] = (b[8] & 0x3f) | 0x80;
+  const h = Array.from(b, (x) => x.toString(16).padStart(2, "0")).join("");
+  return `${h.slice(0, 8)}-${h.slice(8, 12)}-${h.slice(12, 16)}-${h.slice(16, 20)}-${h.slice(20)}`;
+}
+
 function Field({ label, htmlFor, children, hint }: { label: string; htmlFor?: string; children: React.ReactNode; hint?: React.ReactNode }) {
   return (
     <div>
@@ -83,6 +93,9 @@ export function ReferralForm(props: {
   const [showPatient, setShowPatient] = useState(false);
   const [patient, setPatient] = useState({ patient_name: "", attendant_name: "", attendant_phone: "", attendant_language: "en" });
   const [simulate, setSimulate] = useState(props.defaultSimulate || !props.bolnaReady);
+  // One id per press of "Find a bed": a double-click or a retry after a network error reuses it, so hospitals are
+  // never called twice for the same patient.
+  const [requestId] = useState(newRequestId);
   const [preview, setPreview] = useState<Preview | null>(null);
   const [previewError, setPreviewError] = useState<string | null>(null);
   const [loadingPreview, setLoadingPreview] = useState(false);
@@ -171,6 +184,7 @@ export function ReferralForm(props: {
           ...body,
           simulate,
           draft_id: props.draft?.id,
+          client_request_id: requestId,
           patient: showPatient || patient.patient_name || patient.attendant_phone ? patient : undefined,
         }),
       });

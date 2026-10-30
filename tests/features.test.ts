@@ -163,3 +163,32 @@ describe("Bolna agent builder", () => {
     expect(Object.keys(avail.welcome).sort()).toEqual(["en", "hi", "kn"]);
   });
 });
+
+describe("pitch and proof tooling", () => {
+  it("reads the script, fallback ladder and hard questions from docs/08", async () => {
+    const { fillPlaceholders, readPitchDoc, tableUnder } = await import("@/lib/pitch");
+    const md = readPitchDoc();
+    const script = tableUnder(md, "The 3-minute script")!;
+    expect(script.header).toEqual(["Time", "On screen", "Say (roughly)"]);
+    expect(script.rows).toHaveLength(7);
+    expect(script.rows[0][0]).toBe("0:00–0:20");
+    expect(tableUnder(md, "Fallback ladder")!.rows).toHaveLength(4);
+    expect(tableUnder(md, "Hard questions")!.rows).toHaveLength(20);
+    expect(tableUnder(md, "No such heading")).toBeNull();
+    // Only measured numbers are filled; the rest stay visible as placeholders.
+    const said = fillPlaceholders("First yes in {TTFA}; {N} calls; median {X}; answered {answer rate}; with {name}", {
+      ttfa: "0:32", n: 0, median: null, answerRate: "83%",
+    });
+    expect(said).toBe("First yes in 0:32; {N} calls; median {X}; answered 83%; with {name}");
+  });
+
+  it("is demo-ready only at 20/20 twice with no false-yes failure", async () => {
+    const { matrixGate } = await import("@/lib/testMatrix");
+    const all = (pass: 1 | 2, result: "pass" | "fail") =>
+      Array.from({ length: 20 }, (_, i) => ({ pass, row_no: i + 1, result, note: null, referral_code: null, tested_by: null, tested_at: "" }));
+    expect(matrixGate([...all(1, "pass"), ...all(2, "pass")]).ready).toBe(true);
+    const oneFalseYes = [...all(1, "pass").map((e) => (e.row_no === 15 ? { ...e, result: "fail" as const } : e)), ...all(2, "pass")];
+    expect(matrixGate(oneFalseYes)).toMatchObject({ ready: false, failedZeroTolerance: [15] });
+    expect(matrixGate(all(1, "pass")).ready).toBe(false);
+  });
+});

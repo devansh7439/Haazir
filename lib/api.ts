@@ -10,6 +10,10 @@ export function errorResponse(status: number, code: string, message: string, det
 }
 
 export async function parseBody<T>(req: Request, schema: ZodType<T, ZodTypeDef, unknown>): Promise<T> {
+  // Only JSON: a cross-site <form> can't send application/json, so this blocks form-based CSRF on top of SameSite cookies.
+  if (!(req.headers.get("content-type") ?? "").toLowerCase().includes("application/json")) {
+    throw new AppError(415, "UNSUPPORTED_MEDIA_TYPE", "Send the request as application/json");
+  }
   let raw: unknown;
   try {
     raw = await req.json();

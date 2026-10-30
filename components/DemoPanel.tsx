@@ -1,6 +1,7 @@
 "use client";
 
-import { CheckCircle2, Circle, Database, Loader2, Phone, PlayCircle, Radio, RotateCcw, Webhook, XCircle } from "lucide-react";
+import { CheckCircle2, Circle, Database, IdCard, ListChecks, Loader2, ScrollText, Phone, PlayCircle, Radio, RotateCcw, Webhook, XCircle } from "lucide-react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import type { demoStatus } from "@/lib/demo";
@@ -121,6 +122,11 @@ export function DemoPanel({ initial }: { initial: Status }) {
           </>
         }
       />
+      <nav aria-label="Demo tools" className="-mt-2 mb-5 flex flex-wrap gap-2">
+        <Link href="/demo/run-sheet" className="btn btn-secondary min-h-9"><ScrollText aria-hidden className="size-4" /> Run sheet</Link>
+        <Link href="/demo/judge-cards" className="btn btn-secondary min-h-9"><IdCard aria-hidden className="size-4" /> Judge cards</Link>
+        <Link href="/demo/test-matrix" className="btn btn-secondary min-h-9"><ListChecks aria-hidden className="size-4" /> Test matrix</Link>
+      </nav>
       {msg && (
         <p role="status" className={cx("mb-5 rounded-xl px-4 py-3 text-sm font-medium ring-1 ring-inset", msg.ok ? "bg-emerald-50 text-emerald-800 ring-emerald-200" : "bg-rose-50 text-rose-700 ring-rose-200")}>
           {msg.text}

@@ -2,6 +2,7 @@
 
 import { Loader2 } from "lucide-react";
 import { useState } from "react";
+import { safeNext } from "@/lib/safeNext";
 import { Logo } from "./ui";
 
 export function LoginForm({ mode }: { mode: "passcode" | "users" }) {
@@ -31,8 +32,7 @@ export function LoginForm({ mode }: { mode: "passcode" | "users" }) {
             setBusy(false);
             return;
           }
-          const next = new URLSearchParams(window.location.search).get("next") || "/";
-          window.location.href = next.startsWith("/") && !next.startsWith("//") ? next : "/";
+          window.location.href = safeNext(new URLSearchParams(window.location.search).get("next"));
         }}
       >
         <Logo />
