@@ -73,6 +73,15 @@ export function maskPhone(value: string | null | undefined): string {
   return `${cc}••••• ••${tail}`;
 }
 
+/**
+ * Masks anything that looks like a phone number (7+ digits, separated by spaces, dashes, dots or brackets, with an
+ * optional leading +) in free text from a provider, such as a Bolna error message, before it goes into an event the
+ * browser can read.
+ */
+export function redactNumbers(text: string): string {
+  return text.replace(/\+?\(?\d[\d\s().-]{5,}\d/g, (m) => (m.replace(/\D/g, "").length >= 7 ? maskPhone(m) : m));
+}
+
 function slug(value: string): string {
   return value.trim().toLowerCase().replace(/[\s-]+/g, "_");
 }

@@ -120,6 +120,8 @@ export async function migrate(db: Db, opts: { seed?: boolean } = {}): Promise<st
   await db.exec(
     "create table if not exists haazir_migrations (name text primary key, applied_at timestamptz not null default now())",
   );
+  // Server-only, like every table: on Supabase the public anon key could otherwise rewrite the migration log.
+  await db.exec("alter table haazir_migrations enable row level security");
   let applied = new Set((await db.query<{ name: string }>("select name from haazir_migrations")).map((r) => r.name));
   if (applied.size === 0 && !fresh) {
     // Legacy database: infer what was applied before tracking existed.

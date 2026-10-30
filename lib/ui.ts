@@ -15,19 +15,20 @@ export const BED_LABEL: Record<string, string> = {
 
 export type Tone = "grey" | "blue" | "amber" | "green" | "green-cond" | "red" | "purple" | "slate" | "dark" | "orange" | "held";
 
-/** pin: map marker colour · badge: soft pill · dot: status dot · accent: thin left rule on the card */
+/** pin: map marker colour · badge: soft pill · dot: status dot · accent: thin left rule on the card.
+ *  Monochrome: tones differ by lightness and fill (darker and solid = needs the doctor more). Pins stay ≥ zinc-500 so the white label reads. */
 export const TONE: Record<Tone, { pin: string; badge: string; dot: string; accent: string }> = {
-  grey: { pin: "#a1a1aa", badge: "bg-zinc-100 text-zinc-700 ring-zinc-200", dot: "bg-zinc-400", accent: "bg-zinc-200" },
-  blue: { pin: "#0ea5e9", badge: "bg-sky-50 text-sky-700 ring-sky-200", dot: "bg-sky-500", accent: "bg-sky-400" },
-  amber: { pin: "#f59e0b", badge: "bg-amber-50 text-amber-800 ring-amber-200", dot: "bg-amber-500", accent: "bg-amber-400" },
-  green: { pin: "#10b981", badge: "bg-emerald-50 text-emerald-700 ring-emerald-200", dot: "bg-emerald-500", accent: "bg-emerald-500" },
-  "green-cond": { pin: "#10b981", badge: "bg-emerald-50 text-emerald-700 ring-emerald-200", dot: "bg-emerald-500", accent: "bg-emerald-500" },
-  red: { pin: "#f43f5e", badge: "bg-rose-50 text-rose-700 ring-rose-200", dot: "bg-rose-500", accent: "bg-rose-300" },
-  purple: { pin: "#8b5cf6", badge: "bg-violet-50 text-violet-700 ring-violet-200", dot: "bg-violet-500", accent: "bg-violet-500" },
-  slate: { pin: "#64748b", badge: "bg-slate-100 text-slate-700 ring-slate-200", dot: "bg-slate-500", accent: "bg-slate-300" },
-  dark: { pin: "#52525b", badge: "bg-zinc-100 text-zinc-600 ring-zinc-200", dot: "bg-zinc-500", accent: "bg-zinc-200" },
-  orange: { pin: "#f97316", badge: "bg-orange-50 text-orange-700 ring-orange-200", dot: "bg-orange-500", accent: "bg-orange-400" },
-  held: { pin: "#059669", badge: "bg-emerald-600 text-white ring-emerald-600", dot: "bg-white", accent: "bg-emerald-600" },
+  grey: { pin: "#a1a1aa", badge: "bg-zinc-100 text-zinc-600 ring-zinc-200", dot: "bg-zinc-300", accent: "bg-zinc-200" },
+  blue: { pin: "#71717a", badge: "bg-white text-zinc-700 ring-zinc-300", dot: "bg-zinc-400", accent: "bg-zinc-300" },
+  amber: { pin: "#52525b", badge: "bg-zinc-100 text-zinc-800 ring-zinc-300", dot: "bg-zinc-600", accent: "bg-zinc-500" },
+  green: { pin: "#18181b", badge: "bg-zinc-900 text-white ring-zinc-900", dot: "bg-zinc-900", accent: "bg-zinc-900" },
+  "green-cond": { pin: "#3f3f46", badge: "bg-zinc-700 text-white ring-zinc-700", dot: "bg-zinc-700", accent: "bg-zinc-700" },
+  red: { pin: "#a1a1aa", badge: "bg-zinc-50 text-zinc-500 ring-zinc-200", dot: "bg-zinc-300", accent: "bg-zinc-200" },
+  purple: { pin: "#27272a", badge: "bg-white text-zinc-900 ring-zinc-900", dot: "bg-zinc-900", accent: "bg-zinc-800" },
+  slate: { pin: "#71717a", badge: "bg-zinc-100 text-zinc-700 ring-zinc-200", dot: "bg-zinc-500", accent: "bg-zinc-300" },
+  dark: { pin: "#a1a1aa", badge: "bg-zinc-100 text-zinc-500 ring-zinc-200", dot: "bg-zinc-400", accent: "bg-zinc-200" },
+  orange: { pin: "#3f3f46", badge: "bg-white text-zinc-800 ring-zinc-500", dot: "bg-zinc-700", accent: "bg-zinc-600" },
+  held: { pin: "#000000", badge: "bg-black text-white ring-black", dot: "bg-white", accent: "bg-black" },
 };
 
 /** Icon keys rendered as line icons by components/ui.tsx (never emoji). */

@@ -1,3 +1,4 @@
+import { timingSafeEqual } from "node:crypto";
 import { NextResponse } from "next/server";
 import { errorResponse, handle, parseBody } from "@/lib/api";
 import { clientIp } from "@/lib/bolnaAuth";
@@ -61,7 +62,9 @@ export async function POST(req: Request) {
         : NextResponse.json({ ok: true }); // local development: no gate
     }
     if (await isThrottled([ipKey])) return throttled();
-    if (body.passcode.trim() !== expected) {
+    // Compare hashes, in constant time, so response timing says nothing about the passcode.
+    const given = Buffer.from(await gateToken(body.passcode.trim()));
+    if (!timingSafeEqual(given, Buffer.from(await gateToken(expected)))) {
       await recordFailure([ipKey]);
       return errorResponse(401, "WRONG_PASSCODE", "That passcode isn't right");
     }

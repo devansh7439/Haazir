@@ -34,19 +34,24 @@ export function LiveBoard({ initial }: { initial: ReferralView }) {
   const router = useRouter();
   const [view, setView] = useState(initial);
   // Server-minus-browser clock offset, so the timer is right even when the phone's clock is off.
-  const [skewMs, setSkewMs] = useState(() => new Date(initial.server_time).getTime() - Date.now());
-  const [nowMs, setNowMs] = useState(() => Date.now() + skewMs);
+  // A ref, not state: updating it on every refresh must not restart the 1 s timer.
+  const skewMs = useRef(new Date(initial.server_time).getTime() - Date.now());
+  const [nowMs, setNowMs] = useState(() => Date.now() + skewMs.current);
   const [announce, setAnnounce] = useState("");
   const [actionError, setActionError] = useState<string | null>(null);
   const [selecting, setSelecting] = useState<AttemptView | null>(null);
   const r = view.referral;
   const id = r.id;
 
+  // Tick, realtime and actions all refetch; only the newest request may update the view, so a slow older response can't roll it back.
+  const lastRequest = useRef(0);
   const refresh = useCallback(async () => {
+    const seq = ++lastRequest.current;
     const res = await fetch(`/api/referrals/${id}`, { cache: "no-store" });
     if (res.ok) {
       const next = (await res.json()) as ReferralView;
-      setSkewMs(new Date(next.server_time).getTime() - Date.now());
+      if (seq !== lastRequest.current) return;
+      skewMs.current = new Date(next.server_time).getTime() - Date.now();
       setView(next);
     }
   }, [id]);
@@ -61,9 +66,9 @@ export function LiveBoard({ initial }: { initial: ReferralView }) {
   }, [refresh]);
 
   useEffect(() => {
-    const t = setInterval(() => setNowMs(Date.now() + skewMs), 1000);
+    const t = setInterval(() => setNowMs(Date.now() + skewMs.current), 1000);
     return () => clearInterval(t);
-  }, [skewMs]);
+  }, []);
 
   // Tick: drives wave 2, callbacks, hold expiry and (when simulated) the scenario.
   const live = r.status !== "closed" && (r.status !== "cancelled" || view.attempts.some((a) => !TERMINAL.includes(a.status)));
@@ -166,22 +171,27 @@ export function LiveBoard({ initial }: { initial: ReferralView }) {
   const acceptedCount = displays.filter((d) => d.group === "accepted").length;
   const onLine = displays.filter((d) => d.group === "in_progress").length;
 
-  const pins: Pin[] = cards
-    .filter(({ a }) => a.facility_lat !== null && a.facility_lng !== null)
-    .map(({ a }) => {
-      const d = attemptDisplay(a, nowMs);
-      const held = r.selected_facility_id === a.facility_id && r.status === "confirmed";
-      return {
-        id: a.id,
-        lat: a.facility_lat!,
-        lng: a.facility_lng!,
-        label: String(a.rank ?? "•"),
-        color: held ? TONE.held.pin : TONE[d.tone].pin,
-        live: d.tone === "amber",
-        title: shortName(a.facility_name),
-        detail: `${a.eta_minutes ?? "?"} min · ${held ? "Bed held" : d.text}`,
-      };
-    });
+  // Pins don't depend on the 1 s clock (the on-call timer is dropped from the tooltip), so the map only re-renders when the data changes.
+  const pins = useMemo<Pin[]>(
+    () =>
+      cards
+        .filter(({ a }) => a.facility_lat !== null && a.facility_lng !== null)
+        .map(({ a }) => {
+          const d = attemptDisplay(a, 0);
+          const held = r.selected_facility_id === a.facility_id && r.status === "confirmed";
+          return {
+            id: a.id,
+            lat: a.facility_lat!,
+            lng: a.facility_lng!,
+            label: String(a.rank ?? "•"),
+            color: held ? TONE.held.pin : TONE[d.tone].pin,
+            live: d.tone === "amber",
+            title: shortName(a.facility_name),
+            detail: `${a.eta_minutes ?? "?"} min · ${held ? "Bed held" : d.text.replace(/ · \d+:\d+$/, "")}`,
+          };
+        }),
+    [cards, r.selected_facility_id, r.status],
+  );
 
   const grouped = GROUP_ORDER.map((g) => ({
     g,
@@ -714,7 +724,7 @@ function HoldPanel(props: {
             {showPreviews && (
               <div className="mt-3 grid gap-2 md:grid-cols-3">
                 {view.messages.map((m) => (
-                  <div key={m.audience + m.created_at} className="rounded-xl bg-[#efeae2] p-2">
+                  <div key={m.audience + m.created_at} className="rounded-xl bg-zinc-100 p-2">
                     <pre className="whitespace-pre-wrap rounded-lg rounded-tl-none bg-white p-2.5 font-sans text-xs leading-relaxed text-zinc-800 shadow-sm">{m.preview_redacted}</pre>
                   </div>
                 ))}

@@ -34,7 +34,9 @@ function perLanguage(text: string): Record<string, string> {
   return out;
 }
 
-export function parsePromptDoc(key: string, md: string): PromptDoc {
+export function parsePromptDoc(key: string, raw: string): PromptDoc {
+  // Git on Windows (core.autocrlf) checks the prompts out with CRLF; every parser below expects "\n".
+  const md = raw.replace(/\r\n/g, "\n");
   const title = (md.match(/^# (.*)$/m)?.[1] ?? key).trim();
   const systemPrompt = codeBlock(section(md, "System prompt"));
   if (!systemPrompt) throw new Error(`${key}: no System prompt code block`);

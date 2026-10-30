@@ -9,9 +9,10 @@
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
-    "db:setup": "tsx --conditions=react-server scripts/db-setup.ts",
-    "user:create": "tsx --conditions=react-server scripts/create-user.ts",
-    "bolna:agents": "tsx --conditions=react-server scripts/bolna-agents.ts"
+    "db:setup": "bun --conditions=react-server scripts/db-setup.ts",
+    "user:create": "bun --conditions=react-server scripts/create-user.ts",
+    "bolna:agents": "bun --conditions=react-server scripts/bolna-agents.ts",
+    "serve": "next build && next start"
   },
   "dependencies": {
     "@electric-sql/pglite": "^0.3.16",
@@ -39,8 +40,8 @@
     "eslint": "^9",
     "eslint-config-next": "15.5.28",
     "tailwindcss": "^4",
-    "tsx": "^4.23.15",
     "typescript": "^5",
     "vitest": "^3.2.7"
-  }
+  },
+  "packageManager": "bun@1.3.3"
 }

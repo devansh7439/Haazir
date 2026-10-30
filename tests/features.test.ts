@@ -162,6 +162,11 @@ describe("Bolna agent builder", () => {
     expect(avail.toolFiles).toHaveLength(3);
     expect(Object.keys(avail.welcome).sort()).toEqual(["en", "hi", "kn"]);
   });
+
+  it("parses a Windows (CRLF) checkout the same as LF", () => {
+    const lf = fs.readFileSync("bolna/prompts/availability.md", "utf8").replace(/\r\n/g, "\n");
+    expect(parsePromptDoc("availability", lf.replace(/\n/g, "\r\n"))).toEqual(parsePromptDoc("availability", lf));
+  });
 });
 
 describe("pitch and proof tooling", () => {

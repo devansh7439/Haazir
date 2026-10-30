@@ -9,7 +9,7 @@ import { one, q } from "./db";
 import { addEvent, addEventOnce } from "./events";
 import { ELIGIBLE_SQL, applyEtaCap, chooseContact, rankFacilities, type EligibleRow, type RankedFacility } from "./matching";
 import { bedRequestMessage, doctorConfirmation, familyMessage, preArrivalNote, type HandoffFacts } from "./messages";
-import { maskPhone, normalizePhone } from "./normalize";
+import { maskPhone, normalizePhone, redactNumbers } from "./normalize";
 import { checkPortalMismatch } from "./portal";
 import {
   AppError, casAttemptStatus, getAttempt, getAttempts, getCapabilities, getCaseTemplate, getContact,
@@ -423,7 +423,8 @@ export async function dispatchCall(
     await addEvent(r.id, "alert", {
       kind: err instanceof BolnaError && err.httpStatus === 429 ? "concurrency_or_activation" : "dispatch_failed",
       facility_id: attempt.facility_id,
-      message,
+      // A provider error can echo the number it dialled (for a family call, the attendant's).
+      message: redactNumbers(message),
     }, attempt.id);
     return false;
   }

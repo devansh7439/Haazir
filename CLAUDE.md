@@ -12,9 +12,10 @@ Next.js App Router + TypeScript (strict) · Tailwind + shadcn/ui · Supabase Pos
 
 ## Commands
 ```bash
-npm run db:setup     # apply supabase/migrations/* + seed to DATABASE_URL (pglite:./.data/pglite needs no setup)
-npm run dev          # local app on :3000
-npm run lint && npm run typecheck && npm test
+bun run db:setup     # apply supabase/migrations/* + seed to DATABASE_URL (pglite:./.data/pglite needs no setup)
+bun run dev          # local app on :3000 (dev mode is 6–12× slower than production)
+bun run serve        # production build + start: use for demos, rehearsals and latency checks
+bun run lint && bun run typecheck && bun run test   # not `bun test`: tests use vitest
 ngrok http 3000      # public URL for Bolna callbacks; put it in APP_BASE_URL and in the DEV agents
 ```
 
@@ -35,7 +36,7 @@ ngrok http 3000      # public URL for Bolna callbacks; put it in APP_BASE_URL an
 - `supabase/migrations/0002_guards.sql` adds unique indexes so concurrent `evaluateReferral` runs can't double-dispatch redials, releases or once-only events, plus a server-only `app_settings` table.
 - All timestamps come from `lib/clock.ts` (never SQL `now()`), so tests drive time.
 - **Organisations.** Every console route calls `requireSession()` and loads rows through `lib/scope.ts` (`referralFor`, `attemptFor`, `facilityFor`, `contactFor`); list queries filter by `s.org`. New tables that the console reads need an `org_id` (children inherit it by trigger; see migration 0003). Bolna, cron, WhatsApp and trigger routes authenticate with their own secrets or signatures.
-- Migrations are tracked in `haazir_migrations`; `npm run db:setup` (and the embedded DB on connect) applies only new files.
+- Migrations are tracked in `haazir_migrations`; `bun run db:setup` (and the embedded DB on connect) applies only new files.
 - `recoverStaleAttempts` (lib/handlers.ts) re-reads stuck calls from Bolna; `runCronTick` (lib/maintenance.ts) is the background loop.
 - **Safety rules added after a devil's-advocate review** (tests in `tests/adversarial.test.ts`): function routes only accept an id for the right kind of call; "accepted" with bed `none` goes to review; a yes after the patient is placed is released on the same call (`recordInCallRelease`); no TTFA after cancel/close; at most two redials or callbacks per hospital, then the doctor is asked to call; family-call transcripts and recordings are never stored; `parseBody` requires `application/json`; `createReferral` is idempotent on `client_request_id`.
 - Handlers return `{ instruction, followUp }`; routes run `followUp` with `after()`, the simulator awaits it.

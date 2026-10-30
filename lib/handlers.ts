@@ -4,7 +4,7 @@ import { getExecution, isSimulatedExecution } from "./bolna";
 import { addMinutes, now, secondsBetween } from "./clock";
 import { one, q } from "./db";
 import { addEvent } from "./events";
-import { clean, cleanParams, normalizeBedType, normalizeOutcome, normalizePhone, normalizeReferralCode, normalizeYesNo, parseMinutes } from "./normalize";
+import { clean, cleanParams, normalizeBedType, normalizeOutcome, normalizePhone, normalizeReferralCode, normalizeYesNo, parseMinutes, redactNumbers } from "./normalize";
 import {
   addContact, applyHoldResult, evaluateReferral, holdUnconfirmed, isAcceptance, markFirstAcceptance, recordInCallRelease, redial, loadCtx,
 } from "./orchestrator";
@@ -444,7 +444,7 @@ export async function handleWebhook(body: unknown, opts: { log?: boolean } = {})
     }, attempt.id);
     if (mapped.status === "failed") {
       await addEvent(attempt.referral_id, "alert", {
-        kind: "call_failed", facility_id: attempt.facility_id, message: clean(b.error_message) ?? "Call failed",
+        kind: "call_failed", facility_id: attempt.facility_id, message: redactNumbers(clean(b.error_message) ?? "Call failed"),
       }, attempt.id);
     }
     followUp = await reconcileOnTerminal(updated, b);

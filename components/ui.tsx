@@ -101,7 +101,7 @@ export function SectionTitle({ children, count, action }: { children: ReactNode;
 export function Logo({ compact }: { compact?: boolean }) {
   return (
     <span className="inline-flex items-center gap-2.5">
-      <span className="relative grid size-8 place-items-center rounded-[10px] bg-gradient-to-br from-brand-500 to-brand-700 shadow-[0_2px_8px_rgba(99,56,239,0.35)]">
+      <span className="relative grid size-8 place-items-center rounded-[10px] bg-gradient-to-br from-brand-500 to-brand-700 shadow-[0_2px_8px_rgba(24,24,27,0.3)]">
         <svg viewBox="0 0 24 24" className="size-[18px] text-white" fill="none" stroke="currentColor" strokeWidth={2.4} strokeLinecap="round" aria-hidden>
           <path d="M4 12h3l2-5 3 10 2.5-7 1.5 2H20" />
         </svg>

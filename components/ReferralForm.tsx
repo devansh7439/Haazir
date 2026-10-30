@@ -32,9 +32,9 @@ interface Preview {
 const FEATURED = ["snakebite_neuro", "head_injury", "stemi", "stroke", "preterm_newborn", "obstetric_bleed"];
 
 const ACUITY = [
-  { value: "critical", label: "Critical", dot: "bg-rose-500" },
-  { value: "serious", label: "Serious", dot: "bg-amber-500" },
-  { value: "stable", label: "Stable", dot: "bg-emerald-500" },
+  { value: "critical", label: "Critical", dot: "bg-zinc-900" },
+  { value: "serious", label: "Serious", dot: "bg-zinc-500" },
+  { value: "stable", label: "Stable", dot: "bg-zinc-300" },
 ] as const;
 
 function newRequestId(): string {

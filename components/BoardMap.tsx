@@ -2,7 +2,7 @@
 
 import "leaflet/dist/leaflet.css";
 import L from "leaflet";
-import { useEffect, useMemo } from "react";
+import { memo, useEffect, useMemo } from "react";
 import { MapContainer, Marker, TileLayer, Tooltip, useMap } from "react-leaflet";
 
 export interface MapPin {
@@ -16,13 +16,16 @@ export interface MapPin {
   detail: string;
 }
 
+// Same look, same icon object: Leaflet swaps a marker's DOM node whenever the icon changes identity, which restarts the pulse and drops hover.
+const iconCache = new Map<string, L.DivIcon>();
 function pinIcon(p: MapPin) {
-  return L.divIcon({
-    className: "",
-    html: `<div class="haazir-pin${p.live ? " haazir-pin-live" : ""}" style="width:28px;height:28px;background:${p.color}" aria-hidden="true">${p.label}</div>`,
-    iconSize: [28, 28],
-    iconAnchor: [14, 14],
-  });
+  const html = `<div class="haazir-pin${p.live ? " haazir-pin-live" : ""}" style="width:28px;height:28px;background:${p.color}" aria-hidden="true">${p.label}</div>`;
+  let icon = iconCache.get(html);
+  if (!icon) {
+    icon = L.divIcon({ className: "", html, iconSize: [28, 28], iconAnchor: [14, 14] });
+    iconCache.set(html, icon);
+  }
+  return icon;
 }
 
 const originIcon = L.divIcon({
@@ -43,7 +46,7 @@ function FitBounds({ points }: { points: Array<[number, number]> }) {
   return null;
 }
 
-export default function BoardMap({ origin, pins }: { origin: { lat: number; lng: number; name: string | null }; pins: MapPin[] }) {
+function BoardMap({ origin, pins }: { origin: { lat: number; lng: number; name: string | null }; pins: MapPin[] }) {
   const points = useMemo<Array<[number, number]>>(() => [[origin.lat, origin.lng], ...pins.map((p) => [p.lat, p.lng] as [number, number])], [origin, pins]);
   return (
     <MapContainer center={[origin.lat, origin.lng]} zoom={11} scrollWheelZoom={false} className="h-full w-full" attributionControl>
@@ -68,3 +71,5 @@ export default function BoardMap({ origin, pins }: { origin: { lat: number; lng:
     </MapContainer>
   );
 }
+
+export default memo(BoardMap);
