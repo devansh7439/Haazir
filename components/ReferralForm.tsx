@@ -82,7 +82,7 @@ export function ReferralForm(props: {
   const [radius, setRadius] = useState(40);
   const [showPatient, setShowPatient] = useState(false);
   const [patient, setPatient] = useState({ patient_name: "", attendant_name: "", attendant_phone: "", attendant_language: "en" });
-  const [simulate, setSimulate] = useState(props.defaultSimulate);
+  const [simulate, setSimulate] = useState(props.defaultSimulate || !props.bolnaReady);
   const [preview, setPreview] = useState<Preview | null>(null);
   const [previewError, setPreviewError] = useState<string | null>(null);
   const [loadingPreview, setLoadingPreview] = useState(false);
@@ -358,7 +358,7 @@ export function ReferralForm(props: {
           <label className="flex min-h-10 cursor-pointer items-center justify-between gap-3 rounded-lg border border-line bg-white px-3">
             <span className="text-sm font-medium text-zinc-800">Run as simulation</span>
             <span className="relative inline-flex items-center">
-              <input type="checkbox" checked={simulate} onChange={(e) => setSimulate(e.target.checked)} className="peer sr-only" />
+              <input type="checkbox" checked={simulate} disabled={!props.bolnaReady} onChange={(e) => setSimulate(e.target.checked)} className="peer sr-only" />
               <span className="h-6 w-10 rounded-full bg-zinc-200 transition peer-checked:bg-brand-600 peer-focus-visible:ring-4 peer-focus-visible:ring-brand-100" />
               <span className="absolute left-0.5 size-5 rounded-full bg-white shadow transition peer-checked:translate-x-4" />
             </span>

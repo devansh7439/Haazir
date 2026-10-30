@@ -33,7 +33,9 @@ const TERMINAL = ["completed", "no_answer", "busy", "failed", "canceled"];
 export function LiveBoard({ initial }: { initial: ReferralView }) {
   const router = useRouter();
   const [view, setView] = useState(initial);
-  const [nowMs, setNowMs] = useState(() => Date.now());
+  // Server-minus-browser clock offset, so the timer is right even when the phone's clock is off.
+  const [skewMs, setSkewMs] = useState(() => new Date(initial.server_time).getTime() - Date.now());
+  const [nowMs, setNowMs] = useState(() => Date.now() + skewMs);
   const [announce, setAnnounce] = useState("");
   const [actionError, setActionError] = useState<string | null>(null);
   const [selecting, setSelecting] = useState<AttemptView | null>(null);
@@ -42,7 +44,11 @@ export function LiveBoard({ initial }: { initial: ReferralView }) {
 
   const refresh = useCallback(async () => {
     const res = await fetch(`/api/referrals/${id}`, { cache: "no-store" });
-    if (res.ok) setView(await res.json());
+    if (res.ok) {
+      const next = (await res.json()) as ReferralView;
+      setSkewMs(new Date(next.server_time).getTime() - Date.now());
+      setView(next);
+    }
   }, [id]);
 
   const post: Post = useCallback(async (url, body) => {
@@ -55,9 +61,9 @@ export function LiveBoard({ initial }: { initial: ReferralView }) {
   }, [refresh]);
 
   useEffect(() => {
-    const t = setInterval(() => setNowMs(Date.now()), 1000);
+    const t = setInterval(() => setNowMs(Date.now() + skewMs), 1000);
     return () => clearInterval(t);
-  }, []);
+  }, [skewMs]);
 
   // Tick: drives wave 2, callbacks, hold expiry and (when simulated) the scenario.
   const live = r.status !== "closed" && (r.status !== "cancelled" || view.attempts.some((a) => !TERMINAL.includes(a.status)));
@@ -148,7 +154,9 @@ export function LiveBoard({ initial }: { initial: ReferralView }) {
   }, [cards]);
 
   const elapsed = (nowMs - new Date(r.created_at).getTime()) / 1000;
-  const endAt = r.closed_at ?? (r.status === "confirmed" ? r.confirmed_at : null);
+  // The timer stops when the search ends: bed confirmed, closed, cancelled or nobody accepted.
+  const endEvent = view.events.find((e) => e.type === "referral_cancelled" || e.type === "referral_exhausted");
+  const endAt = r.confirmed_at ?? r.closed_at ?? (["cancelled", "exhausted"].includes(r.status) ? endEvent?.created_at ?? null : null);
   const timerSeconds = endAt ? (new Date(endAt).getTime() - new Date(r.created_at).getTime()) / 1000 : elapsed;
   const ttfa = r.first_acceptance_at ? (new Date(r.first_acceptance_at).getTime() - new Date(r.created_at).getTime()) / 1000 : null;
 
@@ -246,7 +254,8 @@ export function LiveBoard({ initial }: { initial: ReferralView }) {
         </section>
 
         <div className="min-w-0 space-y-5">
-          {view.alerts.map((al) => (
+          {/* Once the referral is cancelled or closed, call-back prompts are noise; they stay in the activity feed. */}
+          {view.alerts.filter((al) => !["cancelled", "closed"].includes(r.status) || al.type === "alert").map((al) => (
             <AlertCallout key={al.event_id} alert={al} onDismiss={() => post(`/api/referrals/${id}/dismiss-alert`, { event_id: al.event_id })} />
           ))}
 

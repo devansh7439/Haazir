@@ -189,6 +189,13 @@ export async function createReferral(input: ReferralInput, opts: { simulate?: bo
     });
   }
   const simulated = !!opts.simulate || env.simulationMode;
+  if (!simulated && (!env.bolnaApiKey || !env.agentId("availability"))) {
+    throw new AppError(422, "BOLNA_NOT_CONFIGURED", "Live calls need BOLNA_API_KEY and BOLNA_AGENT_ID_AVAILABILITY. Run it as a simulation instead.");
+  }
+  const attendantPhone = input.patient?.attendant_phone ? normalizePhone(input.patient.attendant_phone) : null;
+  if (input.patient?.attendant_phone && !attendantPhone) {
+    throw new AppError(422, "INVALID_ATTENDANT_PHONE", "The attendant's phone number doesn't look right. Use a 10-digit mobile number.");
+  }
   const t = now();
   const referral = await one<Referral>(
     `insert into referrals
@@ -211,7 +218,7 @@ export async function createReferral(input: ReferralInput, opts: { simulate?: bo
     await q(
       `insert into patient_details (referral_id, patient_name, attendant_name, attendant_phone_e164, attendant_language, created_at)
        values ($1, $2, $3, $4, $5, $6)`,
-      [referral.id, pt.patient_name || null, pt.attendant_name || null, normalizePhone(pt.attendant_phone),
+      [referral.id, pt.patient_name || null, pt.attendant_name || null, attendantPhone,
        pt.attendant_language || "en", t],
     );
   }
@@ -485,7 +492,7 @@ const ACTIVE_REFERRAL = ["searching", "options_ready", "exhausted"];
 export async function evaluateReferral(id: string): Promise<string[]> {
   const actions: string[] = [];
   const r = await getReferral(id);
-  if (!r || r.status === "closed" || r.status === "draft") return actions;
+  if (!r || r.status === "draft" || (r.status === "closed" && r.close_reason === "test_call")) return actions;
   const attempts = await getAttempts(id);
   const avail = attempts.filter((a) => a.purpose === "availability");
   const accepted = avail.filter((a) => isAcceptance(a) && !a.needs_review);
@@ -495,11 +502,23 @@ export async function evaluateReferral(id: string): Promise<string[]> {
   const getCtx = async () => (ctx ??= await loadCtx(r));
 
   // Cancelled: release every hospital that said yes, including late answers.
-  if (r.status === "cancelled") {
-    for (const a of anyAcceptance.filter((x) => !hasRelease(x))) {
+  // Closed: the patient is placed; release anyone (except the chosen hospital) who said yes after that.
+  if (r.status === "cancelled" || r.status === "closed") {
+    const keep = r.status === "closed" ? r.selected_attempt_id : null;
+    for (const a of anyAcceptance.filter((x) => x.id !== keep && !hasRelease(x))) {
       if (await dispatchRelease(await getCtx(), a)) actions.push(`release:${a.facility_id}`);
     }
     return actions;
+  }
+
+  // 0. A hold call waits until the accepting call has ended, so it doesn't ring a desk that is still on the line.
+  if (r.status === "confirming") {
+    for (const h of attempts.filter((x) => x.purpose === "hold_confirm" && x.status === "queued" && !x.bolna_status)) {
+      const parent = attempts.find((x) => x.id === h.parent_attempt_id);
+      const lineFree = !parent || isTerminal(parent.status) || parent.status === "wrapping_up";
+      if (!lineFree && secondsBetween(h.created_at) < HOLD_WAIT_MAX_S) continue;
+      if (await dispatchHoldCall(await getCtx(), h)) actions.push("hold_call_dispatched");
+    }
   }
 
   // 1. First acceptance (sets TTFA once)
@@ -584,6 +603,28 @@ export async function markFirstAcceptance(r: Referral, attempt: Attempt): Promis
 // ============================================================ select, hold, handoff
 
 const SELECTABLE = ["options_ready", "searching", "exhausted"];
+/** Longest a hold call waits for the accepting call to end before dialling anyway. */
+const HOLD_WAIT_MAX_S = 90;
+
+function parentStillOnLine(a: Attempt): boolean {
+  return !isTerminal(a.status) && a.status !== "wrapping_up";
+}
+
+/** Dispatches a queued hold call exactly once (claimed by marking it, so concurrent evaluations can't both dial). */
+async function dispatchHoldCall(ctx: ReferralCtx, hold: Attempt): Promise<boolean> {
+  const claimed = await updateAttempt(hold.id, { bolna_status: "dispatching" }, { bolna_status: null, status: "queued" });
+  if (!claimed) return false;
+  const ok = await dispatchCall(ctx, claimed);
+  if (!ok) {
+    await updateReferral(ctx.referral.id, { status: "options_ready", selected_attempt_id: null, selected_facility_id: null }, ["confirming"]);
+    await addEvent(ctx.referral.id, "alert", {
+      kind: "hold_call_failed",
+      facility_id: hold.facility_id,
+      message: "Couldn't place the confirmation call. Call the desk, then use “I already confirmed by phone”.",
+    });
+  }
+  return ok;
+}
 
 export async function selectAttempt(referralId: string, attemptId: string, force = false) {
   const r = await getReferral(referralId);
@@ -617,16 +658,12 @@ export async function selectAttempt(referralId: string, attemptId: string, force
     to_number: a.to_number,
     call_language: a.call_language,
   });
-  const ok = hold ? await dispatchCall(await loadCtx(updated), hold) : false;
-  if (!ok) {
-    await updateReferral(r.id, { status: "options_ready", selected_attempt_id: null, selected_facility_id: null }, ["confirming"]);
-    await addEvent(r.id, "alert", {
-      kind: "hold_call_failed",
-      facility_id: a.facility_id,
-      message: "Couldn't place the confirmation call. Call the desk, then use “I already confirmed by phone”.",
-    });
-    return { status: "options_ready" as const, hold_attempt_id: hold?.id ?? null };
+  if (hold && parentStillOnLine(a)) {
+    await addEvent(r.id, "hold_call_waiting", { facility_id: a.facility_id }, hold.id);
+    return { status: "confirming" as const, hold_attempt_id: hold.id };
   }
+  const ok = hold ? await dispatchHoldCall(await loadCtx(updated), hold) : false;
+  if (!ok) return { status: "options_ready" as const, hold_attempt_id: hold?.id ?? null };
   return { status: "confirming" as const, hold_attempt_id: hold!.id };
 }
 
@@ -854,6 +891,9 @@ export async function closeReferral(referralId: string, reason: string, note: st
   await addEvent(r.id, "referral_closed", { reason });
 }
 
+/** When the doctor records "call back later" from their own call, Haazir calls back after this long. */
+const MANUAL_CALLBACK_MIN = 5;
+
 export interface ManualOutcome {
   outcome: Attempt["outcome"] & string;
   bed_type?: string | null;
@@ -876,6 +916,7 @@ export async function recordManualOutcome(attemptId: string, m: ManualOutcome) {
     contact_person: m.contact_person || null,
     conditions: m.conditions || null,
     decline_reason: m.decline_reason || null,
+    callback_due_at: m.outcome === "callback_later" ? addMinutes(now(), MANUAL_CALLBACK_MIN) : null,
     outcome_at: now(),
   });
   await addEvent(a.referral_id, "outcome_recorded", {
@@ -931,7 +972,8 @@ export { redial };
 export async function widenReferral(referralId: string, radiusKm: number) {
   const r = await getReferral(referralId);
   if (!r) throw new AppError(404, "NOT_FOUND", "Referral not found");
-  if (!["exhausted", "searching", "options_ready"].includes(r.status)) throw new AppError(409, "NOT_WIDENABLE", `Referral is ${r.status}`);
+  // Only once every call has finished, so no live call is left answering for a closed referral.
+  if (r.status !== "exhausted") throw new AppError(409, "NOT_WIDENABLE", "Widen the search once every hospital has answered");
   const patient = await one<{ patient_name: string | null; attendant_name: string | null; attendant_phone_e164: string | null; attendant_language: string }>(
     `select patient_name, attendant_name, attendant_phone_e164, attendant_language from patient_details where referral_id = $1`, [r.id],
   );

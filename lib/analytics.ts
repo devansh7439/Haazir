@@ -30,7 +30,8 @@ export async function hospitalStats(orgId: string, includeSimulated: boolean): P
             count(a.id) filter (where a.outcome in ('accepted','conditional'))::int as accepted,
             round(percentile_cont(0.5) within group (order by extract(epoch from (a.outcome_at - a.dispatched_at)))
                   filter (where a.outcome_at is not null and a.dispatched_at is not null))::int as median_answer_s,
-            (select count(*)::int from events e where e.type = 'portal_mismatch' and (e.payload->>'facility_id')::uuid = f.id) as mismatches,
+            (select count(*)::int from events e join referrals r2 on r2.id = e.referral_id
+             where e.type = 'portal_mismatch' and (e.payload->>'facility_id')::uuid = f.id and ($2 or not r2.is_simulated)) as mismatches,
             max(a.created_at) as last_called_at
      from facilities f
      left join call_attempts a on a.facility_id = f.id and a.purpose = 'availability'

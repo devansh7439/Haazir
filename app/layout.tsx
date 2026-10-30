@@ -3,6 +3,7 @@ import { AppShell } from "@/components/AppShell";
 import { env } from "@/lib/config";
 import { one } from "@/lib/db";
 import { getSession } from "@/lib/session";
+import { DEFAULT_ORG_ID } from "@/lib/types";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -28,7 +29,7 @@ async function currentUser() {
       name: s.name || strip(row?.name) || "Console",
       facility: strip(row?.facility),
       signOut: env.authMode === "users" || !!env.demoPasscode,
-      isAdmin: s.role === "admin",
+      showDemo: s.role === "admin" && s.org === DEFAULT_ORG_ID,
     };
   } catch {
     return null;

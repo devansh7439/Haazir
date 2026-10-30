@@ -271,8 +271,9 @@ async function reconcileAvailability(a: Attempt, body: Record<string, unknown>):
   if (exOutcome) await updateAttempt(a.id, { extraction_outcome: exOutcome });
 
   if (a.outcome) {
-    // A disagreement about whether the hospital said yes is never resolved automatically.
-    if (exOutcome && yes(a.outcome) !== yes(exOutcome)) {
+    // A disagreement about whether the hospital said yes is never resolved automatically,
+    // except that the doctor's own record (from talking to the desk) wins.
+    if (exOutcome && a.outcome_source !== "manual" && yes(a.outcome) !== yes(exOutcome)) {
       await updateAttempt(a.id, { needs_review: true });
       await addEvent(a.referral_id, "needs_review", {
         facility_id: a.facility_id, function_outcome: a.outcome, extraction_outcome: exOutcome,
@@ -333,7 +334,10 @@ async function reconcileOnTerminal(a: Attempt, body: Record<string, unknown>): P
     await updateAttempt(a.id, { outcome, outcome_source: "extraction", outcome_at: now() }, { outcome: null });
   }
   const fresh = await getAttempt(a.id);
-  await bumpContactStats(a.contact_id, !!fresh?.answered_at, fresh?.outcome ?? a.status);
+  // Simulated calls never count toward a desk's answer rate (it feeds the real ranking).
+  if (!isSimulatedExecution(a.bolna_execution_id)) {
+    await bumpContactStats(a.contact_id, !!fresh?.answered_at, fresh?.outcome ?? a.status);
+  }
   return followUp;
 }
 
@@ -446,6 +450,7 @@ export async function recoverStaleAttempts(referralId: string | null = null): Pr
     `select * from call_attempts
      where status in ('queued','dialing','ringing','in_progress','wrapping_up')
        and bolna_execution_id is not null
+       and bolna_execution_id not like 'sim\_%'
        and ($1::uuid is null or referral_id = $1)
        and (last_polled_at is null or last_polled_at < $2)
      order by updated_at limit 50`,

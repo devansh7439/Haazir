@@ -18,7 +18,11 @@ export async function parseBody<T>(req: Request, schema: ZodType<T, ZodTypeDef, 
   }
   const parsed = schema.safeParse(raw);
   if (!parsed.success) {
-    throw new AppError(422, "VALIDATION_FAILED", "Invalid request", { issues: parsed.error.issues });
+    // Name the first problem ("phone: too short") so the console can show something useful.
+    const first = parsed.error.issues[0];
+    const field = first?.path.filter((p) => typeof p === "string").join(".") || "request";
+    const message = first ? `${field.replace(/_/g, " ")}: ${first.message.replace(/^String must contain at least (\d+) character\(s\)$/, "too short (at least $1 characters)")}` : "Invalid request";
+    throw new AppError(422, "VALIDATION_FAILED", message, { issues: parsed.error.issues });
   }
   return parsed.data;
 }

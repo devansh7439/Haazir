@@ -18,7 +18,7 @@ interface ShellUser {
   name: string;
   facility: string | null;
   signOut: boolean;
-  isAdmin: boolean;
+  showDemo: boolean;
 }
 
 async function signOut() {
@@ -29,7 +29,7 @@ async function signOut() {
 export function AppShell(props: { children: ReactNode; user: ShellUser | null; mode: "live" | "simulation" }) {
   const pathname = usePathname();
   if (pathname === "/login") return <main className="min-h-screen">{props.children}</main>;
-  const nav = NAV.filter((n) => n.href !== "/demo" || props.user?.isAdmin);
+  const nav = NAV.filter((n) => n.href !== "/demo" || props.user?.showDemo);
   const initials = (props.user?.name ?? "Dr")
     .replace(/^Dr\.?\s*/i, "")
     .split(/\s+/)

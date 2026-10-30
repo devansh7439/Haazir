@@ -126,6 +126,7 @@ export async function migrate(db: Db, opts: { seed?: boolean } = {}): Promise<st
     const [legacy] = await db.query<{ app_settings: boolean; organisations: boolean }>(
       "select to_regclass('public.app_settings') is not null as app_settings, to_regclass('public.organisations') is not null as organisations",
     );
+    // 0004 and later were always tracked, so a legacy database never has them.
     const inferred = ["0001_init.sql", ...(legacy.app_settings ? ["0002_guards.sql"] : []), ...(legacy.organisations ? ["0003_orgs_and_reliability.sql"] : [])];
     for (const name of inferred) await db.query("insert into haazir_migrations (name) values ($1) on conflict do nothing", [name]);
     applied = new Set(inferred);
