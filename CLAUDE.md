@@ -35,7 +35,7 @@ ngrok http 3000      # public URL for Bolna callbacks; put it in APP_BASE_URL an
 - `supabase/migrations/0002_guards.sql` adds unique indexes so concurrent `evaluateReferral` runs can't double-dispatch redials, releases or once-only events, plus a server-only `app_settings` table.
 - All timestamps come from `lib/clock.ts` (never SQL `now()`), so tests drive time.
 - Handlers return `{ instruction, followUp }`; routes run `followUp` with `after()`, the simulator awaits it.
-- No shadcn/ui yet: plain Tailwind components in `components/` with the classes in `app/globals.css`.
+- No shadcn/ui: a small in-house design system instead. Tokens and component classes (`btn`, `card`, `input`, `chip`, `tag`) live in `app/globals.css` (violet `brand-*` accent, zinc neutrals, `line` hairline border, Inter). Primitives are in `components/ui.tsx` (`StatusPill`, `PageHeader`, `Stat`, `SectionTitle`, `Logo`), with `lucide-react` line icons. Never use emoji as icons; every status shows an icon or dot plus text.
 
 ## Bolna essentials
 - Base URL `https://api.bolna.ai`; header `Authorization: Bearer <BOLNA_API_KEY>`.

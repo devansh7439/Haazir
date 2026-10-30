@@ -1,5 +1,7 @@
+import { Plus } from "lucide-react";
 import Link from "next/link";
-import { REFERRAL_STATUS, mmss } from "@/lib/ui";
+import { PageHeader, ReferralStatusPill, SimBadge, Stat } from "@/components/ui";
+import { mmss } from "@/lib/ui";
 import { listReferrals } from "@/lib/view";
 
 export const dynamic = "force-dynamic";
@@ -14,48 +16,54 @@ function median(xs: number[]): number | null {
 export default async function HistoryPage() {
   const rows = await listReferrals(200);
   const real = rows.filter((r) => !r.is_simulated);
-  const realTtfa = median(real.map((r) => r.ttfa_seconds).filter((x): x is number => x !== null));
+  const realTtfas = real.map((r) => r.ttfa_seconds).filter((x): x is number => x !== null);
+  const realTtfa = median(realTtfas);
+  const confirmedTimes = real.map((r) => r.time_to_confirmed_seconds).filter((x): x is number => x !== null);
+  const totalCalls = real.reduce((n, r) => n + r.calls_total, 0);
+
   return (
-    <div className="space-y-4">
-      <div className="flex flex-wrap items-end gap-6">
-        <h1 className="text-2xl font-bold">History</h1>
-        <p className="text-slate-700">
-          Median time to first yes on real calls: <strong className="font-mono text-xl">{realTtfa !== null ? mmss(realTtfa) : "—"}</strong>{" "}
-          <span className="text-sm text-slate-500">({real.filter((r) => r.ttfa_seconds !== null).length} real referrals with a yes; simulations excluded)</span>
-        </p>
+    <div>
+      <PageHeader
+        title="Referrals"
+        description="Every referral with its time to first yes. Real calls only in the headline numbers; simulations are labelled."
+        actions={<Link href="/" className="btn btn-primary"><Plus aria-hidden className="size-4" /> New referral</Link>}
+      />
+      <div className="mb-6 grid grid-cols-2 gap-3 lg:grid-cols-4">
+        <Stat label="Median time to first yes" value={realTtfa !== null ? mmss(realTtfa) : "—"} hint={`${realTtfas.length} real referrals with a yes`} accent="green" />
+        <Stat label="Median time to confirmed bed" value={median(confirmedTimes) !== null ? mmss(median(confirmedTimes)!) : "—"} hint={`${confirmedTimes.length} confirmed`} />
+        <Stat label="Real referrals" value={real.length} hint={`${rows.length - real.length} simulated`} />
+        <Stat label="Calls per referral" value={real.length ? (totalCalls / real.length).toFixed(1) : "—"} hint="availability, hold and release" />
       </div>
       <div className="card overflow-x-auto">
-        <table className="w-full min-w-[640px] text-left text-sm">
-          <thead className="border-b border-slate-200 bg-slate-50 text-xs uppercase text-slate-600">
-            <tr>
-              <th className="p-3">Code</th>
-              <th className="p-3">Case</th>
-              <th className="p-3">Status</th>
-              <th className="p-3">First yes (TTFA)</th>
-              <th className="p-3">Time to confirmed bed</th>
-              <th className="p-3">Calls</th>
-              <th className="p-3">Started</th>
+        <table className="w-full min-w-[720px] text-left text-sm">
+          <thead>
+            <tr className="border-b border-line text-xs font-medium text-zinc-500">
+              <th className="px-5 py-3 font-medium">Referral</th>
+              <th className="px-5 py-3 font-medium">Case</th>
+              <th className="px-5 py-3 font-medium">Status</th>
+              <th className="px-5 py-3 text-right font-medium">First yes</th>
+              <th className="px-5 py-3 text-right font-medium">Bed confirmed</th>
+              <th className="px-5 py-3 text-right font-medium">Calls</th>
+              <th className="px-5 py-3 font-medium">Started</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-slate-100">
+          <tbody className="divide-y divide-line">
             {rows.map((r) => (
-              <tr key={r.id} className="hover:bg-slate-50">
-                <td className="p-3 font-mono font-bold">
-                  <Link className="text-blue-800 underline" href={`/referrals/${r.id}`}>{r.code}</Link>
-                  {r.is_simulated && <span className="ml-2 rounded bg-yellow-300 px-1.5 py-0.5 font-sans text-[10px] font-bold text-yellow-950">SIM</span>}
+              <tr key={r.id} className="group hover:bg-zinc-50/80">
+                <td className="px-5 py-3">
+                  <Link className="kbd-num font-medium text-zinc-900 group-hover:text-brand-700" href={`/referrals/${r.id}`}>{r.code}</Link>
+                  {r.is_simulated && <span className="ml-2 align-middle"><SimBadge /></span>}
                 </td>
-                <td className="p-3">{r.case_label} · {r.acuity}</td>
-                <td className="p-3">
-                  <span className={`rounded px-2 py-0.5 text-xs font-semibold ${REFERRAL_STATUS[r.status]?.className}`}>{REFERRAL_STATUS[r.status]?.text ?? r.status}</span>
-                </td>
-                <td className="p-3 font-mono">{r.ttfa_seconds !== null ? mmss(r.ttfa_seconds) : "—"}</td>
-                <td className="p-3 font-mono">{r.time_to_confirmed_seconds !== null ? mmss(r.time_to_confirmed_seconds) : "—"}</td>
-                <td className="p-3">{r.calls_total}</td>
-                <td className="p-3 text-slate-600">{new Date(r.created_at).toLocaleString("en-IN", { timeZone: "Asia/Kolkata" })}</td>
+                <td className="px-5 py-3 text-zinc-700">{r.case_label} <span className="text-zinc-400">· {r.acuity}</span></td>
+                <td className="px-5 py-3"><ReferralStatusPill status={r.status} size="sm" /></td>
+                <td className="kbd-num px-5 py-3 text-right text-zinc-900">{r.ttfa_seconds !== null ? mmss(r.ttfa_seconds) : "—"}</td>
+                <td className="kbd-num px-5 py-3 text-right text-zinc-700">{r.time_to_confirmed_seconds !== null ? mmss(r.time_to_confirmed_seconds) : "—"}</td>
+                <td className="kbd-num px-5 py-3 text-right text-zinc-700">{r.calls_total}</td>
+                <td className="px-5 py-3 text-zinc-500">{new Date(r.created_at).toLocaleString("en-IN", { timeZone: "Asia/Kolkata", day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}</td>
               </tr>
             ))}
             {rows.length === 0 && (
-              <tr><td className="p-6 text-slate-600" colSpan={7}>No referrals yet. Run one from New referral or the Demo page.</td></tr>
+              <tr><td className="px-5 py-12 text-center text-zinc-500" colSpan={7}>No referrals yet. Start one from New referral or the Demo console.</td></tr>
             )}
           </tbody>
         </table>

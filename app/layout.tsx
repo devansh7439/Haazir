@@ -1,5 +1,7 @@
 import type { Metadata, Viewport } from "next";
-import Link from "next/link";
+import { AppShell } from "@/components/AppShell";
+import { env } from "@/lib/config";
+import { one } from "@/lib/db";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -7,34 +9,29 @@ export const metadata: Metadata = {
   description: "Phones every capable hospital nearby at once and hands the doctor a confirmed bed.",
 };
 
-export const viewport: Viewport = { width: "device-width", initialScale: 1 };
+export const viewport: Viewport = { width: "device-width", initialScale: 1, themeColor: "#ffffff" };
 
-const NAV = [
-  { href: "/", label: "New referral" },
-  { href: "/history", label: "History" },
-  { href: "/facilities", label: "Facilities" },
-  { href: "/demo", label: "Demo" },
-];
+export const dynamic = "force-dynamic";
 
-export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
+async function currentDoctor() {
+  try {
+    const row = await one<{ name: string; facility: string | null }>(
+      `select r.name, f.name as facility from referrers r left join facilities f on f.id = r.facility_id order by r.created_at limit 1`,
+    );
+    return row ? { name: row.name.replace(/\s*\(Demo\)/i, ""), facility: row.facility?.replace(/\s*\(Demo\)/i, "") ?? null } : null;
+  } catch {
+    return null;
+  }
+}
+
+export default async function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
+  const live = !env.simulationMode && !!env.bolnaApiKey && !!env.agentId("availability");
   return (
     <html lang="en">
-      <body className="min-h-screen antialiased">
-        <header className="z-[1100] border-b sm:sticky sm:top-0 border-slate-200 bg-white/95 backdrop-blur">
-          <div className="mx-auto flex max-w-7xl flex-wrap items-center gap-x-6 gap-y-1 px-4 py-2">
-            <Link href="/" className="text-xl font-extrabold tracking-tight text-blue-800">
-              Haazir
-            </Link>
-            <nav aria-label="Main" className="flex flex-wrap gap-1 text-sm">
-              {NAV.map((n) => (
-                <Link key={n.href} href={n.href} className="rounded-md px-3 py-2 font-medium text-slate-700 hover:bg-slate-100">
-                  {n.label}
-                </Link>
-              ))}
-            </nav>
-          </div>
-        </header>
-        <main className="mx-auto max-w-7xl px-4 py-4">{children}</main>
+      <body className="min-h-screen">
+        <AppShell doctor={await currentDoctor()} mode={live ? "live" : "simulation"}>
+          {children}
+        </AppShell>
       </body>
     </html>
   );

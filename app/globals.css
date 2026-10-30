@@ -1,67 +1,138 @@
 @import "tailwindcss";
+@import "@fontsource-variable/inter";
 
-:root {
-  --background: #f8fafc;
-  --foreground: #0f172a;
-}
+/* Haazir console design tokens: light SaaS console, violet accent, zinc neutrals, hairline borders. */
+@theme {
+  --font-sans: "Inter Variable", ui-sans-serif, system-ui, -apple-system, "Segoe UI", "Noto Sans Kannada", "Noto Sans Devanagari", sans-serif;
+  --font-mono: ui-monospace, "SF Mono", "JetBrains Mono", Menlo, monospace;
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Noto Sans", "Noto Sans Kannada",
-    "Noto Sans Devanagari", sans-serif;
+  --color-brand-50: #f4f1ff;
+  --color-brand-100: #ebe5ff;
+  --color-brand-200: #d7ccff;
+  --color-brand-300: #b7a4ff;
+  --color-brand-400: #9476ff;
+  --color-brand-500: #7650fa;
+  --color-brand-600: #6338ef;
+  --color-brand-700: #5329cf;
+  --color-brand-800: #4423a6;
+  --color-brand-900: #2d1a6b;
+
+  --color-canvas: #f7f7f9;
+  --color-line: #e8e8ec;
 }
 
 html {
   font-size: 16px;
+  -webkit-font-smoothing: antialiased;
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
+  background: var(--color-canvas);
+  color: var(--color-zinc-900);
   font-family: var(--font-sans);
+  font-feature-settings: "cv11", "ss01";
 }
 
-/* 44 px tap targets for buttons and links styled as buttons */
-.btn {
-  @apply inline-flex min-h-11 items-center justify-center gap-2 rounded-lg px-4 font-semibold transition-colors focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-blue-600 disabled:cursor-not-allowed disabled:opacity-50;
+::selection {
+  background: var(--color-brand-100);
 }
-.btn-primary {
-  @apply bg-blue-700 text-white hover:bg-blue-800;
-}
-.btn-secondary {
-  @apply border border-slate-300 bg-white text-slate-900 hover:bg-slate-50;
-}
-.btn-danger {
-  @apply border border-red-300 bg-white text-red-800 hover:bg-red-50;
-}
-.btn-call {
-  @apply bg-green-700 text-white hover:bg-green-800;
-}
-.chip {
-  @apply inline-flex min-h-11 items-center gap-1 rounded-full border px-3 text-sm font-medium focus-visible:outline-3 focus-visible:outline-blue-600;
-}
-.input {
-  @apply min-h-11 w-full rounded-lg border border-slate-300 bg-white px-3 text-base text-slate-900 focus:border-blue-600 focus:outline-2 focus:outline-blue-600;
-}
-.label {
-  @apply mb-1 block text-sm font-semibold text-slate-700;
-}
-.card {
-  @apply rounded-xl border border-slate-200 bg-white shadow-sm;
+
+@layer components {
+  .btn {
+    @apply inline-flex min-h-11 select-none items-center justify-center gap-2 whitespace-nowrap rounded-lg px-3.5 text-sm font-medium transition
+      focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-500 disabled:pointer-events-none disabled:opacity-45 sm:min-h-10;
+  }
+  .btn-primary {
+    @apply bg-brand-600 text-white shadow-[0_1px_2px_rgba(16,24,40,0.08),inset_0_1px_0_rgba(255,255,255,0.12)] hover:bg-brand-700;
+  }
+  .btn-secondary {
+    @apply border border-line bg-white text-zinc-800 shadow-[0_1px_2px_rgba(16,24,40,0.04)] hover:border-zinc-300 hover:bg-zinc-50;
+  }
+  .btn-ghost {
+    @apply text-zinc-600 hover:bg-zinc-100 hover:text-zinc-900;
+  }
+  .btn-danger {
+    @apply border border-rose-200 bg-white text-rose-600 hover:bg-rose-50;
+  }
+  .btn-success {
+    @apply bg-emerald-600 text-white shadow-[0_1px_2px_rgba(16,24,40,0.08)] hover:bg-emerald-700;
+  }
+  .btn-lg {
+    @apply min-h-12 px-5 text-[15px];
+  }
+  .card {
+    @apply rounded-2xl border border-line bg-white shadow-[0_1px_2px_rgba(16,24,40,0.04)];
+  }
+  .input {
+    @apply min-h-11 w-full rounded-lg border border-line bg-white px-3 text-sm text-zinc-900 shadow-[0_1px_2px_rgba(16,24,40,0.03)] transition
+      placeholder:text-zinc-400 hover:border-zinc-300 focus:border-brand-400 focus:outline-none focus:ring-4 focus:ring-brand-100 sm:min-h-10;
+  }
+  .label {
+    @apply mb-1.5 block text-[13px] font-medium text-zinc-700;
+  }
+  .eyebrow {
+    @apply text-xs font-medium text-zinc-500;
+  }
+  .chip {
+    @apply inline-flex min-h-10 items-center gap-1.5 rounded-full border px-3.5 text-sm font-medium transition focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-500 sm:min-h-9;
+  }
+  .chip-off {
+    @apply border-line bg-white text-zinc-700 hover:border-zinc-300 hover:bg-zinc-50;
+  }
+  .chip-on {
+    @apply border-brand-300 bg-brand-50 text-brand-800;
+  }
+  .tag {
+    @apply inline-flex items-center gap-1 rounded-md bg-zinc-100 px-1.5 py-0.5 text-xs font-medium text-zinc-600;
+  }
+  .kbd-num {
+    @apply tabular-nums tracking-tight;
+  }
 }
 
 .leaflet-container {
   font-family: var(--font-sans);
+  background: #eef0f3;
+}
+.leaflet-tooltip {
+  border-radius: 8px;
+  border: 1px solid var(--color-line);
+  box-shadow: 0 4px 16px rgba(16, 24, 40, 0.08);
+  font-size: 12px;
 }
 .haazir-pin {
   display: flex;
   align-items: center;
   justify-content: center;
   border-radius: 9999px;
-  border: 2px solid white;
+  border: 2.5px solid white;
   color: white;
-  font-weight: 700;
-  font-size: 13px;
-  box-shadow: 0 1px 4px rgb(0 0 0 / 0.4);
+  font-weight: 600;
+  font-size: 12px;
+  box-shadow: 0 2px 6px rgb(16 24 40 / 0.25);
+}
+.haazir-pin-live {
+  animation: haazir-pulse 1.6s ease-out infinite;
+}
+@keyframes haazir-pulse {
+  0% { box-shadow: 0 0 0 0 rgb(245 158 11 / 0.55), 0 2px 6px rgb(16 24 40 / 0.25); }
+  100% { box-shadow: 0 0 0 12px rgb(245 158 11 / 0), 0 2px 6px rgb(16 24 40 / 0.25); }
+}
+@keyframes haazir-ping {
+  75%, 100% { transform: scale(2.2); opacity: 0; }
+}
+.live-dot::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: 9999px;
+  background: inherit;
+  animation: haazir-ping 1.4s cubic-bezier(0, 0, 0.2, 1) infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  .haazir-pin-live, .live-dot::after { animation: none; }
+}
+/* Calm, slightly desaturated basemap so status pins carry the colour. */
+.haazir-tiles {
+  filter: saturate(0.35) contrast(0.95) brightness(1.03);
 }

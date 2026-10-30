@@ -11,7 +11,7 @@ export interface MapPin {
   lng: number;
   label: string;
   color: string;
-  icon: string;
+  live?: boolean;
   title: string;
   detail: string;
 }
@@ -19,17 +19,17 @@ export interface MapPin {
 function pinIcon(p: MapPin) {
   return L.divIcon({
     className: "",
-    html: `<div class="haazir-pin" style="width:30px;height:30px;background:${p.color}" aria-hidden="true">${p.label}</div>`,
-    iconSize: [30, 30],
-    iconAnchor: [15, 15],
+    html: `<div class="haazir-pin${p.live ? " haazir-pin-live" : ""}" style="width:28px;height:28px;background:${p.color}" aria-hidden="true">${p.label}</div>`,
+    iconSize: [28, 28],
+    iconAnchor: [14, 14],
   });
 }
 
 const originIcon = L.divIcon({
   className: "",
-  html: `<div class="haazir-pin" style="width:34px;height:34px;background:#0f172a;font-size:18px" aria-hidden="true">⌂</div>`,
-  iconSize: [34, 34],
-  iconAnchor: [17, 17],
+  html: `<div class="haazir-pin" style="width:32px;height:32px;background:#18181b" aria-hidden="true"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M3 10.5 12 3l9 7.5"/><path d="M5 9.5V21h14V9.5"/></svg></div>`,
+  iconSize: [32, 32],
+  iconAnchor: [16, 16],
 });
 
 function FitBounds({ points }: { points: Array<[number, number]> }) {
@@ -50,6 +50,7 @@ export default function BoardMap({ origin, pins }: { origin: { lat: number; lng:
       <TileLayer
         attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
         url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+        className="haazir-tiles"
       />
       <FitBounds points={points} />
       <Marker position={[origin.lat, origin.lng]} icon={originIcon} title={origin.name ?? "Referring centre"}>
@@ -60,7 +61,7 @@ export default function BoardMap({ origin, pins }: { origin: { lat: number; lng:
           <Tooltip>
             <strong>{p.label}. {p.title}</strong>
             <br />
-            {p.icon} {p.detail}
+            {p.detail}
           </Tooltip>
         </Marker>
       ))}
