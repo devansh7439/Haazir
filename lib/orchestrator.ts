@@ -525,7 +525,7 @@ export async function markFirstAcceptance(r: Referral, attempt: Attempt): Promis
   if (!updated) return false;
   await addEventOnce(r.id, "options_ready", {
     facility_id: attempt.facility_id,
-    ttfa_seconds: Math.round((at.getTime() - new Date(r.created_at).getTime()) / 1000),
+    ttfa_seconds: Math.floor((at.getTime() - new Date(r.created_at).getTime()) / 1000),
   }, attempt.id);
   return true;
 }
@@ -841,3 +841,36 @@ export async function addContact(facilityId: string | null, phone: string, role:
 }
 
 export { redial };
+
+/** "Widen to 80 km and try again": a new referral with the same case (and patient details), the old one closed. */
+export async function widenReferral(referralId: string, radiusKm: number) {
+  const r = await getReferral(referralId);
+  if (!r) throw new AppError(404, "NOT_FOUND", "Referral not found");
+  if (!["exhausted", "searching", "options_ready"].includes(r.status)) throw new AppError(409, "NOT_WIDENABLE", `Referral is ${r.status}`);
+  const patient = await one<{ patient_name: string | null; attendant_name: string | null; attendant_phone_e164: string | null; attendant_language: string }>(
+    `select patient_name, attendant_name, attendant_phone_e164, attendant_language from patient_details where referral_id = $1`, [r.id],
+  );
+  const created = await createReferral(
+    {
+      referrer_id: r.referrer_id,
+      case_type: r.case_type,
+      required_capabilities: r.required_capabilities,
+      acuity: r.acuity,
+      age_value: r.age_value,
+      age_unit: r.age_unit,
+      sex: r.sex,
+      note: r.note,
+      transport: r.transport as ReferralInput["transport"],
+      search_radius_km: Math.max(radiusKm, r.search_radius_km + 1),
+      origin_lat: r.origin_lat,
+      origin_lng: r.origin_lng,
+      patient: patient
+        ? { patient_name: patient.patient_name, attendant_name: patient.attendant_name, attendant_phone: patient.attendant_phone_e164, attendant_language: patient.attendant_language }
+        : undefined,
+    },
+    { simulate: r.is_simulated },
+  );
+  await updateReferral(r.id, { status: "closed", closed_at: now(), close_reason: `widened to ${radiusKm} km: ${created.referral.code}` });
+  await addEvent(r.id, "referral_closed", { reason: "widened", next_referral_id: created.referral.id });
+  return created.referral;
+}

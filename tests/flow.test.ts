@@ -59,7 +59,7 @@ describe("matching on seed data", () => {
       "Tamarind", "Banyan", "Neem", "Jasmine", "Mango", "Lotus",
     ]);
     expect(ranked.map((r) => r.eta_minutes)).toEqual([18, 35, 37, 46, 55, 74]);
-    expect(ranked[0].rank_reasons).toEqual(["18 min away", "has ICU bed + Ventilator"]);
+    expect(ranked[0].rank_reasons).toEqual(["18 min away", "has ICU bed + ventilator"]);
     // Banyan's IVR reception line is never chosen over its direct casualty desk.
     expect(ranked[1].contact?.is_ivr).toBe(false);
   });

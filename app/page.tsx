@@ -1,103 +1,62 @@
-import Image from "next/image";
+import Link from "next/link";
+import { ReferralForm } from "@/components/ReferralForm";
+import { env } from "@/lib/config";
+import { one, q } from "@/lib/db";
+import type { Capability, CaseTemplate } from "@/lib/types";
+import { REFERRAL_STATUS, mmss } from "@/lib/ui";
+import { listReferrals } from "@/lib/view";
 
-export default function Home() {
+export const dynamic = "force-dynamic";
+
+export default async function NewReferralPage() {
+  const [templates, capabilities, referrer, recent] = await Promise.all([
+    q<CaseTemplate>(`select * from case_templates order by case when case_type = 'other' then 1 else 0 end, label`),
+    q<Capability>(`select * from capabilities order by category, label`),
+    one<{ id: string; name: string; facility_name: string | null }>(
+      `select r.id, r.name, f.name as facility_name from referrers r left join facilities f on f.id = r.facility_id
+       order by r.created_at limit 1`,
+    ),
+    listReferrals(8),
+  ]);
+  const bolnaReady = !!env.bolnaApiKey && !!env.agentId("availability");
+
+  if (!referrer) {
+    return <p className="card p-6">No referring doctor is set up. Run the seed (see README).</p>;
+  }
+
   return (
-    <div className="font-sans grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20">
-      <main className="flex flex-col gap-[32px] row-start-2 items-center sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={180}
-          height={38}
-          priority
-        />
-        <ol className="font-mono list-inside list-decimal text-sm/6 text-center sm:text-left">
-          <li className="mb-2 tracking-[-.01em]">
-            Get started by editing{" "}
-            <code className="bg-black/[.05] dark:bg-white/[.06] font-mono font-semibold px-1 py-0.5 rounded">
-              app/page.tsx
-            </code>
-            .
-          </li>
-          <li className="tracking-[-.01em]">
-            Save and see your changes instantly.
-          </li>
-        </ol>
-
-        <div className="flex gap-4 items-center flex-col sm:flex-row">
-          <a
-            className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-foreground text-background gap-2 hover:bg-[#383838] dark:hover:bg-[#ccc] font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:w-auto"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
-            />
-            Deploy now
-          </a>
-          <a
-            className="rounded-full border border-solid border-black/[.08] dark:border-white/[.145] transition-colors flex items-center justify-center hover:bg-[#f2f2f2] dark:hover:bg-[#1a1a1a] hover:border-transparent font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 w-full sm:w-auto md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Read our docs
-          </a>
-        </div>
-      </main>
-      <footer className="row-start-3 flex gap-[24px] flex-wrap items-center justify-center">
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/file.svg"
-            alt="File icon"
-            width={16}
-            height={16}
-          />
-          Learn
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
-          />
-          Examples
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
-          />
-          Go to nextjs.org →
-        </a>
-      </footer>
+    <div className="space-y-6">
+      <p className="text-sm text-slate-600">
+        {referrer.name.replace(" (Demo)", "")}
+        {referrer.facility_name ? `, ${referrer.facility_name.replace(" (Demo)", "")}` : ""}
+      </p>
+      <ReferralForm
+        referrerId={referrer.id}
+        templates={templates}
+        capabilities={capabilities}
+        defaultSimulate={env.simulationMode || !bolnaReady}
+        bolnaReady={bolnaReady && !env.simulationMode}
+      />
+      {recent.length > 0 && (
+        <section aria-labelledby="recent-h" className="card p-4">
+          <h2 id="recent-h" className="mb-2 text-sm font-bold uppercase tracking-wide text-slate-500">Recent referrals</h2>
+          <ul className="divide-y divide-slate-100">
+            {recent.map((r) => (
+              <li key={r.id}>
+                <Link href={`/referrals/${r.id}`} className="flex flex-wrap items-center gap-x-3 gap-y-1 py-2 hover:bg-slate-50">
+                  <span className="font-mono font-bold">{r.code}</span>
+                  <span>{r.case_label}</span>
+                  <span className={`rounded px-2 py-0.5 text-xs font-semibold ${REFERRAL_STATUS[r.status]?.className}`}>
+                    {REFERRAL_STATUS[r.status]?.text ?? r.status}
+                  </span>
+                  {r.ttfa_seconds !== null && <span className="text-sm text-slate-600">First yes {mmss(r.ttfa_seconds)}</span>}
+                  {r.is_simulated && <span className="rounded bg-yellow-300 px-2 py-0.5 text-xs font-bold text-yellow-950">SIMULATED</span>}
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
     </div>
   );
 }

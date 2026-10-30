@@ -12,6 +12,7 @@ Next.js App Router + TypeScript (strict) · Tailwind + shadcn/ui · Supabase Pos
 
 ## Commands
 ```bash
+npm run db:setup     # apply supabase/migrations/* + seed to DATABASE_URL (pglite:./.data/pglite needs no setup)
 npm run dev          # local app on :3000
 npm run lint && npm run typecheck && npm test
 ngrok http 3000      # public URL for Bolna callbacks; put it in APP_BASE_URL and in the DEV agents
@@ -28,6 +29,13 @@ ngrok http 3000      # public URL for Bolna callbacks; put it in APP_BASE_URL an
 8. Simulation runs through the **same handlers** as real webhooks and functions (`lib/simulator.ts`), with `outcome_source = 'simulation'`.
 9. Validate every route body with zod.
 10. Never record `accepted` from ambiguous data. When the function result and extraction disagree, set `needs_review`.
+
+## Decisions made while building (differences from the pack)
+- **Server data access is raw SQL** through `lib/db.ts` (`DATABASE_URL`: Supabase pooler, any Postgres, or `pglite:` for tests and zero-setup dev). The browser uses Supabase only for Realtime (anon key). Reason: the tested eligibility query and the atomic wave claim run unchanged, and integration tests run on a real Postgres.
+- `supabase/migrations/0002_guards.sql` adds unique indexes so concurrent `evaluateReferral` runs can't double-dispatch redials, releases or once-only events, plus a server-only `app_settings` table.
+- All timestamps come from `lib/clock.ts` (never SQL `now()`), so tests drive time.
+- Handlers return `{ instruction, followUp }`; routes run `followUp` with `after()`, the simulator awaits it.
+- No shadcn/ui yet: plain Tailwind components in `components/` with the classes in `app/globals.css`.
 
 ## Bolna essentials
 - Base URL `https://api.bolna.ai`; header `Authorization: Bearer <BOLNA_API_KEY>`.
@@ -50,6 +58,9 @@ ngrok http 3000      # public URL for Bolna callbacks; put it in APP_BASE_URL an
 | `lib/matching.ts` | Eligibility SQL plus scoring (`docs/02-architecture.md` §7) |
 | `lib/statusMap.ts` | Bolna → internal status, monotonic ranks |
 | `lib/summary.ts` | Spoken summary and identifier guard |
+| `lib/handlers.ts` | Webhook + function logic shared by routes and the simulator |
+| `lib/simulator.ts` | Scenario replay through the handlers |
+| `lib/view.ts` | Browser-safe referral view (no identifiers, redacted message previews) |
 
 ## Tests to write first
 - `summary.ts`: the krait-bite example produces exactly the string in `docs/02-architecture.md` §8; a note with 10 digits is rejected.

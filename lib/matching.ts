@@ -46,7 +46,9 @@ export function scoreFacility(row: EligibleRow, contact: Contact | null): number
 
 export function rankReasons(row: EligibleRow, contact: Contact | null, needLabels: string[]): string[] {
   const reasons = [`${row.eta_minutes} min away`];
-  if (needLabels.length) reasons.push(`has ${needLabels.join(" + ")}`);
+  // "Ventilator" → "ventilator", but keep "ICU bed" and "CT scan" as written.
+  const words = needLabels.map((l) => (/^[A-Z][a-z]/.test(l) ? l[0].toLowerCase() + l.slice(1) : l));
+  if (words.length) reasons.push(`has ${words.join(" + ")}`);
   if (row.answered >= 3) reasons.push(`accepted ${row.accepted} of ${row.answered} recent`);
   if (contact?.is_ivr) reasons.push("IVR line only");
   return reasons;

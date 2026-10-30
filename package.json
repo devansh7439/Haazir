@@ -9,7 +9,7 @@
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
-    "db:setup": "tsx scripts/db-setup.ts"
+    "db:setup": "tsx --conditions=react-server scripts/db-setup.ts"
   },
   "dependencies": {
     "@electric-sql/pglite": "^0.3.16",
