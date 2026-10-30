@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { handle } from "@/lib/api";
+import { handle } from "@/lib/core/route";
 import { recoverStaleAttempts } from "@/lib/handlers";
 import { evaluateReferral } from "@/lib/orchestrator";
 import { getReferral } from "@/lib/repo";

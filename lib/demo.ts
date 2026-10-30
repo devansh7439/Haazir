@@ -1,14 +1,15 @@
 import "server-only";
-import { env } from "./config";
-import { now } from "./clock";
-import { getDb, one, q, readSql } from "./db";
-import { addEvent } from "./events";
-import { lastBolnaContact } from "./handlers";
-import { normalizePhone } from "./normalize";
-import { createReferral, dispatchCall, loadCtx, previewReferral, type ReferralInput } from "./orchestrator";
-import { AppError, getFacility, getSetting, insertAttempt, setSetting } from "./repo";
-import { scenario } from "./simulator";
-import type { Referral } from "./types";
+import { env } from "@/lib/core/config";
+import { now } from "@/lib/core/clock";
+import { getDb, one, q, readSql } from "@/lib/core/db";
+import { addEvent } from "@/lib/events";
+import { lastBolnaContact } from "@/lib/handlers";
+import { normalizePhone } from "@/lib/core/normalize";
+import { createReferral, dispatchCall, loadCtx, previewReferral, type ReferralInput } from "@/lib/orchestrator";
+import { getFacility, getSetting, insertAttempt, setSetting } from "@/lib/repo";
+import { scenario } from "@/lib/simulator";
+import type { Referral } from "@/lib/core/types";
+import { ApiError } from "@/lib/core/error";
 
 // Demo control panel (docs/04-api-spec.md §2.12, docs/06-ui-spec.md §4).
 
@@ -85,7 +86,7 @@ export async function demoStatus() {
 
 function phoneOrThrow(raw: string, label: string): string {
   const p = normalizePhone(raw);
-  if (!p) throw new AppError(422, "BAD_NUMBER", `${label}: not a valid phone number`);
+  if (!p) throw ApiError.unprocessable("BAD_NUMBER", `${label}: not a valid phone number`);
   return p;
 }
 
@@ -96,7 +97,7 @@ export async function assignNumbers(b: {
 }) {
   for (const a of b.assignments) {
     const f = await getFacility(a.facility_id);
-    if (!f?.is_demo) throw new AppError(422, "NOT_DEMO", "Only demo facilities can be reassigned here");
+    if (!f?.is_demo) throw ApiError.unprocessable("NOT_DEMO", "Only demo facilities can be reassigned here");
     if (a.phone) {
       const phone = phoneOrThrow(a.phone, f.name);
       const primary = await one<{ id: string; phone_e164: string }>(
@@ -134,12 +135,12 @@ export async function runDemoReferral(simulate: boolean): Promise<Referral> {
 /** One availability call with the fictional demo summary, to rehearse a phone (or a consented real desk). */
 export async function testCall(facilityId: string, consentedTest: boolean) {
   const facility = await getFacility(facilityId);
-  if (!facility) throw new AppError(404, "NOT_FOUND", "Facility not found");
+  if (!facility) throw ApiError.notFound("Facility not found");
   const contact = await one<{ id: string; phone_e164: string }>(
     `select id, phone_e164 from facility_contacts where facility_id = $1 and active order by is_ivr, priority limit 1`,
     [facilityId],
   );
-  if (!contact) throw new AppError(422, "NO_CONTACT", "This hospital has no active number");
+  if (!contact) throw ApiError.unprocessable("NO_CONTACT", "This hospital has no active number");
   const input = structuredClone(scenario.referral) as unknown as ReferralInput;
   // A closed carrier referral: evaluateReferral ignores it, so a test call never opens waves or holds.
   const t = now();
@@ -153,7 +154,7 @@ export async function testCall(facilityId: string, consentedTest: boolean) {
     [input.referrer_id, input.case_type, input.acuity, input.age_value, input.age_unit, input.sex, input.note,
      input.required_capabilities, env.simulationMode, t, (await previewReferral(input)).spoken_summary],
   );
-  if (!r) throw new AppError(500, "INSERT_FAILED", "Could not create the test call");
+  if (!r) throw ApiError.internal("INSERT_FAILED", "Could not create the test call");
   const attempt = await insertAttempt({
     referral_id: r.id,
     facility_id: facility.id,

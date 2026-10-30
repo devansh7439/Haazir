@@ -1,9 +1,9 @@
 import { NextResponse, after } from "next/server";
 import { timingSafeEqual } from "node:crypto";
-import { env } from "@/lib/config";
-import { addMinutes, now } from "@/lib/clock";
-import { one } from "@/lib/db";
-import { normalizePhone } from "@/lib/normalize";
+import { env } from "@/lib/core/config";
+import { addMinutes, now } from "@/lib/core/clock";
+import { one } from "@/lib/core/db";
+import { normalizePhone } from "@/lib/core/normalize";
 import { dispatchFamilyCall } from "@/lib/orchestrator";
 import { getReferral } from "@/lib/repo";
 

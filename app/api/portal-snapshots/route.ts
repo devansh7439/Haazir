@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { handle, parseBody } from "@/lib/api";
+import { handle, parseBody } from "@/lib/core/route";
 import { addSnapshots, latestSnapshots } from "@/lib/portal";
 import { requireSession } from "@/lib/session";
 

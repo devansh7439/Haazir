@@ -1,9 +1,9 @@
 import { NextResponse } from "next/server";
-import { handle } from "@/lib/api";
-import { now } from "@/lib/clock";
+import { handle } from "@/lib/core/route";
+import { now } from "@/lib/core/clock";
 import { addSnapshots } from "@/lib/portal";
 import { requireDemoAdmin } from "@/lib/session";
-import { DEFAULT_ORG_ID } from "@/lib/types";
+import { DEFAULT_ORG_ID } from "@/lib/core/types";
 
 // Loads fictional portal readings for the demo story: Neem's portal row says ICU beds are free (its desk will say full),
 // and Banyan's says none (its desk will say yes). Both show up as "portal vs desk" flags.

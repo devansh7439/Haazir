@@ -4,7 +4,7 @@ import { AudioLines, ChevronDown, Info, Loader2, Lock, MapPin, ShieldCheck, Spar
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import type { ParsedIntake } from "@/lib/intakeParse";
-import type { Capability, CaseTemplate } from "@/lib/types";
+import type { Capability, CaseTemplate } from "@/lib/core/types";
 import { LANGUAGE_LABEL, shortName } from "@/lib/ui";
 import { cx } from "./ui";
 

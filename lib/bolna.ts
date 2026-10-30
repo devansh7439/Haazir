@@ -1,6 +1,6 @@
 import "server-only";
 import { randomUUID } from "node:crypto";
-import { env } from "./config";
+import { env } from "@/lib/core/config";
 
 // Bolna REST client (docs/04-api-spec.md §6). In simulation, makeCall returns sim_<uuid> and never calls Bolna.
 

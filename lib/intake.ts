@@ -1,8 +1,8 @@
 import "server-only";
-import { now } from "./clock";
-import { json, one, q } from "./db";
-import { parseIntake, type ParsedIntake } from "./intakeParse";
-import type { CaseTemplate } from "./types";
+import { now } from "@/lib/core/clock";
+import { json, one, q } from "@/lib/core/db";
+import { parseIntake, type ParsedIntake } from "@/lib/intakeParse";
+import type { CaseTemplate } from "@/lib/core/types";
 
 // WhatsApp referral drafts (C2). The transcript stays server-side; the console only ever sees `parsed`.
 

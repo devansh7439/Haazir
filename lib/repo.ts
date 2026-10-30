@@ -1,23 +1,9 @@
 import "server-only";
-import { now } from "./clock";
-import { json, one, q } from "./db";
-import type {
-  Attempt, AttemptStatus, Capability, CaseTemplate, Contact, Facility, Referral, Referrer,
-} from "./types";
+import { now } from "@/lib/core/clock";
+import { json, one, q } from "@/lib/core/db";
+import type { Attempt, AttemptStatus, Capability, CaseTemplate, Contact, Facility, Referral, Referrer } from "@/lib/core/types";
 
 // Data access shared by the orchestrator, handlers and routes. All writes stamp times from lib/clock.
-
-export class AppError extends Error {
-  constructor(
-    readonly status: number,
-    readonly code: string,
-    message: string,
-    readonly details: Record<string, unknown> = {},
-  ) {
-    super(message);
-    this.name = "AppError";
-  }
-}
 
 const JSONB_COLUMNS = new Set(["rank_reasons", "extracted_data", "payload"]);
 

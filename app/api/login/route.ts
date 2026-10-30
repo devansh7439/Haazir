@@ -1,10 +1,10 @@
 import { timingSafeEqual } from "node:crypto";
 import { NextResponse } from "next/server";
-import { errorResponse, handle, parseBody } from "@/lib/api";
+import { errorResponse, handle, parseBody } from "@/lib/core/route";
 import { clientIp } from "@/lib/bolnaAuth";
-import { env } from "@/lib/config";
-import { now } from "@/lib/clock";
-import { one, q } from "@/lib/db";
+import { env } from "@/lib/core/config";
+import { now } from "@/lib/core/clock";
+import { one, q } from "@/lib/core/db";
 import { GATE_COOKIE, SESSION_COOKIE, SESSION_TTL_S, gateToken, signSession } from "@/lib/gate";
 import { verifyPassword } from "@/lib/password";
 import { WINDOW_MIN, clearFailures, isThrottled, recordFailure } from "@/lib/throttle";

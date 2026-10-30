@@ -1,11 +1,9 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import type { Db } from "@/lib/db";
-import { setClock } from "@/lib/clock";
-import { setDb } from "@/lib/db";
+import type { Db } from "@/lib/core/db";
+import { setClock } from "@/lib/core/clock";
+import { setDb } from "@/lib/core/db";
 import { handleRecordResponse, handleWebhook } from "@/lib/handlers";
-import {
-  closeReferral, confirmManually, createReferral, evaluateReferral, recordManualOutcome, selectAttempt, widenReferral,
-} from "@/lib/orchestrator";
+import { closeReferral, confirmManually, createReferral, evaluateReferral, recordManualOutcome, selectAttempt, widenReferral } from "@/lib/orchestrator";
 import { advanceSimulation, scenario } from "@/lib/simulator";
 import { getAttempts, getReferral } from "@/lib/repo";
 import type { ReferralInput } from "@/lib/orchestrator";

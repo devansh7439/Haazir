@@ -1,11 +1,14 @@
 import "server-only";
-import { env } from "./config";
-import { now } from "./clock";
-import { q } from "./db";
-import { recoverStaleAttempts } from "./handlers";
-import { evaluateReferral } from "./orchestrator";
-import { getSetting, setSetting } from "./repo";
-import { advanceSimulation } from "./simulator";
+import { env } from "@/lib/core/config";
+import { now } from "@/lib/core/clock";
+import { q } from "@/lib/core/db";
+import { recoverStaleAttempts } from "@/lib/handlers";
+import { evaluateReferral } from "@/lib/orchestrator";
+import { getSetting, setSetting } from "@/lib/repo";
+import { advanceSimulation } from "@/lib/simulator";
+import { createLogger } from "@/lib/core/logger";
+
+const log = createLogger("maintenance");
 
 // Background work that must happen even when no console is open: next waves, callbacks, hold expiry,
 // missed-webhook recovery and the retention purge. Run by /api/cron/tick (Supabase pg_cron or Vercel cron).
@@ -42,8 +45,8 @@ export async function purgeIdentifiers(days = env.retentionDays): Promise<PurgeR
   const msg = await q(`delete from messages where referral_id in (${ended}) returning id`, [cutoff]);
   // Drafts may hold a voice-note transcript; webhook payloads may hold a family member's name.
   const drafts = await q(`delete from intake_drafts where created_at < $1 returning id`, [cutoff]);
-  const log = await q(`delete from bolna_webhook_log where received_at < $1 returning id`, [cutoff]);
-  return { patient_details: pd.length, messages: msg.length, intake_drafts: drafts.length, webhook_log: log.length };
+  const webhookLog = await q(`delete from bolna_webhook_log where received_at < $1 returning id`, [cutoff]);
+  return { patient_details: pd.length, messages: msg.length, intake_drafts: drafts.length, webhook_log: webhookLog.length };
 }
 
 const PURGE_KEY = "last_purge_at";
@@ -57,7 +60,7 @@ export async function runCronTick(): Promise<{ referrals: number; recovered: num
       if (r.is_simulated) actions += await advanceSimulation(r.id);
       actions += (await evaluateReferral(r.id)).length;
     } catch (err) {
-      console.error("[haazir] cron evaluate failed", r.id, err instanceof Error ? err.message : err);
+      log.error({ err, referralId: r.id }, "Cron evaluate failed");
     }
   }
   // The purge runs at most hourly.

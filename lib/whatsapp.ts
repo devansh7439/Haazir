@@ -1,10 +1,10 @@
 import "server-only";
-import { env } from "./config";
-import { now } from "./clock";
-import { q } from "./db";
-import { addEvent } from "./events";
-import { isE164, maskPhone } from "./normalize";
-import type { Rendered } from "./messages";
+import { env } from "@/lib/core/config";
+import { now } from "@/lib/core/clock";
+import { q } from "@/lib/core/db";
+import { addEvent } from "@/lib/events";
+import { isE164, maskPhone } from "@/lib/core/normalize";
+import type { Rendered } from "@/lib/messages";
 
 // Provider adapter: none (stored as simulated, shown in the UI) | meta | twilio.
 // Always writes a `messages` row (server-only) and a redacted event for the console.

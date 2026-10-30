@@ -1,6 +1,6 @@
 import "server-only";
-import { TIMEZONE } from "./config";
-import { q } from "./db";
+import { TIMEZONE } from "@/lib/core/config";
+import { q } from "@/lib/core/db";
 
 // C5: acceptance analytics per hospital and per hour of day (IST). Availability calls only.
 

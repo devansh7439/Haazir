@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { errorResponse, handle } from "@/lib/api";
+import { errorResponse, handle } from "@/lib/core/route";
 import { referralFor } from "@/lib/scope";
 import { requireSession } from "@/lib/session";
 import { getReferralView } from "@/lib/view";

@@ -1,6 +1,6 @@
 // Bolna execution status → our attempt status, with monotonic ordering (docs/02-architecture.md §5.3).
 
-import type { AttemptStatus } from "./types";
+import type { AttemptStatus } from "@/lib/core/types";
 
 export const TERMINAL: ReadonlySet<AttemptStatus> = new Set(["completed", "no_answer", "busy", "failed", "canceled"]);
 

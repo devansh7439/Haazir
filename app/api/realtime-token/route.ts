@@ -1,7 +1,7 @@
 import { SignJWT } from "jose";
 import { NextResponse } from "next/server";
-import { handle } from "@/lib/api";
-import { env } from "@/lib/config";
+import { handle } from "@/lib/core/route";
+import { env } from "@/lib/core/config";
 import { requireSession } from "@/lib/session";
 
 // Short-lived Supabase JWT carrying the caller's org_id, so Realtime only delivers rows the org-scoped RLS

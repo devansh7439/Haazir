@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { handle, parseBody } from "@/lib/api";
+import { handle, parseBody } from "@/lib/core/route";
 import { widenReferral } from "@/lib/orchestrator";
 import { referralFor } from "@/lib/scope";
 import { requireSession } from "@/lib/session";

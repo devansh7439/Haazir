@@ -1,15 +1,18 @@
 import "server-only";
 import { createHmac, timingSafeEqual } from "node:crypto";
-import { env } from "./config";
-import { addMinutes, now } from "./clock";
-import { one, q } from "./db";
-import { handleRecordResponse } from "./handlers";
-import { createDraft } from "./intake";
-import { normalizePhone } from "./normalize";
-import { parseQuickReply } from "./quickReply";
-import { downloadMetaMedia, downloadTwilioMedia, transcribe } from "./stt";
-import { spokenName } from "./summary";
-import { replyWhatsApp } from "./whatsapp";
+import { env } from "@/lib/core/config";
+import { addMinutes, now } from "@/lib/core/clock";
+import { one, q } from "@/lib/core/db";
+import { handleRecordResponse } from "@/lib/handlers";
+import { createDraft } from "@/lib/intake";
+import { normalizePhone } from "@/lib/core/normalize";
+import { parseQuickReply } from "@/lib/quickReply";
+import { downloadMetaMedia, downloadTwilioMedia, transcribe } from "@/lib/stt";
+import { spokenName } from "@/lib/summary";
+import { replyWhatsApp } from "@/lib/whatsapp";
+import { createLogger } from "@/lib/core/logger";
+
+const log = createLogger("whatsapp");
 
 // Inbound WhatsApp: hospital desks answering a bed request (C6) and doctors sending a referral by text or voice note (C2).
 
@@ -133,7 +136,7 @@ async function handleDoctorIntake(m: InboundMessage): Promise<boolean> {
       const audio = m.audio.provider === "twilio" ? await downloadTwilioMedia(m.audio.url) : await downloadMetaMedia(m.audio.id);
       text = await transcribe(audio);
     } catch (err) {
-      console.error("[haazir] voice note failed", err instanceof Error ? err.message : err);
+      log.error({ err }, "Voice note failed");
       text = null;
     }
     if (!text) {

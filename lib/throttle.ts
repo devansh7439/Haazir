@@ -1,6 +1,6 @@
 import "server-only";
-import { now } from "./clock";
-import { one, q } from "./db";
+import { now } from "@/lib/core/clock";
+import { one, q } from "@/lib/core/db";
 
 // Sign-in throttling: after LIMIT failures for an IP or an account within WINDOW_MIN minutes, refuse further
 // attempts (even correct ones) until the window passes. Stops passcode and password guessing.

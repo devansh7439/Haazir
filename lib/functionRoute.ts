@@ -1,8 +1,11 @@
 import "server-only";
 import { NextResponse, after } from "next/server";
-import { functionAuthorized } from "./bolnaAuth";
-import type { FunctionResult } from "./handlers";
-import { logRaw } from "./repo";
+import { functionAuthorized } from "@/lib/bolnaAuth";
+import type { FunctionResult } from "@/lib/handlers";
+import { logRaw } from "@/lib/repo";
+import { createLogger } from "@/lib/core/logger";
+
+const log = createLogger("bolna-function");
 
 // Shared wrapper for /api/bolna/functions/*. Bolna's LLM reads the JSON we return, so we always answer 200
 // with an `instruction` — even on internal errors — so a call never breaks in front of a hospital.
@@ -30,12 +33,12 @@ export async function functionRoute(
       try {
         await res.followUp();
       } catch (err) {
-        console.error(`[haazir] ${name} follow-up failed`, err instanceof Error ? err.message : err);
+        log.error({ err, function: name }, "Follow-up failed");
       }
     });
     return NextResponse.json({ result: res.result, instruction: res.instruction });
   } catch (err) {
-    console.error(`[haazir] ${name} failed`, err instanceof Error ? err.message : err);
+    log.error({ err, function: name }, "Failed");
     return NextResponse.json(SAFE);
   }
 }

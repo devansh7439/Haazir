@@ -1,11 +1,11 @@
 import "server-only";
 import scenarioJson from "@/scenarios/demo-krait-bite.json";
-import { isSimulatedExecution } from "./bolna";
-import { secondsBetween } from "./clock";
-import { handleRecordHold, handleRecordResponse, handleRequestCallback, handleRequestDoctor, handleWebhook } from "./handlers";
-import { getAttempt, getAttempts, getReferral } from "./repo";
-import { canTransition, isTerminal, mapBolnaStatus } from "./statusMap";
-import type { Attempt } from "./types";
+import { isSimulatedExecution } from "@/lib/bolna";
+import { secondsBetween } from "@/lib/core/clock";
+import { handleRecordHold, handleRecordResponse, handleRequestCallback, handleRequestDoctor, handleWebhook } from "@/lib/handlers";
+import { getAttempt, getAttempts, getReferral } from "@/lib/repo";
+import { canTransition, isTerminal, mapBolnaStatus } from "@/lib/statusMap";
+import type { Attempt } from "@/lib/core/types";
 
 // Replays scripted calls through the same handlers as real webhooks and function calls, with
 // outcome_source = 'simulation'. Step times are seconds after the call was dispatched.

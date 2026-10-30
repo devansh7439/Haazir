@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { canTransition, mapBolnaStatus } from "@/lib/statusMap";
-import type { AttemptStatus } from "@/lib/types";
+import type { AttemptStatus } from "@/lib/core/types";
 
 /** Applies webhooks in the given order with the monotonic rule, like the webhook handler does. */
 function replay(statuses: string[]): AttemptStatus {

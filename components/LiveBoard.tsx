@@ -1,9 +1,6 @@
 "use client";
 
-import {
-  ArrowLeft, BedDouble, Check, CheckCircle2, ChevronDown, Clock, FileText, Lock, Mail, MapPin, MessageCircle, PenLine, Phone,
-  PhoneCall, RotateCw, Timer, TriangleAlert, User, X,
-} from "lucide-react";
+import { ArrowLeft, BedDouble, Check, CheckCircle2, ChevronDown, Clock, FileText, Lock, Mail, MapPin, MessageCircle, PenLine, Phone, PhoneCall, RotateCw, Timer, TriangleAlert, User, X } from "lucide-react";
 import dynamic from "next/dynamic";
 import Link from "next/link";
 import { useRouter } from "next/navigation";

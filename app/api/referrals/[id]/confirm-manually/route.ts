@@ -1,5 +1,5 @@
 import { NextResponse, after } from "next/server";
-import { handle, parseBody } from "@/lib/api";
+import { handle, parseBody } from "@/lib/core/route";
 import { confirmManually } from "@/lib/orchestrator";
 import { referralFor } from "@/lib/scope";
 import { requireSession } from "@/lib/session";

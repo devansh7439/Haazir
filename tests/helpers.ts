@@ -1,5 +1,5 @@
-import { applySchema, connect, setDb, type Db } from "@/lib/db";
-import { setClock } from "@/lib/clock";
+import { applySchema, connect, setDb, type Db } from "@/lib/core/db";
+import { setClock } from "@/lib/core/clock";
 
 export const IDS = {
   hoskote: "00000000-0000-4000-8000-000000000100",

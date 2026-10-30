@@ -1,5 +1,5 @@
 import { LoginForm } from "@/components/LoginForm";
-import { env } from "@/lib/config";
+import { env } from "@/lib/core/config";
 
 export const dynamic = "force-dynamic";
 

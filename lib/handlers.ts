@@ -1,21 +1,19 @@
 import "server-only";
-import { CALLBACK_MAX_MIN, LOST_TRACK_AFTER_S, MAX_REDIALS_PER_FACILITY, POLL_EVERY_S, STALE_AFTER_S } from "./config";
-import { getExecution, isSimulatedExecution } from "./bolna";
-import { addMinutes, now, secondsBetween } from "./clock";
-import { one, q } from "./db";
-import { addEvent } from "./events";
-import { clean, cleanParams, normalizeBedType, normalizeOutcome, normalizePhone, normalizeReferralCode, normalizeYesNo, parseMinutes, redactNumbers } from "./normalize";
-import {
-  addContact, applyHoldResult, evaluateReferral, holdUnconfirmed, isAcceptance, markFirstAcceptance, recordInCallRelease, redial, loadCtx,
-} from "./orchestrator";
-import {
-  bumpContactStats, casAttemptStatus, findAttemptByExecution, findOpenAttemptByNumber, getAttempt, getFacility,
-  getReferral, getReferralByCode, getReferrer, logRaw, updateAttempt,
-} from "./repo";
-import { canTransition, isTerminal, mapBolnaStatus } from "./statusMap";
-import { checkPortalMismatch } from "./portal";
-import { spokenName } from "./summary";
-import type { Attempt, AvailabilityOutcome } from "./types";
+import { CALLBACK_MAX_MIN, LOST_TRACK_AFTER_S, MAX_REDIALS_PER_FACILITY, POLL_EVERY_S, STALE_AFTER_S } from "@/lib/core/config";
+import { getExecution, isSimulatedExecution } from "@/lib/bolna";
+import { addMinutes, now, secondsBetween } from "@/lib/core/clock";
+import { one, q } from "@/lib/core/db";
+import { addEvent } from "@/lib/events";
+import { clean, cleanParams, normalizeBedType, normalizeOutcome, normalizePhone, normalizeReferralCode, normalizeYesNo, parseMinutes, redactNumbers } from "@/lib/core/normalize";
+import { addContact, applyHoldResult, evaluateReferral, holdUnconfirmed, isAcceptance, markFirstAcceptance, recordInCallRelease, redial, loadCtx } from "@/lib/orchestrator";
+import { bumpContactStats, casAttemptStatus, findAttemptByExecution, findOpenAttemptByNumber, getAttempt, getFacility, getReferral, getReferralByCode, getReferrer, logRaw, updateAttempt } from "@/lib/repo";
+import { canTransition, isTerminal, mapBolnaStatus } from "@/lib/statusMap";
+import { checkPortalMismatch } from "@/lib/portal";
+import { spokenName } from "@/lib/summary";
+import type { Attempt, AvailabilityOutcome } from "@/lib/core/types";
+import { createLogger } from "@/lib/core/logger";
+
+const log = createLogger("call");
 
 // Bolna webhook and custom-function logic. The HTTP routes and the simulator both call these, so a simulated
 // referral exercises exactly the same code as a real one (docs/02-architecture.md §10).
@@ -524,7 +522,7 @@ export async function recoverStaleAttempts(referralId: string | null = null): Pr
           await evaluateReferral(a.referral_id);
         }
       }
-      console.error("[haazir] status poll failed", err instanceof Error ? err.message : err);
+      log.error({ err }, "Status poll failed");
     }
   }
   return recovered;

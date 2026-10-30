@@ -22,16 +22,16 @@ vi.mock("next/headers", () => ({
   cookies: async () => ({ get: (name: string) => (jar.has(name) ? { name, value: jar.get(name)! } : undefined) }),
 }));
 
-import type { Db } from "@/lib/db";
-import { migrate, setDb } from "@/lib/db";
-import { setClock } from "@/lib/clock";
+import type { Db } from "@/lib/core/db";
+import { migrate, setDb } from "@/lib/core/db";
+import { setClock } from "@/lib/core/clock";
 import { SESSION_COOKIE, signSession } from "@/lib/gate";
 import { hashPassword } from "@/lib/password";
 import { createReferral, evaluateReferral, selectAttempt, type ReferralInput } from "@/lib/orchestrator";
 import { advanceSimulation, scenario } from "@/lib/simulator";
 import { getAttempts, getReferral } from "@/lib/repo";
-import { redactNumbers } from "@/lib/normalize";
-import { DEFAULT_ORG_ID } from "@/lib/types";
+import { redactNumbers } from "@/lib/core/normalize";
+import { DEFAULT_ORG_ID } from "@/lib/core/types";
 import { IDS, fakeClock, freshDb } from "./helpers";
 import * as loginRoute from "@/app/api/login/route";
 import * as referralRoute from "@/app/api/referrals/[id]/route";

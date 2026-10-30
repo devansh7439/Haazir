@@ -1,6 +1,4 @@
-import {
-  Ban, Check, CircleDashed, CircleHelp, CornerUpRight, Lock, Phone, PhoneCall, RotateCw, X, type LucideIcon,
-} from "lucide-react";
+import { Ban, Check, CircleDashed, CircleHelp, CornerUpRight, Lock, Phone, PhoneCall, RotateCw, X, type LucideIcon } from "lucide-react";
 import type { ReactNode } from "react";
 import { REFERRAL_STATUS, TONE, type IconKey, type Tone } from "@/lib/ui";
 

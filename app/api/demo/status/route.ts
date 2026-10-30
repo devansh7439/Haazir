@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { handle } from "@/lib/api";
+import { handle } from "@/lib/core/route";
 import { demoStatus } from "@/lib/demo";
 import { requireDemoAdmin } from "@/lib/session";
 

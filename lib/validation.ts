@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { AVAILABILITY_OUTCOMES, BED_TYPES } from "./types";
+import { AVAILABILITY_OUTCOMES, BED_TYPES } from "@/lib/core/types";
 
 // Request bodies for console routes. Bolna payloads are normalised separately (lib/normalize.ts):
 // every value arrives as a string and may be "None" or an unreplaced %(name)s token.

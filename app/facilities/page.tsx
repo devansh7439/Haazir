@@ -1,8 +1,8 @@
 import { FacilitiesAdmin } from "@/components/FacilitiesAdmin";
-import { q } from "@/lib/db";
+import { q } from "@/lib/core/db";
 import { listFacilities } from "@/lib/directory";
 import { pageSession } from "@/lib/session";
-import type { Capability } from "@/lib/types";
+import type { Capability } from "@/lib/core/types";
 
 export const dynamic = "force-dynamic";
 

@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { handle } from "@/lib/api";
+import { handle } from "@/lib/core/route";
 import { dismissDraft } from "@/lib/intake";
 import { requireSession } from "@/lib/session";
 

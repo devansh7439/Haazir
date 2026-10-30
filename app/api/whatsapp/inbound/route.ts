@@ -1,8 +1,9 @@
 import { NextResponse, after } from "next/server";
-import { env } from "@/lib/config";
-import {
-  handleInbound, parseMetaPayload, parseTwilioPayload, verifyMetaSignature, verifyTwilioSignature, type InboundMessage,
-} from "@/lib/whatsappInbound";
+import { env } from "@/lib/core/config";
+import { handleInbound, parseMetaPayload, parseTwilioPayload, verifyMetaSignature, verifyTwilioSignature, type InboundMessage } from "@/lib/whatsappInbound";
+import { createLogger } from "@/lib/core/logger";
+
+const log = createLogger("whatsapp");
 
 // WhatsApp webhook (Meta Cloud API or Twilio). Signatures are checked; processing (which may transcribe a voice note)
 // runs after the response so the provider doesn't retry.
@@ -42,7 +43,7 @@ export async function POST(req: Request) {
       try {
         await handleInbound(m);
       } catch (err) {
-        console.error("[haazir] inbound WhatsApp failed", err instanceof Error ? err.message : err);
+        log.error({ err }, "Inbound WhatsApp failed");
       }
     }
   });

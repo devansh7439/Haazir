@@ -1,6 +1,9 @@
 import { NextResponse, after } from "next/server";
 import { webhookAuthorized } from "@/lib/bolnaAuth";
 import { handleWebhook } from "@/lib/handlers";
+import { createLogger } from "@/lib/core/logger";
+
+const log = createLogger("bolna-webhook");
 
 // Bolna status webhook (docs/04-api-spec.md §3.1). Statuses can arrive late or twice; the handler only
 // moves attempts forward. Respond quickly and never throw on bad payloads.
@@ -18,11 +21,11 @@ export async function POST(req: Request) {
       try {
         await res.followUp();
       } catch (err) {
-        console.error("[haazir] webhook follow-up failed", err instanceof Error ? err.message : err);
+        log.error({ err }, "Webhook follow-up failed");
       }
     });
   } catch (err) {
-    console.error("[haazir] webhook failed", err instanceof Error ? err.message : err);
+    log.error({ err }, "Webhook failed");
   }
   return NextResponse.json({ ok: true });
 }

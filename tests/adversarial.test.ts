@@ -11,9 +11,9 @@ vi.mock("next/headers", () => ({
   cookies: async () => ({ get: (name: string) => (jar.has(name) ? { name, value: jar.get(name)! } : undefined) }),
 }));
 
-import type { Db } from "@/lib/db";
-import { setClock } from "@/lib/clock";
-import { setDb } from "@/lib/db";
+import type { Db } from "@/lib/core/db";
+import { setClock } from "@/lib/core/clock";
+import { setDb } from "@/lib/core/db";
 import { clientIp } from "@/lib/bolnaAuth";
 import { handleRecordResponse, handleRequestCallback, handleWebhook } from "@/lib/handlers";
 import { hashPassword } from "@/lib/password";

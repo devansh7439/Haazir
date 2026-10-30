@@ -2,10 +2,10 @@
 //   DATABASE_URL=… npm run user:create -- --email dr.rao@example.org --name "Dr. Meera Rao" --password '…' \
 //     [--org "Hoskote PHC network" | --org-id <uuid>] [--role admin|doctor] [--referrer-phone +91… --facility-id <uuid>]
 // Without --org/--org-id the user joins the demo organisation.
-import { connect } from "../lib/db";
+import { connect } from "../lib/core/db";
 import { hashPassword } from "../lib/password";
-import { normalizePhone } from "../lib/normalize";
-import { DEFAULT_ORG_ID } from "../lib/types";
+import { normalizePhone } from "../lib/core/normalize";
+import { DEFAULT_ORG_ID } from "../lib/core/types";
 
 function arg(name: string): string | undefined {
   const i = process.argv.indexOf(`--${name}`);

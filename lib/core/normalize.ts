@@ -1,7 +1,7 @@
 // Normalising untrusted values from Bolna function calls and console forms.
 // Every function param arrives as a string; Bolna may also send unreplaced "%(name)s" tokens.
 
-import { AVAILABILITY_OUTCOMES, BED_TYPES, type AvailabilityOutcome, type BedType } from "./types";
+import { AVAILABILITY_OUTCOMES, BED_TYPES, type AvailabilityOutcome, type BedType } from "@/lib/core/types";
 
 const MISSING = new Set(["", "none", "null", "undefined", "nil", "n/a", "na"]);
 const UNREPLACED = /^%\([A-Za-z0-9_]+\)s$/;

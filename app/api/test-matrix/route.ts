@@ -1,8 +1,8 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { handle, parseBody } from "@/lib/api";
-import { now } from "@/lib/clock";
-import { one, q } from "@/lib/db";
+import { handle, parseBody } from "@/lib/core/route";
+import { now } from "@/lib/core/clock";
+import { one, q } from "@/lib/core/db";
 import { requireSession } from "@/lib/session";
 import type { MatrixEntry } from "@/lib/testMatrix";
 

@@ -1,7 +1,7 @@
 // Deterministic spoken case summary (docs/02-architecture.md §8). Never LLM-written.
 // Format: "{who}, {case_spoken}, {acuity}. {note_normalised} Needs {needs_spoken}."
 
-import type { Acuity, AgeUnit, Sex } from "./types";
+import type { Acuity, AgeUnit, Sex } from "@/lib/core/types";
 
 export interface SummaryInput {
   age_value: number | null | undefined;

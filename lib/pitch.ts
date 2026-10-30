@@ -1,8 +1,8 @@
 import "server-only";
 import fs from "node:fs";
 import path from "node:path";
-import { one } from "./db";
-import { mmss } from "./ui";
+import { one } from "@/lib/core/db";
+import { mmss } from "@/lib/ui";
 
 // The presenter run sheet reads docs/08-demo-and-pitch.md directly, so the script has one source of truth.
 // Placeholders the doc leaves for real numbers ({TTFA}, {N}, {X}, {answer rate}) are filled only from measured,

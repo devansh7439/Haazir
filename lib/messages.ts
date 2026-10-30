@@ -2,7 +2,7 @@
 // Each template renders twice: the real body (stored server-only in `messages`) and a redacted
 // preview (patient name and phone numbers masked) that goes into `events` for the console.
 
-import { maskPhone } from "./normalize";
+import { maskPhone } from "@/lib/core/normalize";
 
 export const BED_TYPE_LABEL: Record<string, string> = {
   icu_with_ventilator: "ICU + ventilator",

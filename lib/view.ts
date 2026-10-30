@@ -1,9 +1,9 @@
 import "server-only";
-import { TICK_INTERVAL_MS, TICK_INTERVAL_SIM_MS } from "./config";
-import { q } from "./db";
-import { loadCtx } from "./orchestrator";
-import { getReferral } from "./repo";
-import type { Attempt, EventRow, Referral } from "./types";
+import { TICK_INTERVAL_MS, TICK_INTERVAL_SIM_MS } from "@/lib/core/config";
+import { q } from "@/lib/core/db";
+import { loadCtx } from "@/lib/orchestrator";
+import { getReferral } from "@/lib/repo";
+import type { Attempt, EventRow, Referral } from "@/lib/core/types";
 
 // What the console sees for one referral (GET /api/referrals/:id). Never includes patient_details or
 // message bodies: message previews come from redacted `handoff_sent` events.

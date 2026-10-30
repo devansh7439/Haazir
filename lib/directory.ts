@@ -1,9 +1,10 @@
 import "server-only";
-import { now } from "./clock";
-import { one, q } from "./db";
-import { normalizePhone } from "./normalize";
-import { AppError, getCapabilities } from "./repo";
-import type { Contact, Facility } from "./types";
+import { now } from "@/lib/core/clock";
+import { one, q } from "@/lib/core/db";
+import { normalizePhone } from "@/lib/core/normalize";
+import { getCapabilities } from "@/lib/repo";
+import type { Contact, Facility } from "@/lib/core/types";
+import { ApiError } from "@/lib/core/error";
 
 // Facilities admin (docs/04-api-spec.md §2.11).
 
@@ -45,7 +46,7 @@ export async function listFacilities(orgId: string): Promise<FacilityListItem[]>
 
 function requirePhone(raw: string | null | undefined, field: string): string {
   const p = normalizePhone(raw);
-  if (!p) throw new AppError(422, "BAD_NUMBER", `${field} is not a valid phone number`);
+  if (!p) throw ApiError.unprocessable("BAD_NUMBER", `${field} is not a valid phone number`);
   return p;
 }
 
@@ -72,12 +73,12 @@ export async function patchFacility(id: string, b: Record<string, unknown>): Pro
   const keys = Object.keys(fields);
   if (keys.length === 0) {
     const f = await one<Facility>(`select * from facilities where id = $1`, [id]);
-    if (!f) throw new AppError(404, "NOT_FOUND", "Facility not found");
+    if (!f) throw ApiError.notFound("Facility not found");
     return f;
   }
   const set = keys.map((k, i) => `${k} = $${i + 2}`).join(", ");
   const row = await one<Facility>(`update facilities set ${set} where id = $1 returning *`, [id, ...keys.map((k) => fields[k])]);
-  if (!row) throw new AppError(404, "NOT_FOUND", "Facility not found");
+  if (!row) throw ApiError.notFound("Facility not found");
   return row;
 }
 
@@ -85,8 +86,8 @@ export async function patchFacility(id: string, b: Record<string, unknown>): Pro
 export async function setCapabilities(id: string, codes: string[]): Promise<string[]> {
   const unique = [...new Set(codes)];
   const known = await getCapabilities(unique);
-  if (known.length !== unique.length) throw new AppError(422, "UNKNOWN_CAPABILITY", "Unknown capability code");
-  if (!(await one(`select 1 from facilities where id = $1`, [id]))) throw new AppError(404, "NOT_FOUND", "Facility not found");
+  if (known.length !== unique.length) throw ApiError.unprocessable("UNKNOWN_CAPABILITY", "Unknown capability code");
+  if (!(await one(`select 1 from facilities where id = $1`, [id]))) throw ApiError.notFound("Facility not found");
   await q(`delete from facility_capabilities where facility_id = $1 and not (capability_code = any($2::text[]))`, [id, unique]);
   for (const code of unique) {
     await q(
@@ -123,14 +124,14 @@ export async function patchContact(id: string, b: {
   if (b.active !== undefined) fields.active = b.active;
   if (b.verified !== undefined) fields.verified_at = b.verified ? now() : null;
   const keys = Object.keys(fields);
-  if (keys.length === 0) throw new AppError(422, "NOTHING_TO_UPDATE", "No fields to update");
+  if (keys.length === 0) throw ApiError.unprocessable("NOTHING_TO_UPDATE", "No fields to update");
   const set = keys.map((k, i) => `${k} = $${i + 2}`).join(", ");
   try {
     const row = await one<Contact>(`update facility_contacts set ${set} where id = $1 returning *`, [id, ...keys.map((k) => fields[k])]);
-    if (!row) throw new AppError(404, "NOT_FOUND", "Contact not found");
+    if (!row) throw ApiError.notFound("Contact not found");
     return row;
   } catch (err) {
-    if (err instanceof AppError) throw err;
-    throw new AppError(409, "DUPLICATE_NUMBER", "This hospital already has that number");
+    if (err instanceof ApiError) throw err;
+    throw ApiError.conflict("DUPLICATE_NUMBER", "This hospital already has that number");
   }
 }

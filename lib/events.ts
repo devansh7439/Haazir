@@ -1,6 +1,6 @@
 import "server-only";
-import { now } from "./clock";
-import { json, q } from "./db";
+import { now } from "@/lib/core/clock";
+import { json, q } from "@/lib/core/db";
 
 // Append-only audit log. Payloads must never contain patient identifiers.
 

@@ -1,8 +1,8 @@
 // What each Bolna agent receives in user_data (docs/05-voice-agents.md §3).
 // Availability calls must never carry patient identifiers: the inputs below don't even accept them.
 
-import { HOLD_BUFFER_MIN, TIMEZONE } from "./config";
-import { spokenCode, spokenName } from "./summary";
+import { HOLD_BUFFER_MIN, TIMEZONE } from "@/lib/core/config";
+import { spokenCode, spokenName } from "@/lib/summary";
 
 export const CALL_PREFIX_TEST: Record<string, string> = {
   en: "This is a test call agreed with your hospital. ",

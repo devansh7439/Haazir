@@ -1,7 +1,7 @@
 import "server-only";
 import fs from "node:fs";
 import path from "node:path";
-import { env } from "./config";
+import { env } from "@/lib/core/config";
 
 // Thin SQL layer. Server routes use raw SQL so the tested queries in docs/03-data-model.md §5
 // (eligibility, atomic wave claim) run unchanged. Two drivers:

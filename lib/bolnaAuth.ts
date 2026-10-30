@@ -1,6 +1,6 @@
 import "server-only";
 import { timingSafeEqual } from "node:crypto";
-import { BOLNA_IPS, env } from "./config";
+import { BOLNA_IPS, env } from "@/lib/core/config";
 
 // Bolna → app authentication (docs/02-architecture.md §11).
 // Webhook: ?token=<BOLNA_WEBHOOK_SECRET> or an x-haazir-token header. Functions: Authorization: Bearer <BOLNA_FUNCTION_SECRET>.

@@ -3,7 +3,7 @@
 import { Building2, Phone, Search, ShieldCheck, TriangleAlert, X } from "lucide-react";
 import { useState } from "react";
 import type { FacilityListItem } from "@/lib/directory";
-import type { Capability, Contact } from "@/lib/types";
+import type { Capability, Contact } from "@/lib/core/types";
 import { LANGUAGE_LABEL, clock, shortName } from "@/lib/ui";
 import { PageHeader, Stat, cx } from "./ui";
 

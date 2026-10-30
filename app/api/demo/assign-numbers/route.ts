@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { handle, parseBody } from "@/lib/api";
+import { handle, parseBody } from "@/lib/core/route";
 import { assignNumbers } from "@/lib/demo";
 import { requireDemoAdmin } from "@/lib/session";
 import { AssignNumbersBody } from "@/lib/validation";

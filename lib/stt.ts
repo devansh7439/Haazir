@@ -1,5 +1,5 @@
 import "server-only";
-import { env } from "./config";
+import { env } from "@/lib/core/config";
 
 // Voice-note download and speech-to-text for WhatsApp intake (C2).
 // VERIFY: Sarvam's speech-to-text request shape (multipart file + model + language_code, header api-subscription-key)

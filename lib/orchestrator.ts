@@ -1,27 +1,20 @@
 import "server-only";
-import {
-  BUSY_REDIAL_AFTER_S, DEFAULT_RADIUS_KM, HOLD_BUFFER_MIN, MAX_REDIALS_PER_FACILITY, MAX_WAVES, TIMEZONE,
-  WAVE_SIZE, WAVE_TIMEOUT_S, env,
-} from "./config";
-import { BolnaError, makeCall, stopCall } from "./bolna";
-import { addMinutes, now, secondsBetween } from "./clock";
-import { one, q } from "./db";
-import { addEvent, addEventOnce } from "./events";
-import { ELIGIBLE_SQL, applyEtaCap, chooseContact, rankFacilities, type EligibleRow, type RankedFacility } from "./matching";
-import { bedRequestMessage, doctorConfirmation, familyMessage, preArrivalNote, type HandoffFacts } from "./messages";
-import { maskPhone, normalizePhone, redactNumbers } from "./normalize";
-import { checkPortalMismatch } from "./portal";
-import {
-  AppError, casAttemptStatus, getAttempt, getAttempts, getCapabilities, getCaseTemplate, getContact,
-  getContactsByFacility, getFacility, getReferral, getReferrer, insertAttempt, updateAttempt, updateReferral,
-} from "./repo";
-import { isTerminal } from "./statusMap";
-import { buildShortSummary, buildSpokenSummary, checkNote, describeWho, joinSpoken } from "./summary";
-import type {
-  Acuity, AgeUnit, Attempt, Capability, CaseTemplate, Contact, Facility, Referral, Referrer, Sex,
-} from "./types";
-import { availabilityUserData, familyUserData, holdConfirmUserData, releaseUserData, type CallContext } from "./userData";
-import { sendWhatsApp } from "./whatsapp";
+import { BUSY_REDIAL_AFTER_S, DEFAULT_RADIUS_KM, HOLD_BUFFER_MIN, MAX_REDIALS_PER_FACILITY, MAX_WAVES, TIMEZONE, WAVE_SIZE, WAVE_TIMEOUT_S, env } from "@/lib/core/config";
+import { BolnaError, makeCall, stopCall } from "@/lib/bolna";
+import { addMinutes, now, secondsBetween } from "@/lib/core/clock";
+import { one, q } from "@/lib/core/db";
+import { addEvent, addEventOnce } from "@/lib/events";
+import { ELIGIBLE_SQL, applyEtaCap, chooseContact, rankFacilities, type EligibleRow, type RankedFacility } from "@/lib/matching";
+import { bedRequestMessage, doctorConfirmation, familyMessage, preArrivalNote, type HandoffFacts } from "@/lib/messages";
+import { maskPhone, normalizePhone, redactNumbers } from "@/lib/core/normalize";
+import { checkPortalMismatch } from "@/lib/portal";
+import { casAttemptStatus, getAttempt, getAttempts, getCapabilities, getCaseTemplate, getContact, getContactsByFacility, getFacility, getReferral, getReferrer, insertAttempt, updateAttempt, updateReferral } from "@/lib/repo";
+import { isTerminal } from "@/lib/statusMap";
+import { buildShortSummary, buildSpokenSummary, checkNote, describeWho, joinSpoken } from "@/lib/summary";
+import type { Acuity, AgeUnit, Attempt, Capability, CaseTemplate, Contact, Facility, Referral, Referrer, Sex } from "@/lib/core/types";
+import { availabilityUserData, familyUserData, holdConfirmUserData, releaseUserData, type CallContext } from "@/lib/userData";
+import { sendWhatsApp } from "@/lib/whatsapp";
+import { ApiError } from "@/lib/core/error";
 
 // ============================================================ context
 
@@ -40,7 +33,7 @@ export async function loadCtx(referral: Referral): Promise<ReferralCtx> {
     getCaseTemplate(referral.case_type),
     getCapabilities(referral.required_capabilities),
   ]);
-  if (!referrer || !template) throw new AppError(500, "CONTEXT_MISSING", "Referral context is incomplete");
+  if (!referrer || !template) throw ApiError.internal("CONTEXT_MISSING", "Referral context is incomplete");
   return { referral, referrer, origin, template, needs };
 }
 
@@ -122,25 +115,25 @@ interface Prepared {
 async function prepare(input: ReferralInput, orgId?: string): Promise<Prepared> {
   const referrer = await getReferrer(input.referrer_id);
   // A referrer from another organisation is reported exactly like a missing one.
-  if (!referrer || (orgId && referrer.org_id !== orgId)) throw new AppError(422, "UNKNOWN_REFERRER", "Referrer not found");
+  if (!referrer || (orgId && referrer.org_id !== orgId)) throw ApiError.unprocessable("UNKNOWN_REFERRER", "Referrer not found");
   const origin = referrer.facility_id ? await getFacility(referrer.facility_id) : null;
   const lat = origin?.lat ?? input.origin_lat;
   const lng = origin?.lng ?? input.origin_lng;
-  if (lat === undefined || lng === undefined) throw new AppError(422, "ORIGIN_REQUIRED", "Origin location is required");
+  if (lat === undefined || lng === undefined) throw ApiError.unprocessable("ORIGIN_REQUIRED", "Origin location is required");
   const template = await getCaseTemplate(input.case_type);
-  if (!template) throw new AppError(422, "UNKNOWN_CASE_TYPE", "Unknown case type");
+  if (!template) throw ApiError.unprocessable("UNKNOWN_CASE_TYPE", "Unknown case type");
   const codes = [...new Set(input.required_capabilities)];
   const needs = await getCapabilities(codes);
   if (needs.length !== codes.length) {
     const known = new Set(needs.map((n) => n.code));
-    throw new AppError(422, "UNKNOWN_CAPABILITY", "Unknown capability", { unknown: codes.filter((c) => !known.has(c)) });
+    throw ApiError.unprocessable("UNKNOWN_CAPABILITY", "Unknown capability", { unknown: codes.filter((c) => !known.has(c)) });
   }
   if (needs.length === 0 && input.case_type !== "other") {
-    throw new AppError(422, "NEEDS_REQUIRED", "Choose at least one need");
+    throw ApiError.unprocessable("NEEDS_REQUIRED", "Choose at least one need");
   }
   const noteCheck = checkNote(input.note);
   if (noteCheck.blocked) {
-    throw new AppError(422, "NOTE_CONTAINS_IDENTIFIER", noteCheck.errors[0], { errors: noteCheck.errors });
+    throw ApiError.unprocessable("NOTE_CONTAINS_IDENTIFIER", noteCheck.errors[0], { errors: noteCheck.errors });
   }
   const spoken_summary = buildSpokenSummary({
     age_value: input.age_value ?? null,
@@ -202,13 +195,13 @@ export async function createReferral(
   const repeat = await findByRequestId(p.referrer.org_id, input.client_request_id);
   if (repeat) return repeat;
   if (p.ranked.length === 0) {
-    throw new AppError(409, "NO_ELIGIBLE_FACILITIES", "No eligible hospital in range", {
+    throw ApiError.conflict("NO_ELIGIBLE_FACILITIES", "No eligible hospital in range", {
       suggestions: await suggestionsFor(p.params, p.needs),
     });
   }
   const simulated = !!opts.simulate || env.simulationMode;
   if (!simulated && (!env.bolnaApiKey || !env.agentId("availability"))) {
-    throw new AppError(422, "BOLNA_NOT_CONFIGURED", "Live calls need BOLNA_API_KEY and BOLNA_AGENT_ID_AVAILABILITY. Run it as a simulation instead.");
+    throw ApiError.unprocessable("BOLNA_NOT_CONFIGURED", "Live calls need BOLNA_API_KEY and BOLNA_AGENT_ID_AVAILABILITY. Run it as a simulation instead.");
   }
   if (!simulated) {
     const [active] = await q<{ n: number }>(
@@ -217,12 +210,12 @@ export async function createReferral(
       [p.referrer.org_id, new Date(now().getTime() - 2 * 3600_000)],
     );
     if (active.n >= maxActiveLive()) {
-      throw new AppError(429, "TOO_MANY_ACTIVE_REFERRALS", `${active.n} referrals are already calling hospitals. Finish or cancel one first.`);
+      throw ApiError.tooMany("TOO_MANY_ACTIVE_REFERRALS", `${active.n} referrals are already calling hospitals. Finish or cancel one first.`);
     }
   }
   const attendantPhone = input.patient?.attendant_phone ? normalizePhone(input.patient.attendant_phone) : null;
   if (input.patient?.attendant_phone && !attendantPhone) {
-    throw new AppError(422, "INVALID_ATTENDANT_PHONE", "The attendant's phone number doesn't look right. Use a 10-digit mobile number.");
+    throw ApiError.unprocessable("INVALID_ATTENDANT_PHONE", "The attendant's phone number doesn't look right. Use a 10-digit mobile number.");
   }
   const t = now();
   const referral = await one<Referral>(
@@ -244,7 +237,7 @@ export async function createReferral(
     // Lost a race with the same request (a double-click): hand back the referral the other request created.
     const raced = await findByRequestId(p.referrer.org_id, input.client_request_id);
     if (raced) return raced;
-    throw new AppError(500, "INSERT_FAILED", "Could not create the referral");
+    throw ApiError.internal("INSERT_FAILED", "Could not create the referral");
   }
 
   // Identifiers live apart from the referral, server-only.
@@ -665,21 +658,21 @@ async function dispatchHoldCall(ctx: ReferralCtx, hold: Attempt): Promise<boolea
 
 export async function selectAttempt(referralId: string, attemptId: string, force = false) {
   const r = await getReferral(referralId);
-  if (!r) throw new AppError(404, "NOT_FOUND", "Referral not found");
-  if (!SELECTABLE.includes(r.status)) throw new AppError(409, "NOT_SELECTABLE", `Referral is ${r.status}`);
+  if (!r) throw ApiError.notFound("Referral not found");
+  if (!SELECTABLE.includes(r.status)) throw ApiError.conflict("NOT_SELECTABLE", `Referral is ${r.status}`);
   const a = await getAttempt(attemptId);
   if (!a || a.referral_id !== r.id || a.purpose !== "availability" || !isAcceptance(a)) {
-    throw new AppError(409, "ATTEMPT_NOT_ACCEPTED", "That hospital has not accepted");
+    throw ApiError.conflict("ATTEMPT_NOT_ACCEPTED", "That hospital has not accepted");
   }
   if (a.needs_review && !force) {
-    throw new AppError(409, "NEEDS_REVIEW", "The answer is unclear: listen to the recording before selecting");
+    throw ApiError.conflict("NEEDS_REVIEW", "The answer is unclear: listen to the recording before selecting");
   }
   const updated = await updateReferral(
     r.id,
     { status: "confirming", selected_attempt_id: a.id, selected_facility_id: a.facility_id },
     SELECTABLE,
   );
-  if (!updated) throw new AppError(409, "NOT_SELECTABLE", "The referral changed; try again");
+  if (!updated) throw ApiError.conflict("NOT_SELECTABLE", "The referral changed; try again");
   await addEvent(r.id, "facility_selected", { facility_id: a.facility_id }, a.id);
 
   const hold = await insertAttempt({
@@ -770,11 +763,11 @@ export async function holdUnconfirmed(hold: Attempt): Promise<void> {
 
 export async function confirmManually(referralId: string, attemptId: string, contactPerson: string | null) {
   const r = await getReferral(referralId);
-  if (!r) throw new AppError(404, "NOT_FOUND", "Referral not found");
-  if (![...SELECTABLE, "confirming"].includes(r.status)) throw new AppError(409, "NOT_CONFIRMABLE", `Referral is ${r.status}`);
+  if (!r) throw ApiError.notFound("Referral not found");
+  if (![...SELECTABLE, "confirming"].includes(r.status)) throw ApiError.conflict("NOT_CONFIRMABLE", `Referral is ${r.status}`);
   const a = await getAttempt(attemptId);
   if (!a || a.referral_id !== r.id || a.purpose !== "availability" || !isAcceptance(a)) {
-    throw new AppError(409, "ATTEMPT_NOT_ACCEPTED", "That hospital has not accepted");
+    throw ApiError.conflict("ATTEMPT_NOT_ACCEPTED", "That hospital has not accepted");
   }
   if (contactPerson) await updateAttempt(a.id, { contact_person: contactPerson });
   const updated = await updateReferral(
@@ -788,7 +781,7 @@ export async function confirmManually(referralId: string, attemptId: string, con
     },
     [...SELECTABLE, "confirming"],
   );
-  if (!updated) throw new AppError(409, "NOT_CONFIRMABLE", "The referral changed; try again");
+  if (!updated) throw ApiError.conflict("NOT_CONFIRMABLE", "The referral changed; try again");
   await addEvent(r.id, "hold_confirmed", { facility_id: a.facility_id, contact_person: contactPerson, manual: true }, a.id);
   return async () => {
     await sendHandoff(r.id);
@@ -895,13 +888,13 @@ export async function dispatchFamilyCall(r: Referral, reason: "handoff" | "misse
 
 export async function cancelReferral(referralId: string, reason: string | null) {
   const r = await getReferral(referralId);
-  if (!r) throw new AppError(404, "NOT_FOUND", "Referral not found");
+  if (!r) throw ApiError.notFound("Referral not found");
   const updated = await updateReferral(
     r.id,
     { status: "cancelled", close_reason: reason || "cancelled" },
     ["searching", "options_ready", "confirming", "confirmed", "exhausted"],
   );
-  if (!updated) throw new AppError(409, "NOT_CANCELLABLE", `Referral is ${r.status}`);
+  if (!updated) throw ApiError.conflict("NOT_CANCELLABLE", `Referral is ${r.status}`);
   // Only queued calls can be stopped; ringing and live calls finish naturally.
   for (const a of (await getAttempts(r.id)).filter((x) => x.status === "queued")) {
     try {
@@ -917,14 +910,14 @@ export async function cancelReferral(referralId: string, reason: string | null) 
 
 export async function closeReferral(referralId: string, reason: string, note: string | null) {
   const r = await getReferral(referralId);
-  if (!r) throw new AppError(404, "NOT_FOUND", "Referral not found");
+  if (!r) throw ApiError.notFound("Referral not found");
   const safeNote = note && !checkNote(note).blocked ? note.slice(0, 160) : null;
   const updated = await updateReferral(
     r.id,
     { status: "closed", closed_at: now(), close_reason: safeNote ? `${reason}: ${safeNote}` : reason },
     ["searching", "options_ready", "confirming", "confirmed", "exhausted", "cancelled"],
   );
-  if (!updated) throw new AppError(409, "NOT_CLOSABLE", `Referral is ${r.status}`);
+  if (!updated) throw ApiError.conflict("NOT_CLOSABLE", `Referral is ${r.status}`);
   await addEvent(r.id, "referral_closed", { reason });
 }
 
@@ -942,8 +935,8 @@ export interface ManualOutcome {
 
 export async function recordManualOutcome(attemptId: string, m: ManualOutcome) {
   const a = await getAttempt(attemptId);
-  if (!a) throw new AppError(404, "NOT_FOUND", "Attempt not found");
-  if (a.purpose !== "availability") throw new AppError(409, "WRONG_PURPOSE", "Manual outcomes are for availability calls");
+  if (!a) throw ApiError.notFound("Attempt not found");
+  if (a.purpose !== "availability") throw ApiError.conflict("WRONG_PURPOSE", "Manual outcomes are for availability calls");
   const updated = await updateAttempt(a.id, {
     outcome: m.outcome,
     outcome_source: "manual",
@@ -968,25 +961,25 @@ export async function recordManualOutcome(attemptId: string, m: ManualOutcome) {
 
 export async function redialManually(attemptId: string, target: { contact_id?: string; to_number?: string }) {
   const a = await getAttempt(attemptId);
-  if (!a || a.purpose !== "availability") throw new AppError(404, "NOT_FOUND", "Attempt not found");
+  if (!a || a.purpose !== "availability") throw ApiError.notFound("Attempt not found");
   const r = await getReferral(a.referral_id);
-  if (!r || !ACTIVE_REFERRAL.includes(r.status)) throw new AppError(409, "NOT_ACTIVE", "Referral is not searching");
+  if (!r || !ACTIVE_REFERRAL.includes(r.status)) throw ApiError.conflict("NOT_ACTIVE", "Referral is not searching");
   const siblings = (await getAttempts(r.id)).filter((x) => x.purpose === "availability" && x.facility_id === a.facility_id);
   if (siblings.filter((x) => x.parent_attempt_id).length >= MAX_REDIALS_PER_FACILITY) {
-    throw new AppError(429, "REDIAL_LIMIT", "Already redialed this hospital twice for this referral");
+    throw ApiError.tooMany("REDIAL_LIMIT", "Already redialed this hospital twice for this referral");
   }
   let to: { to_number: string; contact_id: string | null };
   if (target.contact_id) {
     const c = await getContact(target.contact_id);
-    if (!c || c.facility_id !== a.facility_id) throw new AppError(422, "BAD_CONTACT", "Contact not found for this hospital");
+    if (!c || c.facility_id !== a.facility_id) throw ApiError.unprocessable("BAD_CONTACT", "Contact not found for this hospital");
     to = { to_number: c.phone_e164, contact_id: c.id };
   } else {
     const phone = normalizePhone(target.to_number);
-    if (!phone) throw new AppError(422, "BAD_NUMBER", "Not a valid phone number");
+    if (!phone) throw ApiError.unprocessable("BAD_NUMBER", "Not a valid phone number");
     to = { to_number: phone, contact_id: await addContact(a.facility_id, phone, "other") };
   }
   const child = await redial(await loadCtx(r), a, to, "manual");
-  if (!child) throw new AppError(409, "ALREADY_REDIALED", "This call was already redialed; redial the latest attempt");
+  if (!child) throw ApiError.conflict("ALREADY_REDIALED", "This call was already redialed; redial the latest attempt");
   return child;
 }
 
@@ -1008,9 +1001,9 @@ export { redial };
 /** "Widen to 80 km and try again": a new referral with the same case (and patient details), the old one closed. */
 export async function widenReferral(referralId: string, radiusKm: number) {
   const r = await getReferral(referralId);
-  if (!r) throw new AppError(404, "NOT_FOUND", "Referral not found");
+  if (!r) throw ApiError.notFound("Referral not found");
   // Only once every call has finished, so no live call is left answering for a closed referral.
-  if (r.status !== "exhausted") throw new AppError(409, "NOT_WIDENABLE", "Widen the search once every hospital has answered");
+  if (r.status !== "exhausted") throw ApiError.conflict("NOT_WIDENABLE", "Widen the search once every hospital has answered");
   const patient = await one<{ patient_name: string | null; attendant_name: string | null; attendant_phone_e164: string | null; attendant_language: string }>(
     `select patient_name, attendant_name, attendant_phone_e164, attendant_language from patient_details where referral_id = $1`, [r.id],
   );

@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { handle, parseBody } from "@/lib/api";
+import { handle, parseBody } from "@/lib/core/route";
 import { createFacility, listFacilities } from "@/lib/directory";
 import { requireSession } from "@/lib/session";
 import { FacilityCreateBody } from "@/lib/validation";

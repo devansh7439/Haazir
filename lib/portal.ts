@@ -1,9 +1,9 @@
 import "server-only";
-import { now } from "./clock";
-import { one, q } from "./db";
-import { addEvent } from "./events";
-import { portalMismatch } from "./portalCheck";
-import type { Attempt } from "./types";
+import { now } from "@/lib/core/clock";
+import { one, q } from "@/lib/core/db";
+import { addEvent } from "@/lib/events";
+import { portalMismatch } from "@/lib/portalCheck";
+import type { Attempt } from "@/lib/core/types";
 
 // Public bed-portal readings (C4). Ingested by an admin or a scraper through POST /api/portal-snapshots,
 // compared with what the desk says on the call, and flagged on the board and in analytics.

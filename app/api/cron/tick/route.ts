@@ -1,7 +1,10 @@
 import { NextResponse } from "next/server";
 import { timingSafeEqual } from "node:crypto";
-import { env } from "@/lib/config";
+import { env } from "@/lib/core/config";
 import { runCronTick } from "@/lib/maintenance";
+import { createLogger } from "@/lib/core/logger";
+
+const log = createLogger("cron");
 
 // Background tick for every active referral. Call it every minute from Supabase pg_cron (supabase/cron.sql)
 // or Vercel cron. Auth: Authorization: Bearer <CRON_SECRET> (Vercel sends this automatically) or ?token=.
@@ -22,7 +25,7 @@ async function run(req: Request) {
   try {
     return NextResponse.json({ ok: true, ...(await runCronTick()) });
   } catch (err) {
-    console.error("[haazir] cron tick failed", err instanceof Error ? err.message : err);
+    log.error({ err }, "Cron tick failed");
     return NextResponse.json({ ok: false }, { status: 500 });
   }
 }

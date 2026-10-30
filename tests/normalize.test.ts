@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { clean, cleanParams, maskPhone, normalizeBedType, normalizeOutcome, normalizePhone, normalizeReferralCode, normalizeYesNo, parseMinutes } from "@/lib/normalize";
+import { clean, cleanParams, maskPhone, normalizeBedType, normalizeOutcome, normalizePhone, normalizeReferralCode, normalizeYesNo, parseMinutes } from "@/lib/core/normalize";
 
 describe("function payload normaliser", () => {
   it("treats empty, None and unreplaced tokens as missing", () => {

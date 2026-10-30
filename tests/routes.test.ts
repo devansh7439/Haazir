@@ -17,9 +17,9 @@ vi.mock("next/headers", () => ({
   cookies: async () => ({ get: (name: string) => (jar.has(name) ? { name, value: jar.get(name)! } : undefined) }),
 }));
 
-import type { Db } from "@/lib/db";
-import { setClock } from "@/lib/clock";
-import { setDb } from "@/lib/db";
+import type { Db } from "@/lib/core/db";
+import { setClock } from "@/lib/core/clock";
+import { setDb } from "@/lib/core/db";
 import { SESSION_COOKIE } from "@/lib/gate";
 import { hashPassword } from "@/lib/password";
 import { createReferral, evaluateReferral, selectAttempt } from "@/lib/orchestrator";
@@ -28,7 +28,7 @@ import { purgeIdentifiers } from "@/lib/maintenance";
 import { advanceSimulation, scenario } from "@/lib/simulator";
 import { getAttempts, getReferral } from "@/lib/repo";
 import type { ReferralInput } from "@/lib/orchestrator";
-import { DEFAULT_ORG_ID } from "@/lib/types";
+import { DEFAULT_ORG_ID } from "@/lib/core/types";
 import { IDS, fakeClock, freshDb } from "./helpers";
 
 import * as webhookRoute from "@/app/api/bolna/webhook/route";

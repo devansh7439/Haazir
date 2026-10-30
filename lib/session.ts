@@ -1,11 +1,11 @@
 import "server-only";
 import { cookies } from "next/headers";
 import { notFound, redirect } from "next/navigation";
-import { env } from "./config";
-import { one } from "./db";
-import { GATE_COOKIE, SESSION_COOKIE, gateToken, verifySession } from "./gate";
-import { AppError } from "./repo";
-import { DEFAULT_ORG_ID } from "./types";
+import { env } from "@/lib/core/config";
+import { one } from "@/lib/core/db";
+import { GATE_COOKIE, SESSION_COOKIE, gateToken, verifySession } from "@/lib/gate";
+import { DEFAULT_ORG_ID } from "@/lib/core/types";
+import { ApiError } from "@/lib/core/error";
 
 // Who is calling a console route, and which organisation's data they may see.
 // Passcode mode has one implicit admin in the demo organisation.
@@ -47,7 +47,7 @@ export async function getSession(): Promise<Session | null> {
 /** The demo console works on the fictional demo directory, which lives in the demo organisation. */
 export async function requireDemoAdmin(): Promise<Session> {
   const s = await requireSession({ admin: true });
-  if (s.org !== DEFAULT_ORG_ID) throw new AppError(403, "FORBIDDEN", "The demo console is only available in the demo organisation");
+  if (s.org !== DEFAULT_ORG_ID) throw ApiError.forbidden("The demo console is only available in the demo organisation");
   return s;
 }
 
@@ -62,7 +62,7 @@ export async function pageSession(opts: { admin?: boolean; demo?: boolean } = {}
 
 export async function requireSession(opts: { admin?: boolean } = {}): Promise<Session> {
   const s = await getSession();
-  if (!s) throw new AppError(401, "UNAUTHORIZED", "Sign in to the console");
-  if (opts.admin && s.role !== "admin") throw new AppError(403, "FORBIDDEN", "Only an admin can do that");
+  if (!s) throw ApiError.unauthorized("Sign in to the console");
+  if (opts.admin && s.role !== "admin") throw ApiError.forbidden("Only an admin can do that");
   return s;
 }

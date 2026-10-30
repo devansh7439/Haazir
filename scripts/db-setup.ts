@@ -2,7 +2,7 @@
 //   npm run db:setup            → migrations + seed
 //   npm run db:setup -- --no-seed
 // Works for Supabase (direct or session-pooler connection string), local Postgres, or pglite:<dir>.
-import { connect, migrate } from "../lib/db";
+import { connect, migrate } from "../lib/core/db";
 
 async function main() {
   const url = process.env.DATABASE_URL;

@@ -1,5 +1,5 @@
 import { TestMatrix } from "@/components/TestMatrix";
-import { q } from "@/lib/db";
+import { q } from "@/lib/core/db";
 import { pageSession } from "@/lib/session";
 import type { MatrixEntry } from "@/lib/testMatrix";
 

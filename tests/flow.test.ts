@@ -1,15 +1,13 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import type { Db } from "@/lib/db";
-import { setClock } from "@/lib/clock";
-import { setDb } from "@/lib/db";
-import {
-  cancelReferral, createReferral, evaluateReferral, rankEligible, selectAttempt,
-} from "@/lib/orchestrator";
+import type { Db } from "@/lib/core/db";
+import { setClock } from "@/lib/core/clock";
+import { setDb } from "@/lib/core/db";
+import { cancelReferral, createReferral, evaluateReferral, rankEligible, selectAttempt } from "@/lib/orchestrator";
 import { handleRecordResponse, handleRequestCallback, handleRequestDoctor, handleWebhook } from "@/lib/handlers";
 import { advanceSimulation, scenario } from "@/lib/simulator";
 import { getAttempts, getReferral } from "@/lib/repo";
 import type { ReferralInput } from "@/lib/orchestrator";
-import { DEFAULT_ORG_ID } from "@/lib/types";
+import { DEFAULT_ORG_ID } from "@/lib/core/types";
 import { IDS, fakeClock, freshDb } from "./helpers";
 
 const KRAIT = scenario.referral as unknown as ReferralInput;

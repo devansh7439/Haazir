@@ -4,12 +4,13 @@
 export async function register() {
   // Written as an if-block (not an early return) so webpack drops the Node-only import from the Edge build.
   if (process.env.NEXT_RUNTIME === "nodejs") {
-    const { getDb } = await import("./lib/db");
+    const { getDb } = await import("@/lib/core/db");
+    const { createLogger } = await import("@/lib/core/logger");
     try {
       await (await getDb()).query("select 1");
     } catch (err) {
       // The first request retries and reports it; the server still starts.
-      console.error("[haazir] database warm-up failed", err instanceof Error ? err.message : err);
+      createLogger("startup").error({ err }, "Database warm-up failed");
     }
   }
 }

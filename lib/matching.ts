@@ -1,7 +1,7 @@
 // Eligibility (docs/03-data-model.md §5.1) and ranking (docs/02-architecture.md §7).
 // Ranking inputs are capability, distance and track record only. Never payments or partnerships.
 
-import type { Contact } from "./types";
+import type { Contact } from "@/lib/core/types";
 
 export interface EligibleRow {
   id: string;
