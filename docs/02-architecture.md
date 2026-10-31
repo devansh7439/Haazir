@@ -236,19 +236,18 @@ stateDiagram-v2
 
 ## 6. Orchestration
 
-### 6.1 Constants (in `lib/config.ts`)
+### 6.1 Constants (in `lib/core/config.ts`)
 
 | Name | Default | Meaning |
 |---|---|---|
 | `WAVE_SIZE` | 6 | Parallel availability calls per wave. Keep it at your Bolna concurrency minus 3, so confirmation and release calls never queue |
 | `WAVE_TIMEOUT_S` | 150 | Start the next wave if nobody has accepted after this long |
-| `MAX_WAVES` | 2 | Then `exhausted` with a tap-to-call list |
-| `ACCEPT_TARGET` | 2 | Stop opening new waves once this many have accepted |
+| `MAX_WAVES` | 2 | Then `exhausted` with a tap-to-call list. A wave only opens while nobody has accepted |
 | `HOLD_BUFFER_MIN` | 30 | Hold expiry = ETA + buffer |
 | `CALLBACK_MAX_MIN` | 10 | Cap for "call me back in N minutes" |
 | `BUSY_REDIAL_AFTER_S` | 45 | One redial on `busy`, then try the next contact |
-| `ROAD_FACTOR` | 1.4 | Straight-line to road distance |
-| `AVG_SPEED_KMPH` | 30 | Ambulance speed estimate. ETA = km × 1.4 ÷ 30 × 60 |
+| Road factor (in the matching SQL, `lib/modules/facility/facility.repository.ts`) | 1.4 | Straight-line to road distance |
+| Average speed (same SQL) | 30 km/h | Ambulance speed estimate. ETA = km × 1.4 ÷ 30 × 60 |
 | `DEFAULT_RADIUS_KM` | 40 | Search radius |
 | `TICK_INTERVAL_MS` | 5000 (1000 in simulation) | Console tick while a referral is active |
 

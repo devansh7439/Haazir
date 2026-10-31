@@ -3,13 +3,10 @@
 export const WAVE_SIZE = 6;
 export const WAVE_TIMEOUT_S = 150;
 export const MAX_WAVES = 2;
-export const ACCEPT_TARGET = 2;
 export const HOLD_BUFFER_MIN = 30;
 export const CALLBACK_MAX_MIN = 10;
 export const BUSY_REDIAL_AFTER_S = 45;
 export const MAX_REDIALS_PER_FACILITY = 2;
-export const ROAD_FACTOR = 1.4;
-export const AVG_SPEED_KMPH = 30;
 export const DEFAULT_RADIUS_KM = 40;
 export const TICK_INTERVAL_MS = 5000;
 export const TICK_INTERVAL_SIM_MS = 1000;

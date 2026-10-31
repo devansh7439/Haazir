@@ -154,8 +154,3 @@ export async function migrate(db: Db, opts: { seed?: boolean } = {}): Promise<st
   if (fresh || opts.seed) await db.exec(readSql("supabase/seed.sql"));
   return ran;
 }
-
-/** Roles (plain Postgres only), every migration in order, then optionally the seed. */
-export async function applySchema(db: Db, opts: { seed: boolean }): Promise<void> {
-  await migrate(db, { seed: opts.seed });
-}

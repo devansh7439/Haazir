@@ -1,4 +1,4 @@
-import { applySchema, connect, setDb, type Db } from "@/lib/core/db";
+import { connect, setDb, type Db } from "@/lib/core/db";
 import { setClock } from "@/lib/core/clock";
 
 export const IDS = {
@@ -18,8 +18,6 @@ export async function freshDb(): Promise<Db> {
   setDb(db);
   return db;
 }
-
-export { applySchema };
 
 /**
  * A controllable clock. It starts at real "now" because Postgres triggers (updated_at) stamp real time,
