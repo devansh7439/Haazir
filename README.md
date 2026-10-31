@@ -13,30 +13,6 @@ The product thinking, architecture and contracts are in [`docs/`](docs/README.md
 
 The family is messaged or called only when the referring doctor ticked that the attendant agreed (`docs/09-validation-safety-compliance.md` §3).
 
-## What works today
-
-| Area | Status |
-|---|---|
-| New referral form: case templates, needs, identifier guard, live "what hospitals will hear" preview, ranked hospitals with reasons | ✅ |
-| Matching (capability + radius + ETA + track record, IVR lines last), optional max ETA by acuity (C8) | ✅ |
-| Wave of 6 parallel Bolna calls, atomic wave claim, wave 2, *exhausted* with tap-to-call list, widen to 80 km | ✅ |
-| Bolna webhook (monotonic statuses), five mid-call function routes (always 200 + `instruction`), optional source-IP allowlist | ✅ |
-| **Missed-webhook recovery**: calls stuck in a status are re-read from Bolna; lost calls are closed after 15 min with an alert | ✅ |
-| Live board: map, grouped cards, timer, TTFA, activity feed, realtime (org-scoped) or tick refresh | ✅ |
-| Select → hold-confirm call → WhatsApp handoff → release calls; manual confirm; cancel; close; hold expiry | ✅ |
-| Needs-doctor banner, callbacks, busy redial, redirects, manual outcome and redial, extraction cross-check → *needs review* | ✅ |
-| **Background cron** (`/api/cron/tick`): next waves, callbacks, hold expiry and recovery with no console open | ✅ |
-| **Sign-in**: shared passcode, or per-user email/password with organisations; every route and page scoped to the caller's org | ✅ |
-| **Retention**: patient details, message bodies, drafts and raw webhook logs deleted N days after a referral ends | ✅ |
-| WhatsApp: Meta templates or plain text, Twilio; inbound webhook with signature checks | ✅ (needs a live provider test) |
-| `bun run bolna:agents`: builds the five agents from `bolna/` (dry run by default) | ✅ (verify payload shape before `--apply`) |
-| C1 family voice call · C2 WhatsApp text/voice-note intake · C3 missed-call callback · C4 portal-vs-desk flags · C5 analytics · C6 WhatsApp quick reply · C7 Aapat Setu link · C8 max ETA | ✅ |
-| Simulation through the same handlers, SIMULATED badge, Demo console | ✅ |
-| Demo tools: presenter **run sheet** (script, fallback ladder, 20 hard questions from `docs/08`, measured numbers filled in), printable **judge cards** with assigned phones, **voice test-matrix** tracker (20 scenarios × 2 passes, demo-ready gate) | ✅ |
-| **Hospitals page**: admins list a hospital with its services and desk numbers; everyone can filter by what a hospital offers, open its details (services, numbers, location map) and see its Google star rating (set `GOOGLE_PLACES_API_KEY`; off without it) | ✅ (ratings need a live Google test) |
-| Attendant consent checkbox: the family is contacted only when the doctor recorded that the attendant agreed | ✅ |
-| Hardening: sign-in throttling, fail-closed production gate, safe post-login redirect, JSON-only console bodies, one referral per "Find a bed" press, live-referral cap per org, doctors refer as themselves | ✅ |
-
 ## Run it locally (no accounts needed)
 
 ```bash
