@@ -10,6 +10,9 @@ export default defineConfig({
   },
   test: {
     include: ["tests/**/*.test.ts"],
+    // Bun loads .env.local into every script. Without this, a test that reaches the default connection would open the
+    // same on-disk database as a running dev or production server, and the two would collide.
+    env: { DATABASE_URL: "pglite:memory" },
     testTimeout: 60_000,
     hookTimeout: 60_000,
   },

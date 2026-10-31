@@ -1,6 +1,6 @@
 "use client";
 
-import { BarChart3, Building2, FlaskConical, History, LogOut, PlusCircle, Radio } from "lucide-react";
+import { BarChart3, Building2, FlaskConical, History, Info, LogOut, PlusCircle, Radio } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import type { ReactNode } from "react";
@@ -12,6 +12,7 @@ const NAV = [
   { href: "/facilities", label: "Hospitals", icon: Building2, match: (p: string) => p.startsWith("/facilities") },
   { href: "/analytics", label: "Analytics", icon: BarChart3, match: (p: string) => p.startsWith("/analytics") },
   { href: "/demo", label: "Demo console", icon: FlaskConical, match: (p: string) => p.startsWith("/demo") },
+  { href: "/about", label: "About", icon: Info, match: (p: string) => p.startsWith("/about") },
 ];
 
 interface ShellUser {
