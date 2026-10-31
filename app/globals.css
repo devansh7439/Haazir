@@ -90,8 +90,9 @@ body {
   .chip-off {
     @apply border-line bg-white text-zinc-700 hover:border-zinc-300 hover:bg-zinc-50;
   }
+  /* Solid, so the chosen case and needs are unmistakable at a glance (brand-50 is near-white in the monochrome theme). */
   .chip-on {
-    @apply border-brand-300 bg-brand-50 text-brand-800;
+    @apply border-zinc-900 bg-zinc-900 text-white hover:bg-zinc-800;
   }
   .tag {
     @apply inline-flex items-center gap-1 rounded-md bg-zinc-100 px-1.5 py-0.5 text-xs font-medium text-zinc-600;

@@ -186,7 +186,7 @@ function FacilityDrawer({ f, capabilities, onClose, onSaved }: { f: FacilityList
                 return (
                   <button key={c.code} type="button" aria-pressed={on} className={cx("chip", on ? "chip-on" : "chip-off")}
                     onClick={() => setCaps((x) => (on ? x.filter((y) => y !== c.code) : [...x, c.code]))}>
-                    <span aria-hidden className={cx("size-1.5 rounded-full", on ? "bg-brand-500" : "bg-zinc-300")} />
+                    <span aria-hidden className={cx("size-1.5 rounded-full", on ? "bg-white" : "bg-zinc-300")} />
                     {c.label}
                   </button>
                 );

@@ -214,7 +214,8 @@ export function ReferralForm(props: {
 
   return (
     <form onSubmit={submit} className="grid grid-cols-1 items-start gap-6 xl:grid-cols-[minmax(0,1fr)_440px]">
-      <section aria-label="Referral details" className="card overflow-hidden">
+      {/* overflow-clip (not hidden) keeps the rounded corners without breaking the sticky "Find a bed" bar. */}
+      <section aria-label="Referral details" className="card overflow-clip">
         {props.draft && (
           <div className="flex items-start gap-3 border-b border-brand-100 bg-brand-50/60 px-5 py-3.5 text-sm sm:px-6">
             <Sparkles aria-hidden className="mt-0.5 size-4 shrink-0 text-brand-600" />
@@ -259,7 +260,7 @@ export function ReferralForm(props: {
                 onClick={() => toggleNeed(c.code)}
                 className={cx("chip", needs.includes(c.code) ? "chip-on" : "chip-off")}
               >
-                <span aria-hidden className={cx("size-1.5 rounded-full", needs.includes(c.code) ? "bg-brand-500" : "bg-zinc-300")} />
+                <span aria-hidden className={cx("size-1.5 rounded-full", needs.includes(c.code) ? "bg-white" : "bg-zinc-300")} />
                 {c.label}
               </button>
             ))}
@@ -394,11 +395,14 @@ export function ReferralForm(props: {
           {!props.bolnaReady && (
             <p className="text-xs text-zinc-500 sm:col-span-2">Bolna isn&apos;t configured on this deployment, so referrals run as simulations.</p>
           )}
-          {submitError && <p role="alert" className="rounded-lg bg-rose-50 px-3 py-2 text-sm font-medium text-rose-700 sm:col-span-2">{submitError}</p>}
-          <button type="submit" disabled={!canSubmit} className="btn btn-primary btn-lg w-full sm:col-span-2">
+        </div>
+        {/* Always in reach: the bar sticks to the bottom of the screen while the doctor scrolls the form. */}
+        <div className="sticky bottom-0 z-10 space-y-2 border-t border-line bg-white/95 px-5 py-3 backdrop-blur sm:px-6">
+          {submitError && <p role="alert" className="rounded-lg bg-rose-50 px-3 py-2 text-sm font-medium text-rose-700">{submitError}</p>}
+          <button type="submit" disabled={!canSubmit} className="btn btn-primary btn-lg w-full">
             {submitting ? <><Loader2 aria-hidden className="size-4 animate-spin" /> Starting calls…</> : willCall.length > 0 && ready ? `Find a bed · call ${willCall.length} hospitals` : "Find a bed"}
           </button>
-          {missing && <p className="-mt-2 text-center text-xs text-zinc-500 sm:col-span-2">{missing} to continue.</p>}
+          {missing && <p className="text-center text-xs text-zinc-500">{missing} to continue.</p>}
         </div>
       </section>
 

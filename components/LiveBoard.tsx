@@ -438,10 +438,10 @@ function AttemptCard(props: {
   const muted = d.group === "not_available";
 
   return (
-    <li className={cx("card relative overflow-hidden", props.isSelected && "ring-2 ring-emerald-500")}>
+    <li className={cx("card relative overflow-hidden", props.isSelected && "ring-2 ring-green-600")}>
       <span aria-hidden className={cx("absolute inset-y-0 left-0 w-[3px]", tone.accent)} />
       <div className="px-4 py-3.5 sm:px-5">
-        <div className="flex items-start gap-3">
+        <div className="flex flex-wrap items-start gap-x-3 gap-y-2">
           <span
             aria-hidden
             className={cx("grid size-8 shrink-0 place-items-center rounded-full text-[13px] font-semibold text-white", d.tone === "amber" && "haazir-pin-live")}
@@ -451,8 +451,9 @@ function AttemptCard(props: {
           </span>
           <div className="min-w-0 flex-1">
             <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
-              <h3 className={cx("truncate text-[15px] font-semibold", muted ? "text-zinc-600" : "text-zinc-900")}>{shortName(a.facility_name)}</h3>
-              {props.isSelected && <span className="rounded-md bg-emerald-600 px-1.5 py-0.5 text-[11px] font-semibold text-white">Selected</span>}
+              {/* The hospital name is the most important text on the card: on phones it wraps instead of being cut off. */}
+              <h3 className={cx("text-[15px] font-semibold sm:truncate", muted ? "text-zinc-600" : "text-zinc-900")}>{shortName(a.facility_name)}</h3>
+              {props.isSelected && <span className="rounded-md bg-green-700 px-1.5 py-0.5 text-[11px] font-semibold text-white">Selected</span>}
             </div>
             <div className="mt-0.5 flex flex-wrap items-center gap-x-2 text-xs text-zinc-500">
               <span className="inline-flex items-center gap-1"><Clock aria-hidden className="size-3" />{a.eta_minutes ?? "?"} min</span>
@@ -463,7 +464,10 @@ function AttemptCard(props: {
               {props.calls > 1 && <><span aria-hidden>·</span><span>{props.calls} calls</span></>}
             </div>
           </div>
-          <StatusPill tone={d.tone} text={d.text} icon={d.icon} />
+          {/* On phones the status gets its own line, lined up with the name, so it never squeezes the name. */}
+          <div className="basis-full pl-11 sm:basis-auto sm:pl-0">
+            <StatusPill tone={d.tone} text={d.text} icon={d.icon} />
+          </div>
         </div>
 
         {accepted && (
