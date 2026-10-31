@@ -63,16 +63,24 @@ export function availabilityUserData(
   };
 }
 
+/**
+ * Hold-confirm user_data. contact_known and whatsapp_on_file are "yes" or "no", so the agent asks only for what is missing.
+ */
 export function holdConfirmUserData(
   ctx: CallContext,
-  c: { case_summary_short: string; bed_type: string | null; accepted_by: string | null; eta_minutes: number | null },
+  c: { case_summary_short: string; bed_type: string | null; accepted_by: string | null; eta_minutes: number | null; whatsapp_on_file: boolean },
 ): Record<string, string> {
   const eta = c.eta_minutes ?? 0;
+  const contact = c.accepted_by?.trim() || null;
+  const flag = (v: boolean): "yes" | "no" => (v ? "yes" : "no");
   return {
     ...base(ctx),
     case_summary_short: c.case_summary_short,
     bed_phrase: bedPhrase(c.bed_type),
-    accepted_by: c.accepted_by || ACCEPTED_BY_FALLBACK[ctx.language] || ACCEPTED_BY_FALLBACK.en,
+    accepted_by: contact ?? ACCEPTED_BY_FALLBACK[ctx.language] ?? ACCEPTED_BY_FALLBACK.en,
+    // Every saved question is seconds off the call while the patient waits (docs/05-voice-agents.md §6).
+    contact_known: flag(contact !== null),
+    whatsapp_on_file: flag(c.whatsapp_on_file),
     eta_minutes: String(eta),
     hold_until_spoken: `for the next ${eta + HOLD_BUFFER_MIN} minutes`,
   };

@@ -37,6 +37,13 @@ const ACUITY = [
   { value: "stable", label: "Stable", dot: "bg-zinc-300" },
 ] as const;
 
+const SEX = [
+  { value: "male", label: "Male" },
+  { value: "female", label: "Female" },
+  { value: "other", label: "Other" },
+  { value: "unknown", label: "Unknown" },
+] as const;
+
 function newRequestId(): string {
   if (typeof crypto.randomUUID === "function") return crypto.randomUUID();
   // crypto.randomUUID needs a secure context (https or localhost); fall back to getRandomValues elsewhere.
@@ -278,7 +285,7 @@ export function ReferralForm(props: {
               </label>
             ))}
           </div>
-          <div className="grid grid-cols-3 gap-3">
+          <div className="grid grid-cols-2 gap-3">
             <Field label="Age" htmlFor="age">
               <input id="age" inputMode="numeric" className="input" value={age} placeholder="34" onChange={(e) => setAge(e.target.value.replace(/\D/g, "").slice(0, 3))} />
             </Field>
@@ -289,14 +296,21 @@ export function ReferralForm(props: {
                 <option value="days">Days</option>
               </select>
             </Field>
-            <Field label="Sex" htmlFor="sex">
-              <select id="sex" className="input" value={sex} onChange={(e) => setSex(e.target.value as typeof sex)}>
-                <option value="unknown">Unknown</option>
-                <option value="male">Male</option>
-                <option value="female">Female</option>
-                <option value="other">Other</option>
-              </select>
-            </Field>
+          </div>
+          {/* One tap instead of opening a dropdown. */}
+          <div role="radiogroup" aria-label="Sex" className="grid grid-cols-4 gap-1 rounded-xl bg-zinc-100 p-1">
+            {SEX.map((o) => (
+              <label
+                key={o.value}
+                className={cx(
+                  "flex min-h-10 cursor-pointer items-center justify-center rounded-lg text-sm font-medium transition",
+                  sex === o.value ? "bg-white text-zinc-900 shadow-[0_1px_3px_rgba(16,24,40,0.12)]" : "text-zinc-600 hover:text-zinc-900",
+                )}
+              >
+                <input type="radio" name="sex" value={o.value} checked={sex === o.value} onChange={() => setSex(o.value)} className="sr-only" />
+                {o.label}
+              </label>
+            ))}
           </div>
           <Field
             label="Clinical note"

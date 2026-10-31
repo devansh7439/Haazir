@@ -103,7 +103,7 @@ Also send `agent_data: { "language": "<facilities.call_language>" }` and `bypass
 |---|---|---|
 | Clear yes | Asks ready-time and contact, reads back, records | `accepted` |
 | Yes, with a condition ("only if…") | Captures the condition in their words | `conditional` |
-| No | Asks the main reason once | `declined` + `decline_reason` |
+| No | Reads the "no" back, then records it. Records a reason only if they gave one; never asks for one | `declined` (+ `decline_reason` if given) |
 | "Hold on, let me check" | "Sure, I'll wait." User-online message at about 15 s | Final answer |
 | "Call back in 5 minutes" | Calls `request_callback`; our scheduler redials (capped at 10 min) | `callback_later` → new attempt |
 | "Talk to the doctor" / clinical questions | Calls `request_doctor_callback`; promises a callback in about 2 min | `needs_doctor` + banner |
@@ -155,7 +155,7 @@ Run every scenario with a teammate playing the desk. Record the result in a shee
 | 1 | Clear yes in English, gives time and name | `accepted`, `ready_in_minutes`, `contact_person` filled |
 | 2 | Clear yes in Kannada | `accepted`; transcript in Kannada |
 | 3 | Starts in English, switches to Hindi | Agent switches; outcome correct |
-| 4 | No, "ICU full" | `declined`, reason `full` or `no_bed` |
+| 4 | No, "ICU full" | `declined`, reason `full` or `no_bed`. Agent doesn't ask a follow-up question |
 | 5 | Yes "only if you send the case sheet" | `conditional` with the condition |
 | 6 | "Hold on" and 25 s of silence, then yes | Agent waits; `accepted` |
 | 7 | "Call back in 3 minutes" | `callback_later`; a new attempt dials after about 3 min |
@@ -168,8 +168,8 @@ Run every scenario with a teammate playing the desk. Record the result in a shee
 | 14 | Reject the call (busy) | `busy`; one redial after 45 s |
 | 15 | Ward noise playing loudly, mumbled "haan… dekhte hain" | `unclear` or a correct answer. **Never** `accepted` |
 | 16 | Says yes, then "actually no ventilator" at read-back | `declined` |
-| 17 | Hold confirm: yes with a name | `hold_confirmed`; referral `confirmed`; WhatsApp sent |
-| 18 | Hold confirm: "sorry, bed just went" | `hold_declined`; referral back to `options_ready` |
+| 17 | Hold confirm: yes (contact name known from the first call, WhatsApp on file) | `hold_confirmed`; referral `confirmed`; WhatsApp sent. Agent asks no name or number |
+| 18 | Hold confirm: "sorry, bed just went" | `hold_declined` at once (no "why?"); referral back to `options_ready` |
 | 19 | Release call | Completes; `release_ack` |
 | 20 | Function route returns 500 (stop the server) | Agent still ends politely; extraction fills the outcome |
 

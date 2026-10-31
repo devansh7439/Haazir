@@ -45,10 +45,20 @@ describe("user_data privacy", () => {
   });
 
   it("hold-confirm falls back to 'your desk' per language and states the hold window", () => {
-    const h = holdConfirmUserData(ctx, { case_summary_short: "man aged 34", bed_type: "icu_with_ventilator", accepted_by: null, eta_minutes: 18 });
+    const h = holdConfirmUserData(ctx, { case_summary_short: "man aged 34", bed_type: "icu_with_ventilator", accepted_by: null, eta_minutes: 18, whatsapp_on_file: false });
     expect(h.accepted_by).toBe("ನಿಮ್ಮ ಡೆಸ್ಕ್");
     expect(h.bed_phrase).toBe("the ICU bed with a ventilator");
     expect(h.hold_until_spoken).toBe("for the next 48 minutes");
+  });
+
+  it("hold-confirm tells the agent what it still has to ask, and nothing it already knows", () => {
+    const base = { case_summary_short: "man aged 34", bed_type: "icu", eta_minutes: 18 };
+    const known = holdConfirmUserData(ctx, { ...base, accepted_by: "Dr Kiran", whatsapp_on_file: true });
+    expect(known).toMatchObject({ accepted_by: "Dr Kiran", contact_known: "yes", whatsapp_on_file: "yes" });
+    const unknown = holdConfirmUserData(ctx, { ...base, accepted_by: null, whatsapp_on_file: false });
+    // The spoken fallback is unchanged; the flag is what makes the agent ask for a name.
+    expect(unknown).toMatchObject({ accepted_by: "ನಿಮ್ಮ ಡೆಸ್ಕ್", contact_known: "no", whatsapp_on_file: "no" });
+    expect(holdConfirmUserData(ctx, { ...base, accepted_by: "  ", whatsapp_on_file: false }).contact_known).toBe("no");
   });
 
   it("release user_data has no identifiers either", () => {

@@ -131,6 +131,7 @@ export const CallService = {
         bed_type: accepted?.bed_type ?? null,
         accepted_by: accepted?.contact_person ?? null,
         eta_minutes: attempt.eta_minutes,
+        whatsapp_on_file: !!facility?.whatsapp_number,
       });
     } else if (attempt.purpose === "family_update") {
       const patient = await ReferralRepository.patient(r.id);
