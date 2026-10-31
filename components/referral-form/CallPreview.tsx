@@ -1,6 +1,6 @@
-import { AudioLines, Loader2, MapPin, Sparkles } from "lucide-react";
+import { AudioLines, Loader2, Sparkles } from "lucide-react";
 import type { Capability } from "@/lib/core/types";
-import { LANGUAGE_LABEL, shortName } from "@/lib/ui/display";
+import { shortName } from "@/lib/ui/display";
 import { cx } from "@/components/ui";
 import type { Acuity, Preview } from "./types";
 
@@ -47,9 +47,6 @@ export function CallPreview(props: {
               </blockquote>
             </div>
           )}
-          {preview?.spoken_summary && acuity && (
-            <p className="mt-3 text-xs text-zinc-500">The agent introduces itself as an automated assistant for the doctor, discloses recording, and reads the answer back before recording it.</p>
-          )}
         </div>
       </section>
 
@@ -73,15 +70,12 @@ export function CallPreview(props: {
                     <span className="truncate text-sm font-medium text-zinc-900">{shortName(e.name)}</span>
                     <span className="kbd-num shrink-0 text-sm text-zinc-700">{e.eta_minutes} min</span>
                   </div>
-                  <div className="mt-1 flex flex-wrap items-center gap-1.5 text-xs text-zinc-500">
-                    <span className="inline-flex items-center gap-1"><MapPin aria-hidden className="size-3" />{e.distance_km} km</span>
-                    <span aria-hidden>·</span>
-                    <span>{LANGUAGE_LABEL[e.call_language] ?? e.call_language}</span>
-                    {e.rank_reasons.filter((r) => !r.endsWith("min away")).map((r) => (
-                      <span key={r} className={cx("tag", r === "IVR line only" && "bg-amber-50 text-amber-800")}>{r}</span>
-                    ))}
-                    {!e.will_call && <span className="tag">next round</span>}
-                  </div>
+                  {(!e.will_call || e.rank_reasons.includes("IVR line only")) && (
+                    <div className="mt-1 flex flex-wrap items-center gap-1.5 text-xs">
+                      {e.rank_reasons.includes("IVR line only") && <span className="tag bg-amber-50 text-amber-800">IVR line only</span>}
+                      {!e.will_call && <span className="tag">next round</span>}
+                    </div>
+                  )}
                 </div>
               </li>
             ))}

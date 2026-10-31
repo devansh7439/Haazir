@@ -21,7 +21,6 @@ export function Timeline({ view, facilityName }: { view: ReferralView; facilityN
     <section className="card overflow-hidden" aria-labelledby="tl-h">
       <div className="flex items-center justify-between border-b border-line px-5 py-3">
         <h2 id="tl-h" className="text-sm font-semibold">Activity</h2>
-        <span className="text-xs text-zinc-500">Every event is timestamped for audit</span>
       </div>
       <ol className="relative px-5 py-4">
         <span aria-hidden className="absolute bottom-6 left-[5.35rem] top-6 w-px bg-line" />

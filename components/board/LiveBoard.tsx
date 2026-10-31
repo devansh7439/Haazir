@@ -104,7 +104,6 @@ export function LiveBoard({ initial }: { initial: ReferralView }) {
         <section className="card overflow-hidden lg:sticky lg:top-28">
           <div className="flex items-center justify-between border-b border-line px-4 py-2.5">
             <h2 className="text-sm font-semibold">Live map</h2>
-            <span className="text-xs text-zinc-500">Numbers match the cards</span>
           </div>
           <div className="h-64 sm:h-80 lg:h-[calc(100vh-15rem)] lg:min-h-[420px]">
             <BoardMap origin={view.origin} pins={pins} />

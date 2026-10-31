@@ -12,7 +12,7 @@ export function CaseSection(props: { templates: CaseTemplate[]; caseType: string
   const shown = showAll ? templates : templates.filter((t) => FEATURED.includes(t.case_type) || t.case_type === caseType);
   const template = templates.find((t) => t.case_type === caseType);
   return (
-    <FormSection title="Case" description="Picking a case pre-fills what the patient needs. You can change it.">
+    <FormSection title="Case">
       <div className="flex flex-wrap gap-2">
         {shown.map((t) => (
           <button

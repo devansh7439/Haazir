@@ -25,7 +25,6 @@ export function AlertCallout({ alert, onDismiss }: { alert: ReferralView["alerts
         )}
         <button className="btn btn-secondary" onClick={onDismiss}>Dismiss</button>
       </div>
-      <p className="mt-2 text-xs text-zinc-500">After the call, use “Record outcome” on their card.</p>
     </Callout>
   );
 }
