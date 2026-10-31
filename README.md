@@ -32,23 +32,23 @@ Open http://localhost:3000, pick **Snakebite – neurotoxic signs**, set **Criti
 bun run lint && bun run typecheck && bun run test
 ```
 
-193 tests, including the ones `CLAUDE.md` asks for: the exact krait-bite spoken summary, the 10-digit note guard, monotonic statuses under replayed/out-of-order webhooks, the `%(x)s`/`None` normaliser, matching order on the seed (Tamarind 18 → Lotus 74 min), no identifiers in availability `user_data`, and an end-to-end simulated referral that reaches `confirmed` with exactly two release calls (Banyan, Mango Grove). Integration tests run on an in-memory Postgres (PGlite) with the real migrations. Route tests call the actual route handlers: Bolna auth and the always-200 contract, the IP allowlist, cron auth, passcode and user sign-in, organisation isolation, missed calls, signed WhatsApp webhooks, missed-webhook recovery, portal flags and the retention purge. Unit tests cover every branch of the evaluation planner (`tests/planner.test.ts`), so the rules that decide redials, waves and releases are tested without a database.
+194 tests, including the ones `CLAUDE.md` asks for: the exact krait-bite spoken summary, the 10-digit note guard, monotonic statuses under replayed/out-of-order webhooks, the `%(x)s`/`None` normaliser, matching order on the seed (Tamarind 18 → Lotus 74 min), no identifiers in availability `user_data`, and an end-to-end simulated referral that reaches `confirmed` with exactly two release calls (Banyan, Mango Grove). Integration tests run on an in-memory Postgres (PGlite) with the real migrations. Route tests call the actual route handlers: Bolna auth and the always-200 contract, the IP allowlist, cron auth, passcode and user sign-in, organisation isolation, missed calls, signed WhatsApp webhooks, missed-webhook recovery, portal flags and the retention purge. Unit tests cover every branch of the evaluation planner (`tests/planner.test.ts`), so the rules that decide redials, waves and releases are tested without a database.
 
-## Deploy (Supabase + Vercel + Bolna)
+## Run it with real calls (Supabase + tunnel + Bolna)
 
-1. **Supabase**: create a project in **ap-south-1 (Mumbai)**. `vercel.json` runs the app's functions in Mumbai (`bom1`) too; every request makes several sequential queries, so a database in another region adds ~200 ms per query (a "Find a bed" makes about 40). Apply the schema with `DATABASE_URL=<connection string> bun run db:setup`, or paste `supabase/migrations/*.sql` then `supabase/seed.sql` into the SQL editor.
-2. **Vercel**: import the repo and set the env vars from `.env.example`:
-   - `DATABASE_URL`: the Supabase **transaction pooler** URI (port 6543).
+1. **Supabase** (optional; the embedded PGlite database works too): create a project in **ap-south-1 (Mumbai)**, close to the machine running the app. Every request makes several sequential queries, so a database far away adds ~200 ms per query (a "Find a bed" makes about 40). Apply the schema with `DATABASE_URL=<connection string> bun run db:setup`, or paste `supabase/migrations/*.sql` then `supabase/seed.sql` into the SQL editor.
+2. **App**: set the env vars from `.env.example` in `.env.local`, then `bun run serve` and `ngrok http 3000` (or cloudflared). Put the tunnel URL in `APP_BASE_URL`.
+   - `DATABASE_URL`: the Supabase **transaction pooler** URI (port 6543), or `pglite:./.data/pglite`.
    - `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`: browser Realtime (cards update within ~1 s instead of on the 5 s tick).
    - `DEMO_PASSCODE`, `APP_BASE_URL`, `BOLNA_*`, `WHATSAPP_PROVIDER`.
-3. **Bolna**: `bun run bolna:agents` writes each agent's payload to `bolna/generated/` for review; compare one with Bolna's API reference, then `bun run bolna:agents -- --apply`. Or build them by hand from `bolna/prompts/*.md` and `docs/05-voice-agents.md`. Paste `bolna/tools/*.json` with `YOUR_APP_URL` and `YOUR_BOLNA_FUNCTION_SECRET` replaced. Set each agent's webhook to `https://<app>/api/bolna/webhook?token=<BOLNA_WEBHOOK_SECRET>`.
+3. **Bolna**: `bun run bolna:agents` writes each agent's payload to `bolna/generated/` for review; compare one with Bolna's API reference, then `bun run bolna:agents -- --apply`. Or build them by hand from `bolna/prompts/*.md` and `docs/05-voice-agents.md`. Paste `bolna/tools/*.json` with `YOUR_APP_URL` and `YOUR_BOLNA_FUNCTION_SECRET` replaced. Set each agent's webhook to `https://<tunnel>/api/bolna/webhook?token=<BOLNA_WEBHOOK_SECRET>`. A free ngrok URL changes on restart, so use a reserved domain or rerun the agent setup.
 4. **Demo page**: put in the phones you control, then **Test call** each one.
 
 ### Production checklist
 - `AUTH_MODE=users` with a `SESSION_SECRET`, then create people with
   `DATABASE_URL=… bun run user:create -- --email … --name … --password … --org "Your network" --role admin`.
 - `SUPABASE_JWT_SECRET` so Realtime only delivers your organisation's rows (migration 0003 removes anonymous reads).
-- `CRON_SECRET` and `supabase/cron.sql` (or a Vercel cron on a paid plan) so waves, callbacks and recovery run with no console open.
+- `CRON_SECRET` and `supabase/cron.sql` (or any scheduler calling `/api/cron/tick` every minute) so waves, callbacks and recovery run with no console open.
 - Optional: `BOLNA_IP_ALLOWLIST=on`, Meta templates (`docs/whatsapp-templates.md`), `RETENTION_DAYS`.
 - Existing databases: `bun run db:setup` applies only the migrations not yet recorded.
 

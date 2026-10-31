@@ -94,7 +94,7 @@ The DPDP Rules were notified in November 2025, with obligations phasing in over 
 - **Minimisation:** the note field blocks phone and ID numbers; the board and events never show identifiers.
 - **Access:** server-only tables; RLS everywhere; organisation-scoped policies and sign-in before any pilot.
 - **Logs:** never log message bodies, `patient_details` or full transcripts in application logs.
-- **Processors:** Bolna (voice), Supabase (database), Vercel (hosting) and the WhatsApp provider process data on your behalf. Bolna offers Indian server routing and data residency options for enterprise **[B21]**; check what your plan provides before a pilot.
+- **Processors:** Bolna (voice), Supabase (database) and the WhatsApp provider process data on your behalf. Bolna offers Indian server routing and data residency options for enterprise **[B21]**; check what your plan provides before a pilot.
 
 ---
 

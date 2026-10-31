@@ -8,7 +8,7 @@ An emergency referral router. A doctor submits a referral; we phone capable hosp
 Read first: `docs/01-product-blueprint.md` (what and why), `docs/02-architecture.md` (how), `docs/04-api-spec.md` (contracts), `docs/05-voice-agents.md` (Bolna).
 
 ## Stack
-Next.js App Router + TypeScript (strict) · Tailwind + shadcn/ui · Supabase Postgres + Realtime (`@supabase/supabase-js`) · zod · react-leaflet with OpenStreetMap tiles · Vercel.
+Next.js App Router + TypeScript (strict) · Tailwind + shadcn/ui · Supabase Postgres + Realtime (`@supabase/supabase-js`) · zod · react-leaflet with OpenStreetMap tiles. Runs as a Node server (`bun run serve`) behind an ngrok or cloudflared tunnel.
 
 ## Commands
 ```bash

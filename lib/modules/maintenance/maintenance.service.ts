@@ -18,7 +18,7 @@ const ACTIVE_WINDOW_MS = 24 * HOUR_MS;
 
 /**
  * Work that must happen even when no console is open: next waves, callbacks, hold expiry, missed-webhook recovery
- * and the retention purge. Run by /api/cron/tick (Supabase pg_cron or a Vercel cron).
+ * and the retention purge. Run by /api/cron/tick (Supabase pg_cron or any scheduler).
  */
 export const MaintenanceService = {
   /** Referrals from the last 24 h that can still change on their own. */

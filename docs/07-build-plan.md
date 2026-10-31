@@ -36,7 +36,6 @@ If the judging criteria differ from the assumptions in `01-product-blueprint.md`
 - [ ] **Bolna:** API key; claim credits; **confirm concurrency of at least 10** (Settings → Organisation → Account Info). On a trial account, calls are limited to 2 at a time and to **verified numbers only** **[B9]**.
 - [ ] **Bolna:** get an **Indian** caller-ID number and attach it to the agents.
 - [ ] **Supabase:** create the project; run `supabase/migrations/0001_init.sql`, then `supabase/seed.sql`.
-- [ ] **Vercel:** create the project from the GitHub repo; add env vars from `.env.example`.
 - [ ] **Tunnel:** ngrok or cloudflared working on everyone's laptop.
 - [ ] **Phones:** collect **8 phones you control** (6 hospital roles, 1 doctor, 1 family). Write the numbers down. WhatsApp installed; unknown-caller blocking off.
 - [ ] **Decisions:** name (D1), buyer (D2), WhatsApp provider (D4). See blueprint §15.
@@ -67,7 +66,7 @@ Estimates are focused hours. "AC" is the acceptance criterion.
 ### Setup
 | ID | Ticket | Owner | Est. | AC |
 |---|---|---|---|---|
-| H-01 | Repo scaffold, lint, typecheck, Vercel preview | R2 | 2 | A preview URL loads |
+| H-01 | Repo scaffold, lint, typecheck, tunnel URL | R2 | 2 | The tunnel URL loads |
 | H-02 | Supabase schema and seed; server and browser clients | R2 | 1 | Seed rows readable from a page |
 | H-03 | Env handling, passcode middleware | R2 | 1 | Console requires the passcode |
 | H-04 | Availability agent (dev copy): prompt, 3 tools, webhook | R1 | 3 | Dashboard test call reaches the tunnel |

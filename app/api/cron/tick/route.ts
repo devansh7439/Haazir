@@ -7,7 +7,7 @@ import { createLogger } from "@/lib/core/logger";
 const log = createLogger("cron");
 
 // Background tick for every active referral. Call it every minute from Supabase pg_cron (supabase/cron.sql)
-// or Vercel cron. Auth: Authorization: Bearer <CRON_SECRET> (Vercel sends this automatically) or ?token=.
+// or any scheduler. Auth: Authorization: Bearer <CRON_SECRET> or ?token=.
 export const maxDuration = 60;
 
 function authorized(req: Request): boolean {

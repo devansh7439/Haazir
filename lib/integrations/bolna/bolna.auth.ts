@@ -13,7 +13,7 @@ function same(a: string, b: string): boolean {
 }
 
 /**
- * The caller's IP. x-real-ip is set by Vercel from the connection and can't be forged by the client; otherwise the
+ * The caller's IP. x-real-ip, when the proxy in front of the app sets it from the connection; otherwise the
  * rightmost x-forwarded-for hop (added by our own proxy). The leftmost entry is whatever the client chose to send.
  */
 export function clientIp(req: Request): string {

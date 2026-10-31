@@ -8,7 +8,7 @@ How Haazir works end to end: stack, flows, state machines, orchestration, matchi
 
 | Layer | Choice | Why |
 |---|---|---|
-| Web app and API | **Next.js (App Router, TypeScript)** on **Vercel** | One deploy gives you the UI, API routes and a public HTTPS URL that Bolna can call back. The Slack suggests a live link may be part of submission |
+| Web app and API | **Next.js (App Router, TypeScript)** as a Node server behind an **ngrok/cloudflared** tunnel | One process gives you the UI and API routes; the tunnel gives Bolna a public HTTPS URL to call back |
 | Database and live updates | **Supabase** Postgres + Realtime (`postgres_changes`) | The live board updates without running your own websocket server |
 | Voice | **Bolna**: agents, `POST /call`, custom functions, extractions, webhooks | The point of the buildathon, and it covers telephony, Indian-language speech and tool calls |
 | Map | **Leaflet + react-leaflet + OpenStreetMap tiles** | No API key; credit OpenStreetMap on the map |
@@ -28,7 +28,7 @@ flowchart LR
   subgraph Browser
     UI[Referral console]
   end
-  subgraph App["Next.js app on Vercel"]
+  subgraph App["Next.js app (Node server)"]
     API[Console API routes]
     ORCH[Orchestrator]
     HOOK[Bolna webhook route]
@@ -400,7 +400,7 @@ Load the full state once with `GET /api/referrals/:id`, then apply realtime chan
 |---|---|
 | Bolna → function routes | `api_token` in the tool config sends `Authorization: Bearer <BOLNA_FUNCTION_SECRET>`; reject anything else with 401 |
 | Bolna → webhook route | Secret in the URL (`?token=<BOLNA_WEBHOOK_SECRET>`) or a custom header (the dashboard supports **Add headers**) **[B5]** |
-| Source IPs (optional) | Bolna calls from 13.203.39.153, 13.126.9.249, 13.202.133.53 **[B5][B19]**. Check `x-forwarded-for` on Vercel. Don't rely on this alone |
+| Source IPs (optional) | Bolna calls from 13.203.39.153, 13.126.9.249, 13.202.133.53 **[B5][B19]**. Check `x-forwarded-for` as set by your tunnel or proxy. Don't rely on this alone |
 | Inputs | zod on every route. Treat `""`, `"None"`, `"null"` and unreplaced `%(name)s` tokens as missing |
 | Secrets | Server-only env vars. Never expose `BOLNA_API_KEY` or `SUPABASE_SERVICE_ROLE_KEY` to the browser |
 | Data | RLS as in `03-data-model.md` §4. No identifiers in `events` or availability `user_data`. Never log message bodies or `patient_details` |
@@ -413,7 +413,7 @@ Load the full state once with `GET /api/referrals/:id`, then apply realtime chan
 | Environment | App URL | Bolna agents |
 |---|---|---|
 | Local | `https://<tunnel>.ngrok.app` | **Dev copies** of each agent with webhook and function URLs pointing at the tunnel |
-| Production / demo | `https://haazir.vercel.app` (or yours) | **Demo agents** pointing at the production URL |
+| Demo | `bun run serve` behind a fixed tunnel URL | **Demo agents** pointing at that URL |
 
 Webhook and function URLs live **inside the agent configuration**, so keep separate dev and demo agents rather than editing URLs back and forth. Env vars are listed in `.env.example`.
 

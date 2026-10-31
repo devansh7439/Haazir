@@ -48,7 +48,7 @@ Everything you need to start building **Haazir** (working name), an emergency re
 ---
 
 ## Decisions already made
-- **Stack:** Next.js on Vercel, Supabase (Postgres + Realtime), Bolna, Leaflet with OpenStreetMap, zod.
+- **Stack:** Next.js (Node server behind an ngrok/cloudflared tunnel), Supabase (Postgres + Realtime), Bolna, Leaflet with OpenStreetMap, zod.
 - **Doctor callback** instead of live transfer (a per-call transfer destination isn't documented in Bolna). A fixed-number transfer is optional for the stage demo.
 - **Our own scheduler** for waves, redials and callbacks (Bolna's `scheduled_at` and `retry_config` work in minutes).
 - **No patient identifiers** on availability calls; identifiers go to the accepting hospital on WhatsApp.
