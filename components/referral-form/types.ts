@@ -31,4 +31,6 @@ export interface PatientFields {
   attendant_name: string;
   attendant_phone: string;
   attendant_language: string;
+  /** The attendant agreed to their details being shared and to a WhatsApp update. */
+  attendant_consent: boolean;
 }

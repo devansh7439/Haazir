@@ -24,6 +24,7 @@ export const ReferralBody = z.object({
       attendant_name: optionalText(120),
       attendant_phone: optionalText(32),
       attendant_language: languageCode.optional().nullable(),
+      attendant_consent: z.boolean().optional(),
     })
     .optional(),
 });

@@ -241,7 +241,8 @@ export const CallService = {
     if (!r.is_simulated && !env.agentId("family_update")) return null;
     if (!r.selected_attempt_id) return null;
     const patient = await ReferralRepository.patient(r.id);
-    if (!patient?.attendant_phone_e164) return null;
+    // No call to a private person who hasn't agreed to one (docs/09 §3).
+    if (!patient?.attendant_phone_e164 || !patient.attendant_consent_at) return null;
     if (await CallRepository.hasFamilyCallSince(r.id, addMinutes(now(), -FAMILY_CALL_GAP_MIN))) return null;
     const selected = await CallRepository.get(r.selected_attempt_id);
     const a = await CallRepository.insert({

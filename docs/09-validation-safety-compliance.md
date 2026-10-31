@@ -90,7 +90,7 @@ The DPDP Rules were notified in November 2025, with obligations phasing in over 
 | Staff names given on calls; voices in recordings | Hospital staff | Accountability | `call_attempts` | Per the agreement with the hospital |
 
 **Practices**
-- **Notice and consent:** the referring doctor tells the attendant that their details will be shared with the receiving hospital and used for a WhatsApp update, and records that the attendant agreed (add a checkbox to the form for the pilot).
+- **Notice and consent:** the referring doctor tells the attendant that their details will be shared with the receiving hospital and used for a WhatsApp update, and records that the attendant agreed. **Built:** a checkbox on the form's patient details, shown once an attendant phone is entered and unchecked by default. The time is stored in `patient_details.attendant_consent_at` (server only). Without it the family gets no WhatsApp message and no call, including the missed-call callback; the receiving hospital and the doctor are told as usual.
 - **Minimisation:** the note field blocks phone and ID numbers; the board and events never show identifiers.
 - **Access:** server-only tables; RLS everywhere; organisation-scoped policies and sign-in before any pilot.
 - **Logs:** never log message bodies, `patient_details` or full transcripts in application logs.

@@ -24,6 +24,8 @@ export interface ReferralInput {
     attendant_name?: string | null;
     attendant_phone?: string | null;
     attendant_language?: string | null;
+    /** The doctor confirms the attendant agreed to their details being shared and to a WhatsApp update. */
+    attendant_consent?: boolean;
   };
 }
 
@@ -76,6 +78,8 @@ export interface PatientDetails {
   attendant_name: string | null;
   attendant_phone_e164: string | null;
   attendant_language: string;
+  /** When the doctor recorded the attendant's agreement; null means the family must not be contacted. */
+  attendant_consent_at: Date | null;
 }
 
 /** An outcome the doctor records after talking to the desk themselves. */

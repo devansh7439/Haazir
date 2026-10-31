@@ -115,16 +115,18 @@ export const ReferralRepository = {
   /** Stores the identifiers apart from the referral, server-only (CLAUDE.md rule 1). */
   insertPatient: async (referralId: string, p: PatientDetails, at: Date): Promise<void> => {
     await q(
-      `insert into patient_details (referral_id, patient_name, attendant_name, attendant_phone_e164, attendant_language, created_at)
-       values ($1, $2, $3, $4, $5, $6)`,
-      [referralId, p.patient_name, p.attendant_name, p.attendant_phone_e164, p.attendant_language, at],
+      `insert into patient_details
+         (referral_id, patient_name, attendant_name, attendant_phone_e164, attendant_language, attendant_consent_at, created_at)
+       values ($1, $2, $3, $4, $5, $6, $7)`,
+      [referralId, p.patient_name, p.attendant_name, p.attendant_phone_e164, p.attendant_language, p.attendant_consent_at, at],
     );
   },
 
   /** The patient and attendant, or null when the doctor gave none. */
   patient: (referralId: string): Promise<PatientDetails | null> =>
     one<PatientDetails>(
-      `select patient_name, attendant_name, attendant_phone_e164, attendant_language from patient_details where referral_id = $1`,
+      `select patient_name, attendant_name, attendant_phone_e164, attendant_language, attendant_consent_at
+       from patient_details where referral_id = $1`,
       [referralId],
     ),
 

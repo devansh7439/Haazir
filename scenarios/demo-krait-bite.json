@@ -16,7 +16,8 @@
       "patient_name": "Ramesh K. (Demo)",
       "attendant_name": "Lakshmi",
       "attendant_phone": "+910000000301",
-      "attendant_language": "kn"
+      "attendant_language": "kn",
+      "attendant_consent": true
     }
   },
   "availability": {

@@ -106,7 +106,7 @@ erDiagram
 | Data | Where | Who sees it |
 |---|---|---|
 | Age, sex, case type, acuity, short clinical note | `referrals` | Console, and every hospital called (spoken) |
-| Patient name, attendant name and phone, attendant language | `patient_details` | Server only. The name goes to the **accepting** hospital in the pre-arrival message |
+| Patient name, attendant name and phone, attendant language, when the attendant agreed to be contacted | `patient_details` | Server only. The name goes to the **accepting** hospital in the pre-arrival message. The family is contacted only if consent is recorded |
 | Message bodies | `messages` | Server only. The UI sees a redacted preview through `events` |
 | Hospital staff names (contact person), recordings, transcripts | `call_attempts` | Console. Disclose recording at the start of every call |
 

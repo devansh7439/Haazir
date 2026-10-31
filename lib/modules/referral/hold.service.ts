@@ -176,7 +176,8 @@ export const HoldService = {
       rendered: doctorConfirmation(facts),
       simulated,
     });
-    if (patient?.attendant_phone_e164) {
+    // The family hears from us only if the doctor recorded that the attendant agreed (docs/09 §3).
+    if (patient?.attendant_phone_e164 && patient.attendant_consent_at) {
       const rendered = familyMessage(facts, patient.attendant_language);
       await WhatsAppService.send({ referral_id: r.id, audience: "family", to: patient.attendant_phone_e164, rendered, simulated });
       if (env.familyCalls) await CallService.dispatchFamilyCall(r, "handoff");

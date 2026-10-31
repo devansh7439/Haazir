@@ -169,6 +169,7 @@ export const ReferralService = {
         attendant_name: pt.attendant_name || null,
         attendant_phone_e164: attendantPhone,
         attendant_language: pt.attendant_language || "en",
+        attendant_consent_at: pt.attendant_consent ? t : null,
       };
       await ReferralRepository.insertPatient(referral.id, patient, t);
     }
@@ -243,6 +244,7 @@ export const ReferralService = {
               attendant_name: patient.attendant_name,
               attendant_phone: patient.attendant_phone_e164,
               attendant_language: patient.attendant_language,
+              attendant_consent: patient.attendant_consent_at !== null,
             }
           : undefined,
       },

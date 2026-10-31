@@ -44,7 +44,7 @@ export function ReferralForm(props: {
   const [note, setNote] = useState(d?.note ?? "");
   const [radius, setRadius] = useState(DEFAULT_RADIUS_KM);
   const [showPatient, setShowPatient] = useState(false);
-  const [patient, setPatient] = useState<PatientFields>({ patient_name: "", attendant_name: "", attendant_phone: "", attendant_language: "en" });
+  const [patient, setPatient] = useState<PatientFields>({ patient_name: "", attendant_name: "", attendant_phone: "", attendant_language: "en", attendant_consent: false });
   const [simulate, setSimulate] = useState(props.defaultSimulate || !props.bolnaReady);
   // One id per press of "Find a bed": a double-click or a retry after a network error reuses it, so hospitals are
   // never called twice for the same patient.
