@@ -27,9 +27,7 @@ import { migrate, setDb } from "@/lib/core/db";
 import { setClock } from "@/lib/core/clock";
 import { SESSION_COOKIE, signSession } from "@/lib/gate";
 import { hashPassword } from "@/lib/password";
-import { createReferral, evaluateReferral, selectAttempt, type ReferralInput } from "@/lib/orchestrator";
 import { advanceSimulation, scenario } from "@/lib/simulator";
-import { getAttempts, getReferral } from "@/lib/repo";
 import { redactNumbers } from "@/lib/core/normalize";
 import { DEFAULT_ORG_ID } from "@/lib/core/types";
 import { IDS, fakeClock, freshDb } from "./helpers";
@@ -37,6 +35,10 @@ import * as loginRoute from "@/app/api/login/route";
 import * as referralRoute from "@/app/api/referrals/[id]/route";
 import * as referralsRoute from "@/app/api/referrals/route";
 import * as facilitiesRoute from "@/app/api/facilities/route";
+import { CallRepository } from "@/lib/modules/call/call.repository";
+import { ReferralRepository } from "@/lib/modules/referral/referral.repository";
+import { ReferralService } from "@/lib/modules/referral/referral.service";
+import type { ReferralInput } from "@/lib/modules/referral/referral.type";
 
 const KRAIT = scenario.referral as unknown as ReferralInput;
 const ORG_B = "00000000-0000-4000-8000-0000000000b0";
@@ -190,7 +192,7 @@ describe("route access control", () => {
 
   it("an admin from another organisation gets 404 from every route that takes an id from this one", async () => {
     vi.stubEnv("AUTH_MODE", "passcode"); // create demo-org data through the orchestrator
-    const { referral, attempts } = await createReferral(KRAIT, { simulate: true, orgId: DEFAULT_ORG_ID });
+    const { referral, attempts } = await ReferralService.create(KRAIT, { simulate: true, orgId: DEFAULT_ORG_ID });
     vi.stubEnv("AUTH_MODE", "users");
     const [contact] = await db.query<{ id: string }>(`select id from facility_contacts where facility_id = $1 limit 1`, [IDS.tamarind]);
     const ids: Record<string, string> = {
@@ -226,11 +228,11 @@ describe("route access control", () => {
   });
 
   it("an accepted answer from another referral can't be selected or confirmed", async () => {
-    const a = await createReferral(KRAIT, { simulate: true, orgId: DEFAULT_ORG_ID });
-    const b = await createReferral({ ...KRAIT, client_request_id: "00000000-0000-4000-8000-0000000000c1" } as ReferralInput, { simulate: true, orgId: DEFAULT_ORG_ID });
+    const a = await ReferralService.create(KRAIT, { simulate: true, orgId: DEFAULT_ORG_ID });
+    const b = await ReferralService.create({ ...KRAIT, client_request_id: "00000000-0000-4000-8000-0000000000c1" } as ReferralInput, { simulate: true, orgId: DEFAULT_ORG_ID });
     await db.query(`update call_attempts set outcome = 'accepted', bed_type = 'icu_with_ventilator' where id = $1`, [a.attempts[0].id]);
     await db.query(`update referrals set status = 'options_ready' where id = $1`, [b.referral.id]);
-    await expect(selectAttempt(b.referral.id, a.attempts[0].id)).rejects.toMatchObject({ status: 409 });
+    await expect(ReferralService.select(b.referral.id, a.attempts[0].id)).rejects.toMatchObject({ status: 409 });
   });
 });
 
@@ -287,16 +289,16 @@ describe("no identifiers reach the browser", () => {
     let selected = false;
     for (let t = 0; t <= 240; t++) {
       await advanceSimulation(id);
-      await evaluateReferral(id);
-      const r = await getReferral(id);
+      await ReferralService.evaluate(id);
+      const r = await ReferralRepository.get(id);
       if (!selected && r!.status === "options_ready" && t >= 45) {
-        const tamarind = (await getAttempts(id)).find((a) => a.facility_id === IDS.tamarind && a.purpose === "availability")!;
-        await selectAttempt(id, tamarind.id);
+        const tamarind = (await CallRepository.listForReferral(id)).find((a) => a.facility_id === IDS.tamarind && a.purpose === "availability")!;
+        await ReferralService.select(id, tamarind.id);
         selected = true;
       }
       clock.advance(1);
     }
-    expect((await getReferral(id))!.status).toBe("confirmed");
+    expect((await ReferralRepository.get(id))!.status).toBe("confirmed");
     expect((await db.query(`select count(*)::int as n from messages where referral_id = $1`, [id]))[0]).toMatchObject({ n: expect.any(Number) });
 
     const one = await (await referralRoute.GET(req(`referrals/${id}`, "GET"), ctx(id))).text();
@@ -355,7 +357,7 @@ describe("database exposure (Supabase roles)", () => {
     await sb.exec(SUPABASE_LIKE);
     await migrate(sb);
     setDb(sb);
-    await createReferral(KRAIT, { simulate: true, orgId: DEFAULT_ORG_ID });
+    await ReferralService.create(KRAIT, { simulate: true, orgId: DEFAULT_ORG_ID });
     await sb.query(`insert into organisations (id, name) values ($1, 'Other hospital network')`, [ORG_B]);
     await sb.query(`insert into patient_details (referral_id, patient_name) select id, 'Ramesh' from referrals on conflict do nothing`);
   });

@@ -14,6 +14,16 @@ export const DEFAULT_RADIUS_KM = 40;
 export const TICK_INTERVAL_MS = 5000;
 export const TICK_INTERVAL_SIM_MS = 1000;
 export const TIMEZONE = "Asia/Kolkata";
+/** Longest a hold call waits for the accepting call to end before dialling anyway. */
+export const HOLD_WAIT_MAX_S = 90;
+/** When the doctor records "call back later" from their own call, Haazir calls back after this long. */
+export const MANUAL_CALLBACK_MIN = 5;
+/** At most one family update call this often. */
+export const FAMILY_CALL_GAP_MIN = 10;
+/** Live referrals count toward the per-organisation cap for this long after they start. */
+export const ACTIVE_LIVE_WINDOW_H = 2;
+/** An inbound call is matched to the latest call Haazir placed to that number within this window. */
+export const INBOUND_MATCH_WINDOW_MIN = 120;
 
 // Missed-webhook recovery: an attempt is stale when its status hasn't moved for this long; poll at most every POLL_EVERY_S.
 export const STALE_AFTER_S: Record<string, number> = { queued: 60, dialing: 60, ringing: 90, in_progress: 240, wrapping_up: 45 };
@@ -65,6 +75,8 @@ export const env = {
   get whatsappAvailabilityPing() { return ["on", "true", "1"].includes(str("WHATSAPP_AVAILABILITY_PING").toLowerCase()); },
   get missedCallSecret() { return str("MISSED_CALL_SECRET"); },
   get familyCalls() { return str("FAMILY_CALLS").toLowerCase() !== "off"; },
+  /** Live referrals placing calls at once per organisation, so a runaway client can't phone every hospital in town. */
+  get maxActiveLiveReferrals() { return Number(str("MAX_ACTIVE_LIVE_REFERRALS")) || 10; },
   agentId(purpose: "availability" | "hold_confirm" | "release" | "family_update"): string {
     const key = {
       availability: "BOLNA_AGENT_ID_AVAILABILITY",

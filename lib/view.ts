@@ -1,9 +1,8 @@
 import "server-only";
 import { TICK_INTERVAL_MS, TICK_INTERVAL_SIM_MS } from "@/lib/core/config";
 import { q } from "@/lib/core/db";
-import { loadCtx } from "@/lib/orchestrator";
-import { getReferral } from "@/lib/repo";
 import type { Attempt, EventRow, Referral } from "@/lib/core/types";
+import { ReferralRepository } from "@/lib/modules/referral/referral.repository";
 
 // What the console sees for one referral (GET /api/referrals/:id). Never includes patient_details or
 // message bodies: message previews come from redacted `handoff_sent` events.
@@ -44,9 +43,9 @@ export interface ReferralView {
 }
 
 export async function getReferralView(id: string): Promise<ReferralView | null> {
-  const referral = await getReferral(id);
+  const referral = await ReferralRepository.get(id);
   if (!referral) return null;
-  const ctx = await loadCtx(referral);
+  const ctx = await ReferralRepository.context(referral);
   const [attempts, eventsDesc] = await Promise.all([
     q<AttemptView>(
       `select a.*, f.name as facility_name, f.lat as facility_lat, f.lng as facility_lng,

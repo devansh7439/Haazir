@@ -1,9 +1,9 @@
 import "server-only";
 import { now } from "@/lib/core/clock";
 import { one, q } from "@/lib/core/db";
-import { addEvent } from "@/lib/events";
 import { portalMismatch } from "@/lib/portalCheck";
 import type { Attempt } from "@/lib/core/types";
+import { EventRepository } from "@/lib/modules/event/event.repository";
 
 // Public bed-portal readings (C4). Ingested by an admin or a scraper through POST /api/portal-snapshots,
 // compared with what the desk says on the call, and flagged on the board and in analytics.
@@ -44,7 +44,7 @@ export async function checkPortalMismatch(a: Attempt): Promise<boolean> {
   if (!detail) return false;
   const seen = await one(`select 1 from events where attempt_id = $1 and type = 'portal_mismatch'`, [a.id]);
   if (seen) return false;
-  await addEvent(a.referral_id, "portal_mismatch", {
+  await EventRepository.add(a.referral_id, "portal_mismatch", {
     facility_id: a.facility_id,
     desk_outcome: a.outcome,
     detail,

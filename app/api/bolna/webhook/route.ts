@@ -1,7 +1,7 @@
 import { NextResponse, after } from "next/server";
 import { webhookAuthorized } from "@/lib/bolnaAuth";
-import { handleWebhook } from "@/lib/handlers";
 import { createLogger } from "@/lib/core/logger";
+import { WebhookService } from "@/lib/modules/call/webhook.service";
 
 const log = createLogger("bolna-webhook");
 
@@ -16,7 +16,7 @@ export async function POST(req: Request) {
     return NextResponse.json({ ok: true, ignored: "invalid json" });
   }
   try {
-    const res = await handleWebhook(body);
+    const res = await WebhookService.handle(body);
     after(async () => {
       try {
         await res.followUp();

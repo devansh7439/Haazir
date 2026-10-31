@@ -2,11 +2,11 @@ import "server-only";
 import { env } from "@/lib/core/config";
 import { now } from "@/lib/core/clock";
 import { q } from "@/lib/core/db";
-import { recoverStaleAttempts } from "@/lib/handlers";
-import { evaluateReferral } from "@/lib/orchestrator";
-import { getSetting, setSetting } from "@/lib/repo";
 import { advanceSimulation } from "@/lib/simulator";
 import { createLogger } from "@/lib/core/logger";
+import { ReferralService } from "@/lib/modules/referral/referral.service";
+import { SettingRepository } from "@/lib/modules/setting/setting.repository";
+import { WebhookService } from "@/lib/modules/call/webhook.service";
 
 const log = createLogger("maintenance");
 
@@ -52,23 +52,23 @@ export async function purgeIdentifiers(days = env.retentionDays): Promise<PurgeR
 const PURGE_KEY = "last_purge_at";
 
 export async function runCronTick(): Promise<{ referrals: number; recovered: number; actions: number; purged: PurgeResult | null }> {
-  const recovered = await recoverStaleAttempts();
+  const recovered = await WebhookService.recoverStale();
   const referrals = await activeReferralIds();
   let actions = 0;
   for (const r of referrals) {
     try {
       if (r.is_simulated) actions += await advanceSimulation(r.id);
-      actions += (await evaluateReferral(r.id)).length;
+      actions += (await ReferralService.evaluate(r.id)).length;
     } catch (err) {
       log.error({ err, referralId: r.id }, "Cron evaluate failed");
     }
   }
   // The purge runs at most hourly.
   let purged: PurgeResult | null = null;
-  const last = await getSetting(PURGE_KEY);
+  const last = await SettingRepository.get(PURGE_KEY);
   if (!last || now().getTime() - new Date(last).getTime() > 3600_000) {
     purged = await purgeIdentifiers();
-    await setSetting(PURGE_KEY, now().toISOString());
+    await SettingRepository.set(PURGE_KEY, now().toISOString());
   }
   return { referrals: referrals.length, recovered, actions, purged };
 }

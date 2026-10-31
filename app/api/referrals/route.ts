@@ -1,10 +1,10 @@
 import { NextResponse } from "next/server";
 import { handle, parseBody } from "@/lib/core/route";
-import { createReferral } from "@/lib/orchestrator";
 import { markDraftUsed } from "@/lib/intake";
 import { requireSession } from "@/lib/session";
 import { ReferralBody } from "@/lib/validation";
 import { listReferrals } from "@/lib/view";
+import { ReferralService } from "@/lib/modules/referral/referral.service";
 
 export async function GET() {
   return handle(async () => {
@@ -20,7 +20,7 @@ export async function POST(req: Request) {
     const { simulate, draft_id, ...input } = body;
     // A doctor always refers as themselves; only an admin may pick another referrer in their organisation.
     if (s.role === "doctor" && s.rid) input.referrer_id = s.rid;
-    const { referral, attempts, duplicate } = await createReferral(input, { simulate, orgId: s.org });
+    const { referral, attempts, duplicate } = await ReferralService.create(input, { simulate, orgId: s.org });
     if (draft_id) await markDraftUsed(s.org, draft_id);
     return NextResponse.json(
       {

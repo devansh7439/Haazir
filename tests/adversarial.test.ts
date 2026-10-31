@@ -15,18 +15,20 @@ import type { Db } from "@/lib/core/db";
 import { setClock } from "@/lib/core/clock";
 import { setDb } from "@/lib/core/db";
 import { clientIp } from "@/lib/bolnaAuth";
-import { handleRecordResponse, handleRequestCallback, handleWebhook } from "@/lib/handlers";
 import { hashPassword } from "@/lib/password";
 import { parseQuickReply } from "@/lib/quickReply";
 import { safeNext } from "@/lib/safeNext";
 import { sessionFromCookies } from "@/lib/session";
-import { cancelReferral, confirmManually, createReferral, evaluateReferral, selectAttempt } from "@/lib/orchestrator";
 import { advanceSimulation, scenario } from "@/lib/simulator";
-import { getAttempts, getReferral } from "@/lib/repo";
-import type { ReferralInput } from "@/lib/orchestrator";
 import { IDS, fakeClock, freshDb } from "./helpers";
 import * as loginRoute from "@/app/api/login/route";
 import * as referralsRoute from "@/app/api/referrals/route";
+import { CallRepository } from "@/lib/modules/call/call.repository";
+import { FunctionService } from "@/lib/modules/call/function.service";
+import { ReferralRepository } from "@/lib/modules/referral/referral.repository";
+import { ReferralService } from "@/lib/modules/referral/referral.service";
+import { WebhookService } from "@/lib/modules/call/webhook.service";
+import type { ReferralInput } from "@/lib/modules/referral/referral.type";
 
 const KRAIT = scenario.referral as unknown as ReferralInput;
 const B = "https://app.example";
@@ -116,7 +118,7 @@ describe("access", () => {
     jar.set(n, v);
     const res = await referralsRoute.POST(json("/api/referrals", { ...KRAIT, referrer_id: IDS.referrer, simulate: true }));
     expect(res.status).toBe(201);
-    const r = await getReferral((await res.json()).id);
+    const r = await ReferralRepository.get((await res.json()).id);
     expect(r!.referrer_id).toBe(other.id);
   });
 
@@ -143,27 +145,27 @@ describe("abuse and cost", () => {
     fakeClock();
     stubBolna();
     vi.stubEnv("MAX_ACTIVE_LIVE_REFERRALS", "2");
-    await createReferral(KRAIT);
-    await createReferral(KRAIT);
-    await expect(createReferral(KRAIT)).rejects.toMatchObject({ code: "TOO_MANY_ACTIVE_REFERRALS" });
-    await expect(createReferral(KRAIT, { simulate: true })).resolves.toBeTruthy(); // simulations don't call anyone
+    await ReferralService.create(KRAIT);
+    await ReferralService.create(KRAIT);
+    await expect(ReferralService.create(KRAIT)).rejects.toMatchObject({ code: "TOO_MANY_ACTIVE_REFERRALS" });
+    await expect(ReferralService.create(KRAIT, { simulate: true })).resolves.toBeTruthy(); // simulations don't call anyone
   });
 
   it("a desk that keeps saying 'call me back' is called back at most twice", async () => {
     const clock = fakeClock();
     stubBolna();
-    const { referral } = await createReferral(KRAIT);
-    let current = (await getAttempts(referral.id))[0];
+    const { referral } = await ReferralService.create(KRAIT);
+    let current = (await CallRepository.listForReferral(referral.id))[0];
     for (let i = 0; i < 4; i++) {
-      await handleRequestCallback({ attempt_id: current.id, minutes: "1" });
-      await (await handleWebhook({ id: current.bolna_execution_id, status: "completed" })).followUp();
+      await FunctionService.requestCallback({ attempt_id: current.id, minutes: "1" });
+      await (await WebhookService.handle({ id: current.bolna_execution_id, status: "completed" })).followUp();
       clock.advance(61);
-      await evaluateReferral(referral.id);
-      const child = (await getAttempts(referral.id)).find((x) => x.parent_attempt_id === current.id);
+      await ReferralService.evaluate(referral.id);
+      const child = (await CallRepository.listForReferral(referral.id)).find((x) => x.parent_attempt_id === current.id);
       if (!child) break;
       current = child;
     }
-    const tamarind = (await getAttempts(referral.id)).filter((x) => x.facility_id === current.facility_id && x.purpose === "availability");
+    const tamarind = (await CallRepository.listForReferral(referral.id)).filter((x) => x.facility_id === current.facility_id && x.purpose === "availability");
     expect(tamarind.length).toBe(3); // the first call + two callbacks
   });
 });
@@ -179,41 +181,41 @@ describe("safety: never a false yes", () => {
   it("'accepted' with no bed is flagged for review, not treated as a yes", async () => {
     fakeClock();
     stubBolna();
-    const { referral } = await createReferral(KRAIT);
-    const a = (await getAttempts(referral.id))[0];
-    await handleRecordResponse({ attempt_id: a.id, outcome: "accepted", bed_type: "none" });
-    const after = (await getAttempts(referral.id)).find((x) => x.id === a.id)!;
+    const { referral } = await ReferralService.create(KRAIT);
+    const a = (await CallRepository.listForReferral(referral.id))[0];
+    await FunctionService.recordResponse({ attempt_id: a.id, outcome: "accepted", bed_type: "none" });
+    const after = (await CallRepository.listForReferral(referral.id)).find((x) => x.id === a.id)!;
     expect(after.needs_review).toBe(true);
-    expect((await getReferral(referral.id))!.status).not.toBe("options_ready");
+    expect((await ReferralRepository.get(referral.id))!.status).not.toBe("options_ready");
   });
 
   it("an availability answer sent with a hold call's id is ignored", async () => {
     fakeClock();
     stubBolna();
-    const { referral } = await createReferral(KRAIT);
-    const a = (await getAttempts(referral.id))[0];
-    await (await handleWebhook({ id: a.bolna_execution_id, status: "completed" })).followUp();
-    await handleRecordResponse({ attempt_id: a.id, outcome: "accepted", bed_type: "icu" });
-    await selectAttempt(referral.id, a.id);
-    const hold = (await getAttempts(referral.id)).find((x) => x.purpose === "hold_confirm")!;
-    const res = await handleRecordResponse({ attempt_id: hold.id, outcome: "declined" });
+    const { referral } = await ReferralService.create(KRAIT);
+    const a = (await CallRepository.listForReferral(referral.id))[0];
+    await (await WebhookService.handle({ id: a.bolna_execution_id, status: "completed" })).followUp();
+    await FunctionService.recordResponse({ attempt_id: a.id, outcome: "accepted", bed_type: "icu" });
+    await ReferralService.select(referral.id, a.id);
+    const hold = (await CallRepository.listForReferral(referral.id)).find((x) => x.purpose === "hold_confirm")!;
+    const res = await FunctionService.recordResponse({ attempt_id: hold.id, outcome: "declined" });
     expect(res.result).toBe("not_found");
-    expect((await getAttempts(referral.id)).find((x) => x.id === hold.id)!.outcome).toBeNull();
+    expect((await CallRepository.listForReferral(referral.id)).find((x) => x.id === hold.id)!.outcome).toBeNull();
   });
 });
 
 describe("privacy and accuracy", () => {
   it("the family call's transcript (their name, the patient's details) is never stored where the browser can read it", async () => {
     const clock = fakeClock();
-    const { referral } = await createReferral(KRAIT, { simulate: true });
-    for (let t = 0; t < 45; t++) { await advanceSimulation(referral.id); await evaluateReferral(referral.id); clock.advance(1); }
-    const tam = (await getAttempts(referral.id)).find((x) => x.facility_id === IDS.tamarind && x.purpose === "availability")!;
-    await selectAttempt(referral.id, tam.id);
-    for (let t = 0; t < 80; t++) { await advanceSimulation(referral.id); await evaluateReferral(referral.id); clock.advance(1); }
-    const fam = (await getAttempts(referral.id)).find((x) => x.purpose === "family_update")!;
+    const { referral } = await ReferralService.create(KRAIT, { simulate: true });
+    for (let t = 0; t < 45; t++) { await advanceSimulation(referral.id); await ReferralService.evaluate(referral.id); clock.advance(1); }
+    const tam = (await CallRepository.listForReferral(referral.id)).find((x) => x.facility_id === IDS.tamarind && x.purpose === "availability")!;
+    await ReferralService.select(referral.id, tam.id);
+    for (let t = 0; t < 80; t++) { await advanceSimulation(referral.id); await ReferralService.evaluate(referral.id); clock.advance(1); }
+    const fam = (await CallRepository.listForReferral(referral.id)).find((x) => x.purpose === "family_update")!;
     await db.query(`update call_attempts set status = 'wrapping_up', transcript = null where id = $1`, [fam.id]);
-    await (await handleWebhook({ id: fam.bolna_execution_id, status: "completed", transcript: "Agent: Hello Lakshmi, about Ramesh…", telephony_data: { recording_url: "https://rec/1" } })).followUp();
-    const stored = (await getAttempts(referral.id)).find((x) => x.id === fam.id)!;
+    await (await WebhookService.handle({ id: fam.bolna_execution_id, status: "completed", transcript: "Agent: Hello Lakshmi, about Ramesh…", telephony_data: { recording_url: "https://rec/1" } })).followUp();
+    const stored = (await CallRepository.listForReferral(referral.id)).find((x) => x.id === fam.id)!;
     expect(stored.transcript).toBeNull();
     expect(stored.recording_url).toBeNull();
   });
@@ -221,28 +223,28 @@ describe("privacy and accuracy", () => {
   it("a yes that arrives after the referral was cancelled doesn't set the time-to-first-yes", async () => {
     fakeClock();
     stubBolna();
-    const { referral } = await createReferral(KRAIT);
-    const a = (await getAttempts(referral.id))[0];
-    await (await handleWebhook({ id: a.bolna_execution_id, status: "in-progress" })).followUp();
-    await (await cancelReferral(referral.id, "stabilised"))();
-    await (await handleRecordResponse({ attempt_id: a.id, outcome: "accepted" })).followUp();
-    expect((await getReferral(referral.id))!.first_acceptance_at).toBeNull();
+    const { referral } = await ReferralService.create(KRAIT);
+    const a = (await CallRepository.listForReferral(referral.id))[0];
+    await (await WebhookService.handle({ id: a.bolna_execution_id, status: "in-progress" })).followUp();
+    await (await ReferralService.cancel(referral.id, "stabilised"))();
+    await (await FunctionService.recordResponse({ attempt_id: a.id, outcome: "accepted" })).followUp();
+    expect((await ReferralRepository.get(referral.id))!.first_acceptance_at).toBeNull();
   });
 
   it("a desk that says yes after the patient is placed hears that on the same call, with no extra release call", async () => {
     fakeClock();
     stubBolna();
-    const { referral } = await createReferral(KRAIT);
-    const [first, second] = await getAttempts(referral.id);
-    await handleRecordResponse({ attempt_id: first.id, outcome: "accepted" });
-    await (await confirmManually(referral.id, first.id, null))();
-    await (await handleWebhook({ id: second.bolna_execution_id, status: "in-progress" })).followUp();
+    const { referral } = await ReferralService.create(KRAIT);
+    const [first, second] = await CallRepository.listForReferral(referral.id);
+    await FunctionService.recordResponse({ attempt_id: first.id, outcome: "accepted" });
+    await (await ReferralService.confirmManually(referral.id, first.id, null))();
+    await (await WebhookService.handle({ id: second.bolna_execution_id, status: "in-progress" })).followUp();
     const before = bolnaCalls.filter((c) => c.agent_id === "r").length;
-    const res = await handleRecordResponse({ attempt_id: second.id, outcome: "accepted" });
+    const res = await FunctionService.recordResponse({ attempt_id: second.id, outcome: "accepted" });
     await res.followUp();
     expect(res.instruction).toMatch(/already been placed/);
     expect(bolnaCalls.filter((c) => c.agent_id === "r").length).toBe(before);
-    const rel = (await getAttempts(referral.id)).filter((x) => x.purpose === "release" && x.parent_attempt_id === second.id);
+    const rel = (await CallRepository.listForReferral(referral.id)).filter((x) => x.purpose === "release" && x.parent_attempt_id === second.id);
     expect(rel).toHaveLength(1);
     expect(rel[0].outcome).toBe("release_ack");
   });
@@ -252,11 +254,11 @@ describe("payload normalising", () => {
   it("keeps bed_type 'none' (no bed) but drops Python's 'None' (missing)", async () => {
     fakeClock();
     stubBolna();
-    const { referral } = await createReferral(KRAIT);
-    const [a, b] = await getAttempts(referral.id);
-    await handleRecordResponse({ attempt_id: a.id, outcome: "declined", bed_type: "none" });
-    await handleRecordResponse({ attempt_id: b.id, outcome: "declined", bed_type: "None" });
-    const all = await getAttempts(referral.id);
+    const { referral } = await ReferralService.create(KRAIT);
+    const [a, b] = await CallRepository.listForReferral(referral.id);
+    await FunctionService.recordResponse({ attempt_id: a.id, outcome: "declined", bed_type: "none" });
+    await FunctionService.recordResponse({ attempt_id: b.id, outcome: "declined", bed_type: "None" });
+    const all = await CallRepository.listForReferral(referral.id);
     expect(all.find((x) => x.id === a.id)!.bed_type).toBe("none");
     expect(all.find((x) => x.id === b.id)!.bed_type).toBeNull();
   });

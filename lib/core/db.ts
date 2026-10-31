@@ -40,6 +40,16 @@ export function json(value: unknown): string {
   return JSON.stringify(value ?? null);
 }
 
+const JSONB_COLUMNS = new Set(["rank_reasons", "extracted_data", "payload"]);
+
+/** `a = $n, b = $n+1 …` for an UPDATE, skipping undefined fields; jsonb columns are passed as JSON text. */
+export function setClause(fields: Record<string, unknown>, startIndex: number): { sql: string; values: unknown[] } {
+  const keys = Object.keys(fields).filter((k) => fields[k] !== undefined);
+  const values = keys.map((k) => (JSONB_COLUMNS.has(k) ? json(fields[k]) : fields[k]));
+  const sql = keys.map((k, i) => `${k} = $${startIndex + i}${JSONB_COLUMNS.has(k) ? "::jsonb" : ""}`).join(", ");
+  return { sql, values };
+}
+
 export async function connect(url: string): Promise<Db> {
   if (url.startsWith("pglite:")) return connectPglite(url.slice("pglite:".length));
   return connectPg(url);

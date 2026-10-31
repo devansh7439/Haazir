@@ -1,8 +1,8 @@
 import { notFound } from "next/navigation";
 import { LiveBoard } from "@/components/LiveBoard";
-import { getReferral } from "@/lib/repo";
 import { pageSession } from "@/lib/session";
 import { getReferralView } from "@/lib/view";
+import { ReferralRepository } from "@/lib/modules/referral/referral.repository";
 
 export const dynamic = "force-dynamic";
 
@@ -12,7 +12,7 @@ export default async function ReferralBoardPage({ params }: { params: Promise<{ 
   const { id } = await params;
   if (!UUID.test(id)) notFound();
   const s = await pageSession();
-  const r = await getReferral(id);
+  const r = await ReferralRepository.get(id);
   if (!r || r.org_id !== s.org) notFound();
   const view = await getReferralView(id);
   if (!view) notFound();

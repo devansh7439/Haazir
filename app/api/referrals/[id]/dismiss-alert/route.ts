@@ -1,16 +1,16 @@
 import { NextResponse } from "next/server";
 import { handle, parseBody } from "@/lib/core/route";
-import { addEvent } from "@/lib/events";
 import { referralFor } from "@/lib/scope";
 import { requireSession } from "@/lib/session";
 import { DismissAlertBody } from "@/lib/validation";
+import { EventRepository } from "@/lib/modules/event/event.repository";
 
 export async function POST(req: Request, { params }: { params: Promise<{ id: string }> }) {
   return handle(async () => {
     const s = await requireSession();
     const r = await referralFor(s, (await params).id);
     const { event_id } = await parseBody(req, DismissAlertBody);
-    await addEvent(r.id, "alert_dismissed", { event_id });
+    await EventRepository.add(r.id, "alert_dismissed", { event_id });
     return NextResponse.json({ ok: true });
   });
 }

@@ -1,9 +1,9 @@
 import { NextResponse } from "next/server";
 import { handle, parseBody } from "@/lib/core/route";
-import { previewReferral } from "@/lib/orchestrator";
 import { requireSession } from "@/lib/session";
 import { PreviewBody } from "@/lib/validation";
 import { ApiError } from "@/lib/core/error";
+import { ReferralService } from "@/lib/modules/referral/referral.service";
 
 // Builds the spoken summary and lists eligible hospitals without creating anything.
 export async function POST(req: Request) {
@@ -12,7 +12,7 @@ export async function POST(req: Request) {
     const input = await parseBody(req, PreviewBody);
     if (s.role === "doctor" && s.rid) input.referrer_id = s.rid;
     try {
-      return NextResponse.json(await previewReferral(input, { orgId: s.org }));
+      return NextResponse.json(await ReferralService.preview(input, { orgId: s.org }));
     } catch (err) {
       // The form shows note problems inline instead of failing the whole preview.
       if (err instanceof ApiError && err.code === "NOTE_CONTAINS_IDENTIFIER") {

@@ -22,12 +22,8 @@ import { setClock } from "@/lib/core/clock";
 import { setDb } from "@/lib/core/db";
 import { SESSION_COOKIE } from "@/lib/gate";
 import { hashPassword } from "@/lib/password";
-import { createReferral, evaluateReferral, selectAttempt } from "@/lib/orchestrator";
-import { recoverStaleAttempts } from "@/lib/handlers";
 import { purgeIdentifiers } from "@/lib/maintenance";
 import { advanceSimulation, scenario } from "@/lib/simulator";
-import { getAttempts, getReferral } from "@/lib/repo";
-import type { ReferralInput } from "@/lib/orchestrator";
 import { DEFAULT_ORG_ID } from "@/lib/core/types";
 import { IDS, fakeClock, freshDb } from "./helpers";
 
@@ -44,6 +40,11 @@ import * as demoStatusRoute from "@/app/api/demo/status/route";
 import * as missedCallRoute from "@/app/api/triggers/missed-call/route";
 import * as whatsappRoute from "@/app/api/whatsapp/inbound/route";
 import * as portalRoute from "@/app/api/portal-snapshots/route";
+import { CallRepository } from "@/lib/modules/call/call.repository";
+import { ReferralRepository } from "@/lib/modules/referral/referral.repository";
+import { ReferralService } from "@/lib/modules/referral/referral.service";
+import { WebhookService } from "@/lib/modules/call/webhook.service";
+import type { ReferralInput } from "@/lib/modules/referral/referral.type";
 
 const KRAIT = scenario.referral as unknown as ReferralInput;
 const BASE = "https://app.example";
@@ -116,13 +117,13 @@ describe("cron tick", () => {
   it("needs CRON_SECRET and advances referrals with no console open", async () => {
     const clock = fakeClock();
     expect((await cronRoute.GET(req("/api/cron/tick", { method: "GET" }))).status).toBe(401);
-    const { referral } = await createReferral(KRAIT, { simulate: true });
+    const { referral } = await ReferralService.create(KRAIT, { simulate: true });
     for (let t = 0; t < 45; t++) {
       clock.advance(1);
       const res = await cronRoute.GET(req("/api/cron/tick", { method: "GET", headers: { authorization: "Bearer cronsec" } }));
       expect(res.status).toBe(200);
     }
-    const r = (await getReferral(referral.id))!;
+    const r = (await ReferralRepository.get(referral.id))!;
     expect(r.status).toBe("options_ready");
     expect(r.first_acceptance_at).not.toBeNull();
   });
@@ -216,14 +217,14 @@ describe("missed-call trigger (C3) and family call (C1)", () => {
   it("calls the family back for their confirmed referral", async () => {
     vi.stubEnv("MISSED_CALL_SECRET", "mc");
     const clock = fakeClock();
-    const { referral } = await createReferral(KRAIT, { simulate: true });
-    for (let t = 0; t < 45; t++) { await advanceSimulation(referral.id); await evaluateReferral(referral.id); clock.advance(1); }
-    const tamarind = (await getAttempts(referral.id)).find((a) => a.facility_id === IDS.tamarind && a.purpose === "availability")!;
-    await selectAttempt(referral.id, tamarind.id);
-    for (let t = 0; t < 40; t++) { await advanceSimulation(referral.id); await evaluateReferral(referral.id); clock.advance(1); }
-    expect((await getReferral(referral.id))!.status).toBe("confirmed");
+    const { referral } = await ReferralService.create(KRAIT, { simulate: true });
+    for (let t = 0; t < 45; t++) { await advanceSimulation(referral.id); await ReferralService.evaluate(referral.id); clock.advance(1); }
+    const tamarind = (await CallRepository.listForReferral(referral.id)).find((a) => a.facility_id === IDS.tamarind && a.purpose === "availability")!;
+    await ReferralService.select(referral.id, tamarind.id);
+    for (let t = 0; t < 40; t++) { await advanceSimulation(referral.id); await ReferralService.evaluate(referral.id); clock.advance(1); }
+    expect((await ReferralRepository.get(referral.id))!.status).toBe("confirmed");
     // The handoff placed one family call; its row holds only a masked number.
-    let family = (await getAttempts(referral.id)).filter((a) => a.purpose === "family_update");
+    let family = (await CallRepository.listForReferral(referral.id)).filter((a) => a.purpose === "family_update");
     expect(family).toHaveLength(1);
     expect(family[0].to_number).toBe("+91 ••••• ••301");
 
@@ -232,7 +233,7 @@ describe("missed-call trigger (C3) and family call (C1)", () => {
     const res = await missedCallRoute.POST(req("/api/triggers/missed-call?token=mc", { body: { from: "+910000000301" } }));
     expect(await res.json()).toEqual({ ok: true, action: "family_call" });
     await settle();
-    family = (await getAttempts(referral.id)).filter((a) => a.purpose === "family_update");
+    family = (await CallRepository.listForReferral(referral.id)).filter((a) => a.purpose === "family_update");
     expect(family).toHaveLength(2);
     const unknown = await missedCallRoute.POST(req("/api/triggers/missed-call?token=mc", { raw: "From=%2B919999999999", headers: { "content-type": "application/x-www-form-urlencoded" } }));
     expect((await unknown.json()).action).toBe("no_referral");
@@ -264,12 +265,12 @@ describe("WhatsApp inbound (C2, C6)", () => {
   it("records a desk's WhatsApp YES with the reference, and refuses to guess without one", async () => {
     fakeClock();
     await db.query(`update facilities set whatsapp_number = '+919800000101' where id = $1`, [IDS.banyan]);
-    const a = await createReferral(KRAIT, { simulate: true });
-    const b = await createReferral(KRAIT, { simulate: true });
+    const a = await ReferralService.create(KRAIT, { simulate: true });
+    const b = await ReferralService.create(KRAIT, { simulate: true });
     // Two open requests to Banyan: a bare "yes" is ambiguous.
     await whatsappRoute.POST(twilio({ From: "whatsapp:+919800000101", Body: "yes" }));
     await settle();
-    const banyanA = () => getAttempts(a.referral.id).then((x) => x.find((y) => y.facility_id === IDS.banyan)!);
+    const banyanA = () => CallRepository.listForReferral(a.referral.id).then((x) => x.find((y) => y.facility_id === IDS.banyan)!);
     expect((await banyanA()).outcome).toBeNull();
     await whatsappRoute.POST(twilio({ From: "whatsapp:+919800000101", Body: `YES ${a.referral.code} send the case sheet` }));
     await settle();
@@ -277,8 +278,8 @@ describe("WhatsApp inbound (C2, C6)", () => {
     expect(rec.outcome).toBe("conditional");
     expect(rec.outcome_source).toBe("whatsapp");
     expect(rec.conditions).toBe("send the case sheet");
-    expect((await getAttempts(b.referral.id)).find((y) => y.facility_id === IDS.banyan)!.outcome).toBeNull();
-    expect((await getReferral(a.referral.id))!.status).toBe("options_ready");
+    expect((await CallRepository.listForReferral(b.referral.id)).find((y) => y.facility_id === IDS.banyan)!.outcome).toBeNull();
+    expect((await ReferralRepository.get(a.referral.id))!.status).toBe("options_ready");
   });
 
   it("turns a doctor's message into a draft without exposing the transcript", async () => {
@@ -304,16 +305,16 @@ describe("missed-webhook recovery, portal flags, retention", () => {
       }
       return new Response(JSON.stringify({ status: "queued", execution_id: `exec-${++n}` }), { status: 200 });
     }));
-    const { referral } = await createReferral(KRAIT);
-    const target = (await getAttempts(referral.id)).find((a) => a.bolna_execution_id === "exec-1")!;
+    const { referral } = await ReferralService.create(KRAIT);
+    const target = (await CallRepository.listForReferral(referral.id)).find((a) => a.bolna_execution_id === "exec-1")!;
     await db.query(`update call_attempts set status = 'ringing', updated_at = $2 where id = $1`, [target.id, clock.now]);
     clock.advance(30);
-    expect(await recoverStaleAttempts(referral.id)).toBe(0); // not stale yet
+    expect(await WebhookService.recoverStale(referral.id)).toBe(0); // not stale yet
     clock.advance(70);
-    expect(await recoverStaleAttempts(referral.id)).toBe(1);
-    const after = (await getAttempts(referral.id)).find((a) => a.id === target.id)!;
+    expect(await WebhookService.recoverStale(referral.id)).toBe(1);
+    const after = (await CallRepository.listForReferral(referral.id)).find((a) => a.id === target.id)!;
     expect(after.status).toBe("no_answer");
-    expect(await recoverStaleAttempts(referral.id)).toBe(0); // terminal now; never polled again
+    expect(await WebhookService.recoverStale(referral.id)).toBe(0); // terminal now; never polled again
   });
 
   it("flags a desk's decline that contradicts a fresh portal reading", async () => {
@@ -322,8 +323,8 @@ describe("missed-webhook recovery, portal flags, retention", () => {
       body: { snapshots: [{ facility_id: IDS.neem, source: "Test portal", icu_beds_free: 3, ventilators_free: 2, observed_at: new Date().toISOString() }] },
     }));
     expect(res.status).toBe(201);
-    const { referral } = await createReferral(KRAIT, { simulate: true });
-    for (let t = 0; t < 40; t++) { await advanceSimulation(referral.id); await evaluateReferral(referral.id); clock.advance(1); }
+    const { referral } = await ReferralService.create(KRAIT, { simulate: true });
+    for (let t = 0; t < 40; t++) { await advanceSimulation(referral.id); await ReferralService.evaluate(referral.id); clock.advance(1); }
     const flags = await db.query<{ payload: { detail: string } }>(`select payload from events where referral_id = $1 and type = 'portal_mismatch'`, [referral.id]);
     // Neem declines with "no ventilator: ICU full, no ventilator free"; the ventilator reading is the one that contradicts it first.
     expect(flags.map((f) => f.payload.detail)).toEqual(["portal showed 2 ventilators free"]);
@@ -331,12 +332,12 @@ describe("missed-webhook recovery, portal flags, retention", () => {
 
   it("purges identifiers 30 days after a referral ends, keeping the de-identified record", async () => {
     const clock = fakeClock();
-    const { referral } = await createReferral(KRAIT, { simulate: true });
+    const { referral } = await ReferralService.create(KRAIT, { simulate: true });
     await db.query(`update referrals set status = 'closed', closed_at = $2 where id = $1`, [referral.id, clock.now]);
     clock.advance(29 * 86400);
     expect((await purgeIdentifiers(30)).patient_details).toBe(0);
     clock.advance(2 * 86400);
     expect((await purgeIdentifiers(30)).patient_details).toBe(1);
-    expect(await getReferral(referral.id)).not.toBeNull();
+    expect(await ReferralRepository.get(referral.id)).not.toBeNull();
   });
 });

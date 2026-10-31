@@ -4,7 +4,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { buildAgent, parsePromptDoc, type ToolDef } from "@/lib/bolnaAgents";
 import { signSession, verifySession } from "@/lib/gate";
 import { parseIntake } from "@/lib/intakeParse";
-import { applyEtaCap } from "@/lib/matching";
+import { applyEtaCap } from "@/lib/modules/facility/matching.helper";
 import { bedRequestMessage, preArrivalNote, templateParam, type HandoffFacts } from "@/lib/messages";
 import { hashPassword, verifyPassword } from "@/lib/password";
 import { portalMismatch } from "@/lib/portalCheck";

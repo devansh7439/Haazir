@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { canTransition, mapBolnaStatus } from "@/lib/statusMap";
+import { canTransition, mapBolnaStatus } from "@/lib/modules/call/status.helper";
 import type { AttemptStatus } from "@/lib/core/types";
 
 /** Applies webhooks in the given order with the monotonic rule, like the webhook handler does. */

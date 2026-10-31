@@ -3,7 +3,6 @@ import { createHmac, timingSafeEqual } from "node:crypto";
 import { env } from "@/lib/core/config";
 import { addMinutes, now } from "@/lib/core/clock";
 import { one, q } from "@/lib/core/db";
-import { handleRecordResponse } from "@/lib/handlers";
 import { createDraft } from "@/lib/intake";
 import { normalizePhone } from "@/lib/core/normalize";
 import { parseQuickReply } from "@/lib/quickReply";
@@ -11,6 +10,7 @@ import { downloadMetaMedia, downloadTwilioMedia, transcribe } from "@/lib/stt";
 import { spokenName } from "@/lib/summary";
 import { replyWhatsApp } from "@/lib/whatsapp";
 import { createLogger } from "@/lib/core/logger";
+import { FunctionService } from "@/lib/modules/call/function.service";
 
 const log = createLogger("whatsapp");
 
@@ -104,7 +104,7 @@ async function handleHospitalReply(m: InboundMessage): Promise<boolean> {
     return true;
   }
   const target = open[0];
-  const res = await handleRecordResponse(
+  const res = await FunctionService.recordResponse(
     {
       attempt_id: target.attempt_id,
       outcome: reply.answer === "no" ? "declined" : reply.condition ? "conditional" : "accepted",

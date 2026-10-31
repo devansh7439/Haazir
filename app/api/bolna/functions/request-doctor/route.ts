@@ -1,6 +1,6 @@
-import { functionRoute } from "@/lib/functionRoute";
-import { handleRequestDoctor } from "@/lib/handlers";
+import { functionRoute } from "@/lib/modules/call/function.route";
+import { FunctionService } from "@/lib/modules/call/function.service";
 
 export async function POST(req: Request) {
-  return functionRoute(req, "request-doctor", (params) => handleRequestDoctor(params));
+  return functionRoute(req, "request-doctor", (params) => FunctionService.requestDoctor(params));
 }

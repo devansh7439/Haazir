@@ -2,10 +2,12 @@ import "server-only";
 import scenarioJson from "@/scenarios/demo-krait-bite.json";
 import { isSimulatedExecution } from "@/lib/bolna";
 import { secondsBetween } from "@/lib/core/clock";
-import { handleRecordHold, handleRecordResponse, handleRequestCallback, handleRequestDoctor, handleWebhook } from "@/lib/handlers";
-import { getAttempt, getAttempts, getReferral } from "@/lib/repo";
-import { canTransition, isTerminal, mapBolnaStatus } from "@/lib/statusMap";
+import { canTransition, isTerminal, mapBolnaStatus } from "@/lib/modules/call/status.helper";
 import type { Attempt } from "@/lib/core/types";
+import { CallRepository } from "@/lib/modules/call/call.repository";
+import { FunctionService } from "@/lib/modules/call/function.service";
+import { ReferralRepository } from "@/lib/modules/referral/referral.repository";
+import { WebhookService } from "@/lib/modules/call/webhook.service";
 
 // Replays scripted calls through the same handlers as real webhooks and function calls, with
 // outcome_source = 'simulation'. Step times are seconds after the call was dispatched.
@@ -84,7 +86,7 @@ async function applyStep(a: Attempt, step: Step, steps: Step[]): Promise<boolean
     const mapped = mapBolnaStatus(step.status);
     if (!mapped || !canTransition(a.status, mapped.status)) return false;
     const completed = mapped.status === "completed";
-    const res = await handleWebhook(
+    const res = await WebhookService.handle(
       {
         id: a.bolna_execution_id,
         status: step.status,
@@ -103,10 +105,10 @@ async function applyStep(a: Attempt, step: Step, steps: Step[]): Promise<boolean
     if (a.outcome || isTerminal(a.status)) return false;
     const params = { ...step.params, attempt_id: a.id, to_number: a.to_number };
     const handler = {
-      "record-response": handleRecordResponse,
-      "request-doctor": handleRequestDoctor,
-      "request-callback": handleRequestCallback,
-      "record-hold": handleRecordHold,
+      "record-response": FunctionService.recordResponse,
+      "request-doctor": FunctionService.requestDoctor,
+      "request-callback": FunctionService.requestCallback,
+      "record-hold": FunctionService.recordHold,
     }[step.function];
     const res = await handler(params, "simulation");
     await res.followUp();
@@ -117,17 +119,17 @@ async function applyStep(a: Attempt, step: Step, steps: Step[]): Promise<boolean
 
 /** Applies every scripted step that is due. Safe to call repeatedly (each step is applied at most once). */
 export async function advanceSimulation(referralId: string): Promise<number> {
-  const r = await getReferral(referralId);
+  const r = await ReferralRepository.get(referralId);
   if (!r?.is_simulated) return 0;
   let applied = 0;
-  const attempts = (await getAttempts(referralId)).filter(
+  const attempts = (await CallRepository.listForReferral(referralId)).filter(
     (a) => isSimulatedExecution(a.bolna_execution_id) && a.dispatched_at && !isTerminal(a.status),
   );
   for (const initial of attempts) {
     const steps = scriptFor(initial);
     const elapsed = secondsBetween(initial.dispatched_at);
     for (const step of steps.filter((s) => s.at_s <= elapsed)) {
-      const current = await getAttempt(initial.id); // re-read: earlier steps change status and outcome
+      const current = await CallRepository.get(initial.id); // re-read: earlier steps change status and outcome
       if (!current || isTerminal(current.status)) break;
       if (await applyStep(current, step, steps)) applied++;
     }

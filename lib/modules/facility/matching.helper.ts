@@ -82,46 +82,6 @@ export function etaMinutes(distanceKm: number, roadFactor = 1.4, speedKmph = 30)
   return Math.round(((distanceKm * roadFactor) / speedKmph) * 60);
 }
 
-/** Parameters: $1 lat, $2 lng, $3 radius_km, $4 needs text[], $5 origin facility id (nullable), $6 organisation id. */
-export const ELIGIBLE_SQL = `
-with params as (
-  select $1::float8 as lat, $2::float8 as lng, $3::int as radius_km,
-         $4::text[] as needs, $5::uuid as origin_id, $6::uuid as org_id
-),
-caps as (
-  select facility_id, array_agg(capability_code) as codes
-  from facility_capabilities
-  where status in ('declared','confirmed')
-  group by facility_id
-),
-dist as (
-  select f.*,
-         2 * 6371 * asin(sqrt(
-           power(sin(radians(f.lat - p.lat) / 2), 2) +
-           cos(radians(p.lat)) * cos(radians(f.lat)) * power(sin(radians(f.lng - p.lng) / 2), 2)
-         )) as distance_km
-  from facilities f cross join params p
-)
-select d.id, d.name, d.lat, d.lng,
-       round(d.distance_km::numeric, 1)::float8   as distance_km,
-       round(d.distance_km * 1.4 / 30 * 60)::int  as eta_minutes,
-       d.call_language,
-       coalesce(s.availability_calls, 0)::int     as availability_calls,
-       coalesce(s.answered, 0)::int               as answered,
-       coalesce(s.accepted, 0)::int               as accepted
-from dist d
-left join caps c on c.facility_id = d.id
-left join facility_stats s on s.facility_id = d.id
-cross join params p
-where d.active
-  and d.org_id = p.org_id
-  and (p.origin_id is null or d.id <> p.origin_id)
-  and coalesce(c.codes, '{}') @> p.needs
-  and d.distance_km <= p.radius_km
-  and exists (select 1 from facility_contacts fc where fc.facility_id = d.id and fc.active)
-order by eta_minutes
-`;
-
 /**
  * Max ETA by acuity (C8): skip hospitals further than `maxMinutes` unless nothing nearer is eligible.
  * 0 disables the cap.

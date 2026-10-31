@@ -1,21 +1,22 @@
 import "server-only";
 import { one } from "@/lib/core/db";
-import { getAttempt, getReferral } from "@/lib/repo";
 import type { Session } from "@/lib/session";
 import type { Attempt, Contact, Facility, Referral } from "@/lib/core/types";
 import { ApiError } from "@/lib/core/error";
+import { CallRepository } from "@/lib/modules/call/call.repository";
+import { ReferralRepository } from "@/lib/modules/referral/referral.repository";
 
 // Every console route loads rows through these, so one organisation can never read or change another's data.
 // A row in another organisation is reported as not found.
 
 export async function referralFor(s: Session, id: string): Promise<Referral> {
-  const r = await getReferral(id);
+  const r = await ReferralRepository.get(id);
   if (!r || r.org_id !== s.org) throw ApiError.notFound("Referral not found");
   return r;
 }
 
 export async function attemptFor(s: Session, id: string): Promise<Attempt & { org_id: string }> {
-  const a = (await getAttempt(id)) as (Attempt & { org_id: string }) | null;
+  const a = (await CallRepository.get(id)) as (Attempt & { org_id: string }) | null;
   if (!a || a.org_id !== s.org) throw ApiError.notFound("Call not found");
   return a;
 }

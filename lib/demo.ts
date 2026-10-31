@@ -2,14 +2,19 @@ import "server-only";
 import { env } from "@/lib/core/config";
 import { now } from "@/lib/core/clock";
 import { getDb, one, q, readSql } from "@/lib/core/db";
-import { addEvent } from "@/lib/events";
-import { lastBolnaContact } from "@/lib/handlers";
 import { normalizePhone } from "@/lib/core/normalize";
-import { createReferral, dispatchCall, loadCtx, previewReferral, type ReferralInput } from "@/lib/orchestrator";
-import { getFacility, getSetting, insertAttempt, setSetting } from "@/lib/repo";
 import { scenario } from "@/lib/simulator";
 import type { Referral } from "@/lib/core/types";
 import { ApiError } from "@/lib/core/error";
+import { CallRepository } from "@/lib/modules/call/call.repository";
+import { CallService } from "@/lib/modules/call/call.service";
+import { EventRepository } from "@/lib/modules/event/event.repository";
+import { FacilityRepository } from "@/lib/modules/facility/facility.repository";
+import { ReferralRepository } from "@/lib/modules/referral/referral.repository";
+import { ReferralService } from "@/lib/modules/referral/referral.service";
+import { SettingRepository } from "@/lib/modules/setting/setting.repository";
+import { WebhookLogRepository } from "@/lib/modules/call/webhook.repository";
+import type { ReferralInput } from "@/lib/modules/referral/referral.type";
 
 // Demo control panel (docs/04-api-spec.md §2.12, docs/06-ui-spec.md §4).
 
@@ -67,8 +72,8 @@ export async function demoStatus() {
   return {
     facilities,
     referrer_phone: referrer?.phone_e164 ?? null,
-    family_phone: await getSetting(FAMILY_PHONE_KEY),
-    ...(await lastBolnaContact()),
+    family_phone: await SettingRepository.get(FAMILY_PHONE_KEY),
+    ...(await WebhookLogRepository.lastContact()),
     config: {
       simulation_mode: env.simulationMode,
       bolna_api_key: !!env.bolnaApiKey,
@@ -96,7 +101,7 @@ export async function assignNumbers(b: {
   family_phone: string | null;
 }) {
   for (const a of b.assignments) {
-    const f = await getFacility(a.facility_id);
+    const f = await FacilityRepository.get(a.facility_id);
     if (!f?.is_demo) throw ApiError.unprocessable("NOT_DEMO", "Only demo facilities can be reassigned here");
     if (a.phone) {
       const phone = phoneOrThrow(a.phone, f.name);
@@ -118,7 +123,7 @@ export async function assignNumbers(b: {
     await q(`update referrers set phone_e164 = $2 where id = $1`, [DEMO_REFERRER_ID, phoneOrThrow(b.referrer_phone, "Doctor phone")]);
   }
   if (b.family_phone !== undefined) {
-    await setSetting(FAMILY_PHONE_KEY, b.family_phone ? phoneOrThrow(b.family_phone, "Family phone") : null);
+    await SettingRepository.set(FAMILY_PHONE_KEY, b.family_phone ? phoneOrThrow(b.family_phone, "Family phone") : null);
   }
   return demoStatus();
 }
@@ -126,15 +131,15 @@ export async function assignNumbers(b: {
 /** The demo story's referral, with the family phone from the Demo page. */
 export async function runDemoReferral(simulate: boolean): Promise<Referral> {
   const input = structuredClone(scenario.referral) as unknown as ReferralInput;
-  const family = await getSetting(FAMILY_PHONE_KEY);
+  const family = await SettingRepository.get(FAMILY_PHONE_KEY);
   if (family && input.patient) input.patient.attendant_phone = family;
-  const { referral } = await createReferral(input, { simulate });
+  const { referral } = await ReferralService.create(input, { simulate });
   return referral;
 }
 
 /** One availability call with the fictional demo summary, to rehearse a phone (or a consented real desk). */
 export async function testCall(facilityId: string, consentedTest: boolean) {
-  const facility = await getFacility(facilityId);
+  const facility = await FacilityRepository.get(facilityId);
   if (!facility) throw ApiError.notFound("Facility not found");
   const contact = await one<{ id: string; phone_e164: string }>(
     `select id, phone_e164 from facility_contacts where facility_id = $1 and active order by is_ivr, priority limit 1`,
@@ -152,10 +157,10 @@ export async function testCall(facilityId: string, consentedTest: boolean) {
      from referrers r join facilities f on f.id = r.facility_id where r.id = $1
      returning *`,
     [input.referrer_id, input.case_type, input.acuity, input.age_value, input.age_unit, input.sex, input.note,
-     input.required_capabilities, env.simulationMode, t, (await previewReferral(input)).spoken_summary],
+     input.required_capabilities, env.simulationMode, t, (await ReferralService.preview(input)).spoken_summary],
   );
   if (!r) throw ApiError.internal("INSERT_FAILED", "Could not create the test call");
-  const attempt = await insertAttempt({
+  const attempt = await CallRepository.insert({
     referral_id: r.id,
     facility_id: facility.id,
     contact_id: contact.id,
@@ -164,7 +169,7 @@ export async function testCall(facilityId: string, consentedTest: boolean) {
     call_language: facility.call_language,
     eta_minutes: 18,
   });
-  await addEvent(r.id, "test_call", { facility_id: facility.id, consented_test: consentedTest });
-  const ok = await dispatchCall(await loadCtx(r), attempt!, { consented_test: consentedTest });
+  await EventRepository.add(r.id, "test_call", { facility_id: facility.id, consented_test: consentedTest });
+  const ok = await CallService.dispatchCall(await ReferralRepository.context(r), attempt!, { consented_test: consentedTest });
   return { referral_id: r.id, attempt_id: attempt!.id, dispatched: ok };
 }

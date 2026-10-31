@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { availabilityUserData, holdConfirmUserData, releaseUserData } from "@/lib/userData";
+import { availabilityUserData, holdConfirmUserData, releaseUserData } from "@/lib/modules/call/user-data.helper";
 
 const ctx = {
   attempt_id: "5b1f0c7e-1f7a-4c3e-9a51-0c9d1e2f3a4b",

@@ -4,8 +4,8 @@ import { env } from "@/lib/core/config";
 import { addMinutes, now } from "@/lib/core/clock";
 import { one } from "@/lib/core/db";
 import { normalizePhone } from "@/lib/core/normalize";
-import { dispatchFamilyCall } from "@/lib/orchestrator";
-import { getReferral } from "@/lib/repo";
+import { CallService } from "@/lib/modules/call/call.service";
+import { ReferralRepository } from "@/lib/modules/referral/referral.repository";
 
 // C3: a family member on a feature phone gives a missed call to our number; we call them back with the update in
 // their language (the family-update agent). Point your telephony provider's missed-call / inbound webhook here:
@@ -42,8 +42,8 @@ export async function POST(req: Request) {
   );
   if (!match) return NextResponse.json({ ok: true, action: "no_referral" });
   after(async () => {
-    const r = await getReferral(match.referral_id);
-    if (r) await dispatchFamilyCall(r, "missed_call");
+    const r = await ReferralRepository.get(match.referral_id);
+    if (r) await CallService.dispatchFamilyCall(r, "missed_call");
   });
   return NextResponse.json({ ok: true, action: "family_call" });
 }

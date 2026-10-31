@@ -2,9 +2,9 @@ import "server-only";
 import { now } from "@/lib/core/clock";
 import { one, q } from "@/lib/core/db";
 import { normalizePhone } from "@/lib/core/normalize";
-import { getCapabilities } from "@/lib/repo";
 import type { Contact, Facility } from "@/lib/core/types";
 import { ApiError } from "@/lib/core/error";
+import { FacilityRepository } from "@/lib/modules/facility/facility.repository";
 
 // Facilities admin (docs/04-api-spec.md §2.11).
 
@@ -85,7 +85,7 @@ export async function patchFacility(id: string, b: Record<string, unknown>): Pro
 /** Replaces the facility's static capabilities. */
 export async function setCapabilities(id: string, codes: string[]): Promise<string[]> {
   const unique = [...new Set(codes)];
-  const known = await getCapabilities(unique);
+  const known = await FacilityRepository.capabilities(unique);
   if (known.length !== unique.length) throw ApiError.unprocessable("UNKNOWN_CAPABILITY", "Unknown capability code");
   if (!(await one(`select 1 from facilities where id = $1`, [id]))) throw ApiError.notFound("Facility not found");
   await q(`delete from facility_capabilities where facility_id = $1 and not (capability_code = any($2::text[]))`, [id, unique]);

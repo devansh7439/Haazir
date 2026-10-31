@@ -1,9 +1,9 @@
 import "server-only";
 import { NextResponse, after } from "next/server";
 import { functionAuthorized } from "@/lib/bolnaAuth";
-import type { FunctionResult } from "@/lib/handlers";
-import { logRaw } from "@/lib/repo";
 import { createLogger } from "@/lib/core/logger";
+import { WebhookLogRepository } from "@/lib/modules/call/webhook.repository";
+import type { FunctionResult } from "@/lib/modules/call/call.type";
 
 const log = createLogger("bolna-function");
 
@@ -27,7 +27,7 @@ export async function functionRoute(
     // Treat an unreadable body as empty; the handler falls back to a safe instruction.
   }
   try {
-    await logRaw(null, `function:${name}`, params);
+    await WebhookLogRepository.log(null, `function:${name}`, params);
     const res = await handler(params);
     after(async () => {
       try {

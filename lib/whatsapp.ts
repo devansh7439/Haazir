@@ -2,9 +2,9 @@ import "server-only";
 import { env } from "@/lib/core/config";
 import { now } from "@/lib/core/clock";
 import { q } from "@/lib/core/db";
-import { addEvent } from "@/lib/events";
 import { isE164, maskPhone } from "@/lib/core/normalize";
 import type { Rendered } from "@/lib/messages";
+import { EventRepository } from "@/lib/modules/event/event.repository";
 
 // Provider adapter: none (stored as simulated, shown in the UI) | meta | twilio.
 // Always writes a `messages` row (server-only) and a redacted event for the console.
@@ -92,7 +92,7 @@ export async function sendWhatsApp(opts: {
      values ($1, 'whatsapp', $2, $3, $4, $5, $6, $7, $8, $9)`,
     [opts.referral_id, opts.audience, to ?? "unknown", opts.rendered.body, result.provider, result.provider_message_id, result.status, result.error, now()],
   );
-  await addEvent(opts.referral_id, opts.eventType ?? "handoff_sent", {
+  await EventRepository.add(opts.referral_id, opts.eventType ?? "handoff_sent", {
     audience: opts.audience,
     facility_id: opts.facilityId ?? null,
     to_masked: maskPhone(to),
