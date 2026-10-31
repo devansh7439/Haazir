@@ -1,4 +1,4 @@
-import { DemoPanel } from "@/components/DemoPanel";
+import { DemoPanel } from "@/components/demo/DemoPanel";
 import { DemoService } from "@/lib/modules/demo/demo.service";
 import { pageSession } from "@/lib/modules/auth/session.service";
 

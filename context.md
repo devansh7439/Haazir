@@ -1,6 +1,6 @@
 # Haazir — Code Quality Context
 
-Shared context for any AI coding assistant (Claude Code, Codex, Cursor, Copilot, …) and for humans. Read this, then `CLAUDE.md`, before changing code. **Last updated: 2026-10-30.**
+Shared context for any AI coding assistant (Claude Code, Codex, Cursor, Copilot, …) and for humans. Read this, then `CLAUDE.md`, before changing code. **Last updated: 2026-10-31.**
 
 ## How to maintain this file
 
@@ -87,7 +87,7 @@ Run `bun run lint && bun run typecheck && bun run test` after every phase (not `
 | 1 | `lib/core/`: `ApiError`, logger, route helpers; move config, clock, db, normalize, types. Mechanical; update imports | done: 3ec3f4e (118 tests) |
 | 2 | Split `orchestrator.ts`, `handlers.ts`, `repo.ts`, `events.ts` into `referral/` and `call/`; evaluate becomes planner (helper) + applier (service), with unit tests for every branch | done: 671dc67 (135 tests); bug fix 1afb484 |
 | 3 | Move the remaining `lib/*.ts` into modules and integrations; only `*.repository.ts` touches the database; request schemas per module | done: 7d3e0de (move), f69b46b (repositories, schemas) |
-| 4 | Split `LiveBoard.tsx` (874 lines), `ReferralForm.tsx` (480), `FacilitiesAdmin.tsx`, `DemoPanel.tsx` into feature folders | **waiting**: session haazir-58 is restyling the UI (components, globals.css, page markup) at the user's request; it messages "UI handover done", then split the finished UI |
+| 4 | Split `LiveBoard.tsx`, `ReferralForm.tsx`, `FacilitiesAdmin.tsx`, `DemoPanel.tsx` into feature folders (`components/board`, `referral-form`, `facilities`, `demo`) | done: 9671d00 (board, form), next commit (facilities, demo); 147 tests |
 | 5 | Update the "Where things are" table in `CLAUDE.md` and the layout in `README.md` | done (with docs/02, docs/04, docs/whatsapp-templates paths) |
 
 ## 5. Decisions
@@ -104,6 +104,7 @@ Run `bun run lint && bun run typecheck && bun run test` after every phase (not `
 
 ## 6. Changelog
 
+- 2026-10-31: phase 4 done: board, referral-form, facilities and demo split into feature folders; client-safe helpers in `lib/ui/board.ts`, `request-id.ts`, `demo.ts`; 147 tests. All phases done.
 - 2026-10-31: phase 3 and 5 done; 139 tests. Phase 4 waits for haazir-58's UI handover.
 - 2026-10-31: phase 2 done (671dc67) + bed-none fix (1afb484). Another session is editing `components/LiveBoard.tsx`, `README.md`, `vercel.json` (speed work); phase 3 waits because moving `lib/view.ts` and `lib/ui.ts` rewrites LiveBoard imports.
 - 2026-10-31: user said start; the concurrent session had also moved the repo to Bun (`bun.lock`, `bun run serve`, `instrumentation.ts`).

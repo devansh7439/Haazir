@@ -1,4 +1,4 @@
-import { FacilitiesAdmin } from "@/components/FacilitiesAdmin";
+import { FacilitiesAdmin } from "@/components/facilities/FacilitiesAdmin";
 import { DirectoryService } from "@/lib/modules/facility/directory.service";
 import { FacilityRepository } from "@/lib/modules/facility/facility.repository";
 import { pageSession } from "@/lib/modules/auth/session.service";

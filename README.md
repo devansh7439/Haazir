@@ -77,7 +77,7 @@ bun run lint && bun run typecheck && bun run test
 
 ```
 app/                 pages (/, /referrals/[id], /facilities, /demo, /history) and API routes
-components/          ReferralForm, LiveBoard, BoardMap, FacilitiesAdmin, DemoPanel
+components/          board/, referral-form/, facilities/, demo/ (one component per file)
 lib/core/            config, clock, db, ApiError, logger, route helpers, normalisers, row types
 lib/integrations/    bolna (client, auth, agent builder), whatsapp (send, inbound), sarvam, supabase browser client
 lib/modules/         referral, call, facility, handoff, intake, portal, analytics, maintenance, demo, auth, event, setting:
