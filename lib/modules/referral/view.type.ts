@@ -1,4 +1,5 @@
-import type { Attempt, EventRow, Referral } from "@/lib/core/types";
+import type { Acuity, Attempt, EventRow, Referral, ReferralStatus } from "@/lib/core/types";
+import type { Audience } from "@/lib/modules/handoff/message.repository";
 
 /** A call as the board shows it, with its hospital and number. */
 export interface AttemptView extends Attempt {
@@ -24,9 +25,9 @@ export interface Alert {
 
 /** A WhatsApp message as the board shows it: masked number and redacted preview only. */
 export interface MessageView {
-  audience: string;
+  audience: Audience;
   to_masked: string;
-  status: string;
+  status: "sent" | "simulated" | "failed";
   preview_redacted: string;
   created_at: string;
 }
@@ -61,9 +62,9 @@ export interface ReferralView {
 export interface ReferralListItem {
   id: string;
   code: string;
-  status: string;
+  status: ReferralStatus;
   case_label: string;
-  acuity: string;
+  acuity: Acuity;
   is_simulated: boolean;
   created_at: string;
   ttfa_seconds: number | null;

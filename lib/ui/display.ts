@@ -1,3 +1,5 @@
+import type { AttemptStatus, Outcome, Purpose } from "@/lib/core/types";
+
 // Client-safe display helpers (docs/06-ui-spec.md §2.1). Colour never carries meaning alone: every state has an icon and text.
 
 export const LANGUAGE_LABEL: Record<string, string> = { en: "English", kn: "Kannada", hi: "Hindi", ta: "Tamil", te: "Telugu", ml: "Malayalam", mr: "Marathi" };
@@ -37,9 +39,9 @@ export const TONE: Record<Tone, { pin: string; badge: string; dot: string; accen
 export type IconKey = "queued" | "ringing" | "oncall" | "check" | "x" | "phone" | "callback" | "redirect" | "ban" | "help" | "lock";
 
 export interface AttemptLike {
-  purpose: string;
-  status: string;
-  outcome: string | null;
+  purpose: Purpose;
+  status: AttemptStatus;
+  outcome: Outcome | null;
   needs_review: boolean;
   decline_reason: string | null;
   callback_due_at: string | Date | null;

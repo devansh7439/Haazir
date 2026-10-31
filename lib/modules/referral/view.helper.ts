@@ -1,4 +1,5 @@
 import type { EventRow } from "@/lib/core/types";
+import type { Audience } from "@/lib/modules/handoff/message.repository";
 import type { Alert, AttemptView, MessageView, PortalFlag } from "@/lib/modules/referral/view.type";
 
 const ALERT_TYPES = new Set<string>(["doctor_callback_requested", "inbound_callback", "alert"]);
@@ -42,17 +43,28 @@ export const alertsOf = (events: EventRow[], attempts: AttemptView[]): Alert[] =
     }));
 };
 
-/** The WhatsApp messages sent, from their redacted events. */
+const AUDIENCES: readonly Audience[] = ["receiving_facility", "referrer", "family", "availability_ping"];
+const SEND_STATUSES: ReadonlyArray<MessageView["status"]> = ["sent", "simulated", "failed"];
+
+/** The value if it is one of the allowed ones, otherwise null. */
+const oneOf = <T extends string>(allowed: readonly T[], value: string | null): T | null => allowed.find((a) => a === value) ?? null;
+
+/** The WhatsApp messages sent, from their redacted events. An event with an unknown audience or status is skipped. */
 export const messagesOf = (events: EventRow[]): MessageView[] =>
   events
     .filter((e) => e.type === "handoff_sent")
-    .map((e) => ({
-      audience: text(e.payload, "audience") ?? "",
-      to_masked: text(e.payload, "to_masked") ?? "",
-      status: text(e.payload, "status") ?? "",
-      preview_redacted: text(e.payload, "preview_redacted") ?? "",
-      created_at: new Date(e.created_at).toISOString(),
-    }));
+    .flatMap((e) => {
+      const audience = oneOf(AUDIENCES, text(e.payload, "audience"));
+      const status = oneOf(SEND_STATUSES, text(e.payload, "status"));
+      if (!audience || !status) return [];
+      return [{
+        audience,
+        to_masked: text(e.payload, "to_masked") ?? "",
+        status,
+        preview_redacted: text(e.payload, "preview_redacted") ?? "",
+        created_at: new Date(e.created_at).toISOString(),
+      }];
+    });
 
 /** Portal contradictions by attempt id. */
 export const portalFlagsOf = (events: EventRow[]): Record<string, PortalFlag> => {

@@ -34,3 +34,11 @@ describe("view helpers", () => {
     expect(portalFlagsOf([flag, event("portal_mismatch", { detail: "x" })])).toEqual({ a1: { detail: "portal shows 3 ICU beds free", source: "state portal", observed_at: "2026-10-31T09:00:00Z" } });
   });
 });
+
+describe("messagesOf", () => {
+  it("skips an event whose audience or status isn't one we send", () => {
+    const bad = event("handoff_sent", { audience: "someone", to_masked: "x", status: "sent", preview_redacted: "" });
+    const worse = event("handoff_sent", { audience: "family", to_masked: "x", status: "queued", preview_redacted: "" });
+    expect(messagesOf([bad, worse])).toEqual([]);
+  });
+});
