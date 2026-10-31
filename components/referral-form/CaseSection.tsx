@@ -30,11 +30,14 @@ export function CaseSection(props: { templates: CaseTemplate[]; caseType: string
           <ChevronDown aria-hidden className={cx("size-3.5 transition", showAll && "rotate-180")} />
         </button>
       </div>
-      {template && !template.clinician_reviewed && (
-        <p className="flex items-center gap-1.5 text-xs text-zinc-500">
-          <Info aria-hidden className="size-3.5" /> Default needs are editable and not yet clinician-reviewed.
-        </p>
-      )}
+      {/* The line keeps its height when empty, so picking a case doesn't push the sections below it down. */}
+      <p className="flex min-h-8 items-start gap-1.5 sm:min-h-4 sm:items-center text-xs text-zinc-500">
+        {template && !template.clinician_reviewed && (
+          <>
+            <Info aria-hidden className="size-3.5" /> Default needs are editable and not yet clinician-reviewed.
+          </>
+        )}
+      </p>
     </FormSection>
   );
 }

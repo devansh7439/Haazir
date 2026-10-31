@@ -69,7 +69,7 @@ export function PatientSection(props: {
         hint={
           <div id="note-help" className="mt-1.5 flex justify-between gap-2 text-xs text-zinc-500">
             <span className="inline-flex items-center gap-1"><ShieldCheck aria-hidden className="size-3.5 text-emerald-600" /> Read to every hospital. No names, phone numbers or IDs.</span>
-            <span className="kbd-num">{note.length}/160</span>
+            <span className="kbd-num w-12 shrink-0 text-right">{note.length}/160</span>
           </div>
         }
       >

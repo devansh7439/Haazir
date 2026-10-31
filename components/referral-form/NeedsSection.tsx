@@ -10,7 +10,7 @@ export function NeedsSection(props: { capabilities: Capability[]; needs: string[
   const shown = showAll ? capabilities : capabilities.filter((c) => needs.includes(c.code));
   return (
     <FormSection title="Needs" description="What the receiving hospital must have. Only hospitals with all of these are called.">
-      <div className="flex flex-wrap gap-2">
+      <div className="flex min-h-9 flex-wrap gap-2">
         {shown.map((c) => (
           <button
             key={c.code}
