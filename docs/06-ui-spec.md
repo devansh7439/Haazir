@@ -154,5 +154,5 @@ List of referrals with code, case, status, **TTFA**, time to confirmed bed, numb
 - Large type: base 16 px, header timer 28 px or more. Tap targets 44 px or more.
 - High contrast (WCAG AA), and colour never carries meaning alone.
 - Mobile: single column; map collapses to a 160 px strip under a sticky header (timer, status, First yes); Select and Call buttons full width.
-- Plain words, written for doctors: "Find a bed", "Calling 6 hospitals", "Accepted", "Wants to talk to you", "Bed held until…". Mention AI only where it's disclosed (the calls themselves, the About page).
+- Plain words, written for doctors: "Find a bed", "Calling 6 hospitals", "Accepted", "Wants to talk to you", "Bed held until…". Mention AI only where it is disclosed (the calls themselves, which open by saying so).
 - Never show patient identifiers on the board. Message previews are redacted ("Patient: ●●●●").
