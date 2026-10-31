@@ -4,7 +4,7 @@ import { ApiError } from "@/lib/core/error";
 import { normalizePhone } from "@/lib/core/normalize";
 import type { Contact, Facility } from "@/lib/core/types";
 import { FacilityRepository } from "@/lib/modules/facility/facility.repository";
-import type { FacilityListItem, NewFacility } from "@/lib/modules/facility/facility.type";
+import type { FacilityListItem, NewListing } from "@/lib/modules/facility/facility.type";
 
 /** A phone number as stored (E.164), or a 422 naming the field. */
 const requirePhone = (raw: string | null | undefined, field: string): string => {
@@ -41,9 +41,24 @@ export const DirectoryService = {
     });
   },
 
-  create: async (orgId: string, b: NewFacility): Promise<Facility> => {
+  /**
+   * Lists a hospital with its services and desk numbers. Everything is checked before anything is written, so a bad
+   * number or an unknown service leaves no half-listed hospital behind.
+   */
+  create: async (orgId: string, b: NewListing): Promise<Facility> => {
     const whatsapp = b.whatsapp_number ? requirePhone(b.whatsapp_number, "WhatsApp number") : null;
-    return FacilityRepository.insert(orgId, { ...b, whatsapp_number: whatsapp });
+    const contacts = b.contacts.map((c) => ({ role: c.role, phone_e164: requirePhone(c.phone, "Phone"), priority: c.priority, is_ivr: c.is_ivr }));
+    if (new Set(contacts.map((c) => c.phone_e164)).size !== contacts.length) {
+      throw ApiError.unprocessable("DUPLICATE_NUMBER", "The same number is listed twice");
+    }
+    const codes = [...new Set(b.capabilities)];
+    if (codes.length > 0 && (await FacilityRepository.capabilities(codes)).length !== codes.length) {
+      throw ApiError.unprocessable("UNKNOWN_CAPABILITY", "Unknown capability code");
+    }
+    const facility = await FacilityRepository.insert(orgId, { ...b, whatsapp_number: whatsapp });
+    if (codes.length > 0) await FacilityRepository.replaceCapabilities(facility.id, codes);
+    for (const c of contacts) await FacilityRepository.upsertContact(facility.id, c);
+    return facility;
   },
 
   /** Changes the editable columns given; with none, returns the hospital unchanged. */

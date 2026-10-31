@@ -29,6 +29,12 @@ export interface FacilityStats {
   last_called_at: Date | null;
 }
 
+/** A hospital being listed: its columns, the services it offers and its desk numbers. */
+export interface NewListing extends NewFacility {
+  capabilities: string[];
+  contacts: Array<{ role: string; phone: string; priority: number; is_ivr: boolean }>;
+}
+
 /** The columns a new hospital is inserted with. */
 export interface NewFacility {
   name: string;
