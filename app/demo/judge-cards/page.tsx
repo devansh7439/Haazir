@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { PrintButton } from "@/components/PrintButton";
 import { PageHeader } from "@/components/ui";
-import { demoStatus } from "@/lib/modules/demo/demo.service";
+import { DemoService } from "@/lib/modules/demo/demo.service";
 import { JUDGE_CARDS } from "@/lib/modules/demo/judge-cards.helper";
 import { pageSession } from "@/lib/modules/auth/session.service";
 import { shortName } from "@/lib/ui/display";
@@ -11,7 +11,7 @@ export const dynamic = "force-dynamic";
 // Printable judge cards (docs/08-demo-and-pitch.md §2), with each phone's assigned number so cards and phones match.
 export default async function JudgeCardsPage() {
   await pageSession({ demo: true });
-  const status = await demoStatus();
+  const status = await DemoService.status();
   const byId = new Map(status.facilities.map((f) => [f.facility_id, f]));
   const placeholder = (p: string | null) => !p || /^\+9100000/.test(p);
   return (

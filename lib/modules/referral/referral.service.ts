@@ -7,7 +7,7 @@ import type { Attempt, Referral } from "@/lib/core/types";
 import { stopCall } from "@/lib/integrations/bolna/bolna.client";
 import { doctorConfirmation, familyMessage, preArrivalNote } from "@/lib/modules/handoff/message.helper";
 import { buildSpokenSummary, checkNote } from "@/lib/modules/referral/summary.helper";
-import { sendWhatsApp } from "@/lib/modules/handoff/whatsapp.service";
+import { WhatsAppService } from "@/lib/modules/handoff/whatsapp.service";
 import { isAcceptance, stillOnLine } from "@/lib/modules/call/call.helper";
 import { CallRepository } from "@/lib/modules/call/call.repository";
 import { CallService } from "@/lib/modules/call/call.service";
@@ -356,12 +356,12 @@ export const ReferralService = {
     const facts = handoffFacts({ ctx, selected, facility, patient, contactPerson: hold?.contact_person || selected.contact_person, now: now() });
     const simulated = r.is_simulated;
     const prearrival = preArrivalNote(facts);
-    await sendWhatsApp({ referral_id: r.id, audience: "receiving_facility", to: facility.whatsapp_number, rendered: prearrival, simulated });
+    await WhatsAppService.send({ referral_id: r.id, audience: "receiving_facility", to: facility.whatsapp_number, rendered: prearrival, simulated });
     await ReferralRepository.markSharedWithFacility(r.id);
-    await sendWhatsApp({ referral_id: r.id, audience: "referrer", to: ctx.referrer.phone_e164, rendered: doctorConfirmation(facts), simulated });
+    await WhatsAppService.send({ referral_id: r.id, audience: "referrer", to: ctx.referrer.phone_e164, rendered: doctorConfirmation(facts), simulated });
     if (patient?.attendant_phone_e164) {
       const rendered = familyMessage(facts, patient.attendant_language);
-      await sendWhatsApp({ referral_id: r.id, audience: "family", to: patient.attendant_phone_e164, rendered, simulated });
+      await WhatsAppService.send({ referral_id: r.id, audience: "family", to: patient.attendant_phone_e164, rendered, simulated });
       if (env.familyCalls) await CallService.dispatchFamilyCall(r, "handoff");
     }
   },

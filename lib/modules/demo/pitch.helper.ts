@@ -1,7 +1,4 @@
-import "server-only";
-import fs from "node:fs";
-import path from "node:path";
-import { one } from "@/lib/core/db";
+import type { MeasuredRow } from "@/lib/modules/demo/pitch.repository";
 import { mmss } from "@/lib/ui/display";
 
 // The presenter run sheet reads docs/08-demo-and-pitch.md directly, so the script has one source of truth.
@@ -39,31 +36,14 @@ export interface Measured {
   answerRate: string | null;
 }
 
-export async function measuredNumbers(orgId: string): Promise<Measured> {
-  const row = await one<{ n: number; median: number | null; latest: number | null; calls: number; answered: number }>(
-    `select
-       (select count(*)::int from referral_metrics m join referrals r on r.id = m.id
-         where r.org_id = $1 and not r.is_simulated and m.ttfa_seconds is not null) as n,
-       (select percentile_cont(0.5) within group (order by m.ttfa_seconds) from referral_metrics m join referrals r on r.id = m.id
-         where r.org_id = $1 and not r.is_simulated and m.ttfa_seconds is not null) as median,
-       (select m.ttfa_seconds from referral_metrics m join referrals r on r.id = m.id
-         where r.org_id = $1 and not r.is_simulated and m.ttfa_seconds is not null order by r.created_at desc limit 1) as latest,
-       (select count(*)::int from call_attempts a join referrals r on r.id = a.referral_id
-         where r.org_id = $1 and not r.is_simulated and a.purpose = 'availability' and a.status in ('completed','no_answer','busy')) as calls,
-       (select count(*)::int from call_attempts a join referrals r on r.id = a.referral_id
-         where r.org_id = $1 and not r.is_simulated and a.purpose = 'availability' and a.answered_at is not null) as answered`,
-    [orgId],
-  );
+/** Measured numbers as the run sheet shows them; null for anything not measured yet. */
+export function measuredFrom(row: MeasuredRow | null): Measured {
   return {
     ttfa: row?.latest != null ? mmss(row.latest) : null,
     n: row?.n ?? 0,
     median: row?.median != null ? mmss(Math.round(row.median)) : null,
     answerRate: row && row.calls > 0 ? `${Math.round((100 * row.answered) / row.calls)}%` : null,
   };
-}
-
-export function readPitchDoc(): string {
-  return fs.readFileSync(path.join(process.cwd(), "docs/08-demo-and-pitch.md"), "utf8");
 }
 
 /** Replaces {TTFA}, {N}, {X} and {answer rate} with measured values; unknown placeholders are left for the team. */

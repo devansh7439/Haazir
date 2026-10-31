@@ -2,7 +2,7 @@ import "server-only";
 import { cookies } from "next/headers";
 import { notFound, redirect } from "next/navigation";
 import { env } from "@/lib/core/config";
-import { one } from "@/lib/core/db";
+import { AuthRepository } from "@/lib/modules/auth/auth.repository";
 import { GATE_COOKIE, SESSION_COOKIE, gateToken, verifySession } from "@/lib/modules/auth/gate.helper";
 import { DEFAULT_ORG_ID } from "@/lib/core/types";
 import { ApiError } from "@/lib/core/error";
@@ -26,10 +26,7 @@ export async function sessionFromCookies(get: (name: string) => string | undefin
     const claims = await verifySession(get(SESSION_COOKIE), env.sessionSecret);
     if (!claims) return null;
     // Deactivated users lose access immediately, not when the cookie expires.
-    const user = await one<{ active: boolean; org_id: string; role: "admin" | "doctor"; referrer_id: string | null }>(
-      `select active, org_id, role, referrer_id from app_users where id = $1`,
-      [claims.uid],
-    );
+    const user = await AuthRepository.access(claims.uid);
     if (!user?.active || user.org_id !== claims.org) return null;
     return { uid: claims.uid, org: user.org_id, role: user.role, rid: user.referrer_id, name: claims.name, email: claims.email };
   }

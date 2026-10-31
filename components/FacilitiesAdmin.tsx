@@ -2,7 +2,7 @@
 
 import { Building2, Phone, Search, ShieldCheck, TriangleAlert, X } from "lucide-react";
 import { useState } from "react";
-import type { FacilityListItem } from "@/lib/modules/facility/directory.service";
+import type { FacilityListItem } from "@/lib/modules/facility/facility.type";
 import type { Capability, Contact } from "@/lib/core/types";
 import { LANGUAGE_LABEL, clock, shortName } from "@/lib/ui/display";
 import { PageHeader, Stat, cx } from "./ui";

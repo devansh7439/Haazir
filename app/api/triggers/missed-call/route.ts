@@ -2,7 +2,6 @@ import { NextResponse, after } from "next/server";
 import { timingSafeEqual } from "node:crypto";
 import { env } from "@/lib/core/config";
 import { addMinutes, now } from "@/lib/core/clock";
-import { one } from "@/lib/core/db";
 import { normalizePhone } from "@/lib/core/normalize";
 import { CallService } from "@/lib/modules/call/call.service";
 import { ReferralRepository } from "@/lib/modules/referral/referral.repository";
@@ -34,15 +33,10 @@ export async function POST(req: Request) {
   const phone = normalizePhone(from);
   if (!phone) return NextResponse.json({ ok: true, action: "ignored" });
   // The most recent confirmed referral (last 24 h) where this number is the attendant's.
-  const match = await one<{ referral_id: string }>(
-    `select r.id as referral_id from patient_details pd join referrals r on r.id = pd.referral_id
-     where pd.attendant_phone_e164 = $1 and r.status in ('confirmed', 'closed') and r.confirmed_at > $2
-     order by r.confirmed_at desc limit 1`,
-    [phone, addMinutes(now(), -24 * 60)],
-  );
-  if (!match) return NextResponse.json({ ok: true, action: "no_referral" });
+  const referralId = await ReferralRepository.latestConfirmedForAttendant(phone, addMinutes(now(), -24 * 60));
+  if (!referralId) return NextResponse.json({ ok: true, action: "no_referral" });
   after(async () => {
-    const r = await ReferralRepository.get(match.referral_id);
+    const r = await ReferralRepository.get(referralId);
     if (r) await CallService.dispatchFamilyCall(r, "missed_call");
   });
   return NextResponse.json({ ok: true, action: "family_call" });

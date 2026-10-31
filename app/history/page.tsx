@@ -3,7 +3,7 @@ import Link from "next/link";
 import { PageHeader, ReferralStatusPill, SimBadge, Stat } from "@/components/ui";
 import { mmss } from "@/lib/ui/display";
 import { pageSession } from "@/lib/modules/auth/session.service";
-import { listReferrals } from "@/lib/modules/referral/view.service";
+import { ViewService } from "@/lib/modules/referral/view.service";
 
 export const dynamic = "force-dynamic";
 
@@ -16,7 +16,7 @@ function median(xs: number[]): number | null {
 
 export default async function HistoryPage() {
   const s = await pageSession();
-  const rows = await listReferrals(s.org, 200);
+  const rows = await ViewService.list(s.org, 200);
   const real = rows.filter((r) => !r.is_simulated);
   const realTtfas = real.map((r) => r.ttfa_seconds).filter((x): x is number => x !== null);
   const realTtfa = median(realTtfas);

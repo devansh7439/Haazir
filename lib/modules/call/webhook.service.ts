@@ -5,7 +5,7 @@ import { createLogger } from "@/lib/core/logger";
 import { clean, normalizeYesNo, redactNumbers } from "@/lib/core/normalize";
 import type { Attempt } from "@/lib/core/types";
 import { getExecution, isSimulatedExecution } from "@/lib/integrations/bolna/bolna.client";
-import { checkPortalMismatch } from "@/lib/modules/portal/portal.service";
+import { PortalService } from "@/lib/modules/portal/portal.service";
 import { isAcceptance } from "@/lib/modules/call/call.helper";
 import { CallRepository } from "@/lib/modules/call/call.repository";
 import { noFollowUp, type FollowUp, type WebhookResult } from "@/lib/modules/call/call.type";
@@ -50,7 +50,7 @@ const reconcileAvailability = async (a: Attempt, body: Body): Promise<void> => {
     const r = await ReferralRepository.get(a.referral_id);
     if (r) await ReferralService.markFirstAcceptance(r, updated);
   }
-  await checkPortalMismatch(updated);
+  await PortalService.checkMismatch(updated);
 };
 
 /** What a call's end means, by purpose; returns follow-up work (a confirmed hold sends the handoff). */

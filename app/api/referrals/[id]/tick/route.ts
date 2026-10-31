@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { handle } from "@/lib/core/route";
-import { referralFor } from "@/lib/modules/auth/scope.service";
+import { ScopeService } from "@/lib/modules/auth/scope.service";
 import { requireSession } from "@/lib/modules/auth/session.service";
 import { advanceSimulation } from "@/lib/modules/demo/simulator.service";
 import { ReferralRepository } from "@/lib/modules/referral/referral.repository";
@@ -11,7 +11,7 @@ import { WebhookService } from "@/lib/modules/call/webhook.service";
 export async function POST(_req: Request, { params }: { params: Promise<{ id: string }> }) {
   return handle(async () => {
     const s = await requireSession();
-    const before = await referralFor(s, (await params).id);
+    const before = await ScopeService.referral(s, (await params).id);
     const id = before.id;
     const steps = before.is_simulated ? await advanceSimulation(id) : await WebhookService.recoverStale(id);
     const actions = await ReferralService.evaluate(id);

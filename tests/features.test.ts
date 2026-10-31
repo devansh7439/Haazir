@@ -9,8 +9,8 @@ import { bedRequestMessage, preArrivalNote, templateParam, type HandoffFacts } f
 import { hashPassword, verifyPassword } from "@/lib/modules/auth/password.helper";
 import { portalMismatch } from "@/lib/modules/portal/portal.helper";
 import { parseQuickReply } from "@/lib/modules/intake/quick-reply.helper";
-import { metaPayload } from "@/lib/modules/handoff/whatsapp.service";
-import { parseMetaPayload, parseTwilioPayload, verifyMetaSignature, verifyTwilioSignature } from "@/lib/modules/intake/inbound.service";
+import { metaPayload } from "@/lib/integrations/whatsapp/whatsapp.client";
+import { parseMetaPayload, parseTwilioPayload, verifyMetaSignature, verifyTwilioSignature } from "@/lib/integrations/whatsapp/whatsapp.inbound";
 
 afterEach(() => vi.unstubAllEnvs());
 
@@ -171,8 +171,9 @@ describe("Bolna agent builder", () => {
 
 describe("pitch and proof tooling", () => {
   it("reads the script, fallback ladder and hard questions from docs/08", async () => {
-    const { fillPlaceholders, readPitchDoc, tableUnder } = await import("@/lib/modules/demo/pitch.helper");
-    const md = readPitchDoc();
+    const { fillPlaceholders, tableUnder } = await import("@/lib/modules/demo/pitch.helper");
+    const { PitchService } = await import("@/lib/modules/demo/pitch.service");
+    const md = PitchService.readDoc();
     const script = tableUnder(md, "The 3-minute script")!;
     expect(script.header).toEqual(["Time", "On screen", "Say (roughly)"]);
     expect(script.rows).toHaveLength(7);

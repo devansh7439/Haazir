@@ -22,7 +22,7 @@ const referral = (o: Partial<Referral> = {}): Referral => ({
 
 let seq = 0;
 const attempt = (o: Partial<Attempt> = {}): Attempt => ({
-  id: `a${++seq}`, referral_id: "r1", facility_id: "f1", contact_id: "c1", parent_attempt_id: null, purpose: "availability",
+  id: `a${++seq}`, org_id: "o1", referral_id: "r1", facility_id: "f1", contact_id: "c1", parent_attempt_id: null, purpose: "availability",
   wave: 1, rank: 1, distance_km: 5, eta_minutes: 18, rank_reasons: [], to_number: "+911", call_language: "en",
   bolna_agent_id: null, bolna_execution_id: null, status: "ringing", bolna_status: null, termination_reason: null,
   outcome: null, outcome_source: null, extraction_outcome: null, needs_review: false, bed_type: null,
@@ -33,7 +33,7 @@ const attempt = (o: Partial<Attempt> = {}): Attempt => ({
 });
 
 const contact = (o: Partial<Contact> = {}): Contact => ({
-  id: "c2", facility_id: "f1", role: "desk", phone_e164: "+912", priority: 2, is_ivr: false, verified_at: null,
+  id: "c2", org_id: "o1", facility_id: "f1", role: "desk", phone_e164: "+912", priority: 2, is_ivr: false, verified_at: null,
   calls_made: 0, calls_answered: 0, last_outcome: null, active: true, ...o,
 });
 

@@ -135,4 +135,30 @@ export const ReferralRepository = {
   /** Whether the pre-arrival note has already gone to the receiving hospital. */
   hasHandoff: async (referralId: string): Promise<boolean> =>
     !!(await one(`select 1 from messages where referral_id = $1 and audience = 'receiving_facility'`, [referralId])),
+
+  /** Every case template for the form, "Other" last. */
+  caseTemplates: (): Promise<CaseTemplate[]> =>
+    q<CaseTemplate>(`select * from case_templates order by case when case_type = 'other' then 1 else 0 end, label`),
+
+  /**
+   * The doctor a session refers as: their own referrer when the user is linked to one, else the organisation's first.
+   * With their centre's name, for the header.
+   */
+  defaultReferrer: (orgId: string, referrerId: string | null): Promise<{ id: string; name: string; facility: string | null } | null> =>
+    one(
+      `select r.id, r.name, f.name as facility from referrers r left join facilities f on f.id = r.facility_id
+       where r.org_id = $1 and ($2::uuid is null or r.id = $2) order by r.created_at limit 1`,
+      [orgId, referrerId],
+    ),
+
+  /** The newest referral confirmed since `since` whose attendant has this number: who a missed call is from (C3). */
+  latestConfirmedForAttendant: async (phone: string, since: Date): Promise<string | null> =>
+    (
+      await one<{ referral_id: string }>(
+        `select r.id as referral_id from patient_details pd join referrals r on r.id = pd.referral_id
+         where pd.attendant_phone_e164 = $1 and r.status in ('confirmed', 'closed') and r.confirmed_at > $2
+         order by r.confirmed_at desc limit 1`,
+        [phone, since],
+      )
+    )?.referral_id ?? null,
 };

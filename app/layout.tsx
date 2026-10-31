@@ -1,7 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { AppShell } from "@/components/AppShell";
 import { env } from "@/lib/core/config";
-import { one } from "@/lib/core/db";
+import { ReferralRepository } from "@/lib/modules/referral/referral.repository";
 import { getSession } from "@/lib/modules/auth/session.service";
 import { DEFAULT_ORG_ID } from "@/lib/core/types";
 import "./globals.css";
@@ -19,11 +19,7 @@ async function currentUser() {
   try {
     const s = await getSession();
     if (!s) return null;
-    const row = await one<{ name: string; facility: string | null }>(
-      `select r.name, f.name as facility from referrers r left join facilities f on f.id = r.facility_id
-       where r.org_id = $1 and ($2::uuid is null or r.id = $2) order by r.created_at limit 1`,
-      [s.org, s.rid],
-    );
+    const row = await ReferralRepository.defaultReferrer(s.org, s.rid);
     const strip = (x: string | null | undefined) => x?.replace(/\s*\(Demo\)/i, "") ?? null;
     return {
       name: s.name || strip(row?.name) || "Console",

@@ -3,7 +3,7 @@ import { CALLBACK_MAX_MIN, INBOUND_MATCH_WINDOW_MIN, MAX_REDIALS_PER_FACILITY } 
 import { addMinutes, now } from "@/lib/core/clock";
 import { cleanParams, normalizeBedType, normalizeOutcome, normalizePhone, normalizeReferralCode, normalizeYesNo, parseMinutes } from "@/lib/core/normalize";
 import type { Attempt, Purpose } from "@/lib/core/types";
-import { checkPortalMismatch } from "@/lib/modules/portal/portal.service";
+import { PortalService } from "@/lib/modules/portal/portal.service";
 import { spokenName } from "@/lib/modules/referral/summary.helper";
 import { isAcceptance } from "@/lib/modules/call/call.helper";
 import { CallRepository } from "@/lib/modules/call/call.repository";
@@ -102,7 +102,7 @@ export const FunctionService = {
     if (plan.releaseInCall && updated) await CallService.recordInCallRelease(updated);
 
     const followUp: FollowUp = async () => {
-      if (updated) await checkPortalMismatch(updated);
+      if (updated) await PortalService.checkMismatch(updated);
       if (plan.redialTo && updated) {
         const contactId = await FacilityRepository.addUnverifiedContact(attempt.facility_id, plan.redialTo, "other");
         const r = await ReferralRepository.get(attempt.referral_id);

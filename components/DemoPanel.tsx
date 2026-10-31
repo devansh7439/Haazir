@@ -4,11 +4,11 @@ import { CheckCircle2, Circle, Database, IdCard, ListChecks, Loader2, ScrollText
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
-import type { demoStatus } from "@/lib/modules/demo/demo.service";
+import type { DemoService } from "@/lib/modules/demo/demo.service";
 import { LANGUAGE_LABEL, shortName } from "@/lib/ui/display";
 import { PageHeader, cx } from "./ui";
 
-type Status = Awaited<ReturnType<typeof demoStatus>>;
+type Status = Awaited<ReturnType<typeof DemoService.status>>;
 
 const CHECKLIST = [
   "Bolna concurrency is at least 10 (trial accounts dial 2 at a time, verified numbers only)",

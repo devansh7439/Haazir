@@ -42,6 +42,8 @@ export interface Facility {
 
 export interface Contact {
   id: string;
+  /** Inherited from the hospital by trigger (migration 0003). */
+  org_id: string;
   facility_id: string;
   role: string;
   phone_e164: string;
@@ -90,6 +92,8 @@ export interface Referral {
 
 export interface Attempt {
   id: string;
+  /** Inherited from the referral by trigger (migration 0003). */
+  org_id: string;
   referral_id: string;
   facility_id: string | null;
   contact_id: string | null;

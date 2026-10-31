@@ -1,6 +1,6 @@
 import "server-only";
 import { now } from "@/lib/core/clock";
-import { json, q } from "@/lib/core/db";
+import { json, one, q } from "@/lib/core/db";
 
 /** Event types covered by events_once_per_referral_idx (migration 0002): a second insert is ignored. */
 export type OnceEventType = "hold_expired" | "options_ready" | "referral_exhausted";
@@ -15,6 +15,10 @@ export const EventRepository = {
       [referralId, attemptId, type, json(payload), now()],
     );
   },
+
+  /** Whether a call already has an event of this type. */
+  existsForAttempt: async (attemptId: string, type: string): Promise<boolean> =>
+    !!(await one(`select 1 from events where attempt_id = $1 and type = $2`, [attemptId, type])),
 
   /** Adds a once-only event. False when the referral already has one. */
   addOnce: async (referralId: string, type: OnceEventType, payload: Payload = {}, attemptId: string | null = null): Promise<boolean> => {

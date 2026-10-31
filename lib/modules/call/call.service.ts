@@ -6,9 +6,9 @@ import { maskPhone, normalizePhone, redactNumbers } from "@/lib/core/normalize";
 import type { Attempt, Referral } from "@/lib/core/types";
 import { BolnaError, makeCall } from "@/lib/integrations/bolna/bolna.client";
 import { bedRequestMessage } from "@/lib/modules/handoff/message.helper";
-import { checkPortalMismatch } from "@/lib/modules/portal/portal.service";
+import { PortalService } from "@/lib/modules/portal/portal.service";
 import { joinSpoken } from "@/lib/modules/referral/summary.helper";
-import { sendWhatsApp } from "@/lib/modules/handoff/whatsapp.service";
+import { WhatsAppService } from "@/lib/modules/handoff/whatsapp.service";
 import { facilityArea, isAcceptance, withoutDemoTag } from "@/lib/modules/call/call.helper";
 import { CallRepository } from "@/lib/modules/call/call.repository";
 import type { DialTarget } from "@/lib/modules/call/call.type";
@@ -91,7 +91,7 @@ export const CallService = {
       case_summary: ctx.referral.spoken_summary,
     });
     for (const f of facilities.filter((x) => x.whatsapp_number)) {
-      await sendWhatsApp({
+      await WhatsAppService.send({
         referral_id: ctx.referral.id,
         audience: "availability_ping",
         to: f.whatsapp_number,
@@ -311,7 +311,7 @@ export const CallService = {
     }, a.id);
     const r = await ReferralRepository.get(a.referral_id);
     if (r && updated && isAcceptance(updated)) await ReferralService.markFirstAcceptance(r, updated);
-    if (updated) await checkPortalMismatch(updated);
+    if (updated) await PortalService.checkMismatch(updated);
     await ReferralService.evaluate(a.referral_id);
     return updated;
   },

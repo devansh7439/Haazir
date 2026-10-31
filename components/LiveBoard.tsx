@@ -7,7 +7,7 @@ import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { authorizeRealtime, browserSupabase } from "@/lib/integrations/supabase/supabase.browser";
 import { BED_LABEL, LANGUAGE_LABEL, TONE, attemptDisplay, clock, eventText, mmss, shortName, type Group } from "@/lib/ui/display";
-import type { AttemptView, ReferralView } from "@/lib/modules/referral/view.service";
+import type { AttemptView, ReferralView } from "@/lib/modules/referral/view.type";
 import type { MapPin as Pin } from "./BoardMap";
 import { ReferralStatusPill, SectionTitle, SimBadge, StatusPill, cx } from "./ui";
 

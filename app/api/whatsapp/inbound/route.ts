@@ -1,6 +1,7 @@
 import { NextResponse, after } from "next/server";
 import { env } from "@/lib/core/config";
-import { handleInbound, parseMetaPayload, parseTwilioPayload, verifyMetaSignature, verifyTwilioSignature, type InboundMessage } from "@/lib/modules/intake/inbound.service";
+import { parseMetaPayload, parseTwilioPayload, verifyMetaSignature, verifyTwilioSignature, type InboundMessage } from "@/lib/integrations/whatsapp/whatsapp.inbound";
+import { InboundService } from "@/lib/modules/intake/inbound.service";
 import { createLogger } from "@/lib/core/logger";
 
 const log = createLogger("whatsapp");
@@ -41,7 +42,7 @@ export async function POST(req: Request) {
   after(async () => {
     for (const m of messages) {
       try {
-        await handleInbound(m);
+        await InboundService.handle(m);
       } catch (err) {
         log.error({ err }, "Inbound WhatsApp failed");
       }

@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { timingSafeEqual } from "node:crypto";
 import { env } from "@/lib/core/config";
-import { runCronTick } from "@/lib/modules/maintenance/maintenance.service";
+import { MaintenanceService } from "@/lib/modules/maintenance/maintenance.service";
 import { createLogger } from "@/lib/core/logger";
 
 const log = createLogger("cron");
@@ -23,7 +23,7 @@ function authorized(req: Request): boolean {
 async function run(req: Request) {
   if (!authorized(req)) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
   try {
-    return NextResponse.json({ ok: true, ...(await runCronTick()) });
+    return NextResponse.json({ ok: true, ...(await MaintenanceService.tick()) });
   } catch (err) {
     log.error({ err }, "Cron tick failed");
     return NextResponse.json({ ok: false }, { status: 500 });

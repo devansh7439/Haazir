@@ -3,7 +3,7 @@
 import { MessageCircle, Mic, X } from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
-import type { DraftSummary } from "@/lib/modules/intake/intake.service";
+import type { DraftSummary } from "@/lib/modules/intake/intake.type";
 
 // Referral drafts that doctors sent by WhatsApp text or voice note (C2).
 export function DraftsList({ initial }: { initial: DraftSummary[] }) {

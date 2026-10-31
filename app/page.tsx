@@ -4,12 +4,12 @@ import { DraftsList } from "@/components/DraftsList";
 import { ReferralForm } from "@/components/ReferralForm";
 import { PageHeader, ReferralStatusPill, SimBadge } from "@/components/ui";
 import { env } from "@/lib/core/config";
-import { one, q } from "@/lib/core/db";
-import { getDraft, listDrafts } from "@/lib/modules/intake/intake.service";
-import type { Capability, CaseTemplate } from "@/lib/core/types";
+import { IntakeService } from "@/lib/modules/intake/intake.service";
+import { FacilityRepository } from "@/lib/modules/facility/facility.repository";
+import { ReferralRepository } from "@/lib/modules/referral/referral.repository";
 import { mmss } from "@/lib/ui/display";
 import { pageSession } from "@/lib/modules/auth/session.service";
-import { listReferrals } from "@/lib/modules/referral/view.service";
+import { ViewService } from "@/lib/modules/referral/view.service";
 
 export const dynamic = "force-dynamic";
 
@@ -19,15 +19,12 @@ export default async function NewReferralPage({ searchParams }: { searchParams: 
   const s = await pageSession();
   const draftId = (await searchParams).draft;
   const [templates, capabilities, referrer, recent, drafts, draft] = await Promise.all([
-    q<CaseTemplate>(`select * from case_templates order by case when case_type = 'other' then 1 else 0 end, label`),
-    q<Capability>(`select * from capabilities order by category, label`),
-    one<{ id: string }>(
-      `select id from referrers where org_id = $1 and ($2::uuid is null or id = $2) order by created_at limit 1`,
-      [s.org, s.rid],
-    ),
-    listReferrals(s.org, 6),
-    listDrafts(s.org),
-    draftId && UUID.test(draftId) ? getDraft(s.org, draftId) : Promise.resolve(null),
+    ReferralRepository.caseTemplates(),
+    FacilityRepository.allCapabilities(),
+    ReferralRepository.defaultReferrer(s.org, s.rid),
+    ViewService.list(s.org, 6),
+    IntakeService.list(s.org),
+    draftId && UUID.test(draftId) ? IntakeService.get(s.org, draftId) : Promise.resolve(null),
   ]);
   const bolnaReady = !!env.bolnaApiKey && !!env.agentId("availability");
 

@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { HourChart } from "@/components/HourChart";
 import { PageHeader, Stat, cx } from "@/components/ui";
-import { hospitalStats, hourStats } from "@/lib/modules/analytics/analytics.service";
+import { AnalyticsService } from "@/lib/modules/analytics/analytics.service";
 import { pageSession } from "@/lib/modules/auth/session.service";
 import { clock, mmss, shortName } from "@/lib/ui/display";
 
@@ -27,7 +27,7 @@ function RateBar({ n, d }: { n: number; d: number }) {
 export default async function AnalyticsPage({ searchParams }: { searchParams: Promise<{ sim?: string }> }) {
   const s = await pageSession();
   const includeSim = (await searchParams).sim === "1";
-  const [hospitals, hours] = await Promise.all([hospitalStats(s.org, includeSim), hourStats(s.org, includeSim)]);
+  const [hospitals, hours] = await Promise.all([AnalyticsService.hospitalStats(s.org, includeSim), AnalyticsService.hourStats(s.org, includeSim)]);
   const calls = hospitals.reduce((n, h) => n + h.calls, 0);
   const answered = hospitals.reduce((n, h) => n + h.answered, 0);
   const accepted = hospitals.reduce((n, h) => n + h.accepted, 0);

@@ -1,15 +1,16 @@
 import Link from "next/link";
 import { Rich } from "@/components/Rich";
 import { PageHeader, Stat } from "@/components/ui";
-import { fillPlaceholders, measuredNumbers, readPitchDoc, tableUnder } from "@/lib/modules/demo/pitch.helper";
+import { fillPlaceholders, tableUnder } from "@/lib/modules/demo/pitch.helper";
+import { PitchService } from "@/lib/modules/demo/pitch.service";
 import { pageSession } from "@/lib/modules/auth/session.service";
 
 export const dynamic = "force-dynamic";
 
 export default async function RunSheetPage() {
   const s = await pageSession({ demo: true });
-  const md = readPitchDoc();
-  const m = await measuredNumbers(s.org);
+  const md = PitchService.readDoc();
+  const m = await PitchService.measured(s.org);
   const script = tableUnder(md, "The 3-minute script");
   const fallback = tableUnder(md, "Fallback ladder");
   const questions = tableUnder(md, "Hard questions");
