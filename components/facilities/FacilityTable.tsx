@@ -6,10 +6,10 @@ import { cx } from "../ui";
 import { Rate } from "./Rate";
 import { Stars } from "./Stars";
 
-const COLUMNS = ["Hospital", "Language", "Capabilities", "Numbers", "Answer rate", "Acceptance", "Last called"];
+const COLUMNS = ["Hospital", "Language", "Numbers", "Answer rate", "Acceptance", "Last called"];
 export type Ratings = Record<string, { rating: number; count: number; url: string | null }>;
 
-export function FacilityTable({ rows, capLabel, ratings, onOpen }: { rows: FacilityListItem[]; capLabel: Map<string, string>; ratings: Ratings | null; onOpen: (id: string) => void }) {
+export function FacilityTable({ rows, ratings, onOpen }: { rows: FacilityListItem[]; ratings: Ratings | null; onOpen: (id: string) => void }) {
   return (
     <div className="overflow-x-auto">
       <table className="w-full min-w-[900px] text-left text-sm">
@@ -41,13 +41,6 @@ export function FacilityTable({ rows, capLabel, ratings, onOpen }: { rows: Facil
                   </td>
                 )}
                 <td className="px-5 py-3 text-zinc-700">{LANGUAGE_LABEL[f.call_language] ?? f.call_language}</td>
-                <td className="px-5 py-3">
-                  <div className="flex max-w-xs flex-wrap gap-1">
-                    {f.capabilities.slice(0, 4).map((c) => <span key={c} className="tag">{capLabel.get(c) ?? c}</span>)}
-                    {f.capabilities.length > 4 && <span className="tag">+{f.capabilities.length - 4}</span>}
-                    {f.capabilities.length === 0 && <span className="text-xs text-zinc-400">None</span>}
-                  </div>
-                </td>
                 <td className="px-5 py-3">
                   <span className="inline-flex items-center gap-1.5 text-zinc-700"><Phone aria-hidden className="size-3.5 text-zinc-400" />{active.length}</span>
                   {ivrOnly && <span className="ml-2 inline-flex items-center gap-1 text-xs text-amber-700"><TriangleAlert aria-hidden className="size-3" />IVR only</span>}
