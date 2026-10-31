@@ -25,6 +25,16 @@ export const extraction = (data: Json, category: string, name: string): { value:
   return { value: clean(prop(v, "objective")), confident: label === "high" || label === "medium" };
 };
 
+/**
+ * Whether the extraction says there is no bed. Read raw: clean() treats "none" as a missing value (Bolna's Python
+ * None), but here "none" is the answer.
+ */
+export const saysNoBed = (data: Json): boolean => {
+  const v = pick(pick(data, "Referral outcome"), "bed_type");
+  const raw = typeof v === "string" ? v : prop(v, "objective");
+  return typeof raw === "string" && raw.trim().toLowerCase() === "none";
+};
+
 const isYes = (o: string | null): boolean => o === "accepted" || o === "conditional";
 
 /** The execution id a webhook is about: `id`, else `execution_id`. */
@@ -91,7 +101,7 @@ export const readAvailability = (a: Attempt, body: Record<string, Json>): Availa
 
   const voicemail = a.termination_reason === "voicemail_reached" || body.answered_by_voice_mail === true;
   if (voicemail || extractionOutcome === "ivr_blocked") return { kind: "outcome", extractionOutcome, outcome: "ivr_blocked", fields: {} };
-  const noBedYes = !!extractionOutcome && isYes(extractionOutcome) && normalizeBedType(field("bed_type").value) === "none";
+  const noBedYes = !!extractionOutcome && isYes(extractionOutcome) && saysNoBed(data);
   if (!extractionOutcome || !ex.confident || noBedYes) return { kind: "outcome", extractionOutcome, outcome: "unclear", fields: {} };
 
   const declineReason = field("decline_reason").value;

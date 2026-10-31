@@ -163,6 +163,10 @@ describe("function and webhook helpers", () => {
   it("reads a completed call: confident answers are used, anything doubtful is unclear", () => {
     expect(readAvailability(attempt({ extracted_data: extracted("accepted", "High") }), {})).toMatchObject({ kind: "outcome", outcome: "accepted" });
     expect(readAvailability(attempt({ extracted_data: extracted("accepted", "low") }), {})).toMatchObject({ outcome: "unclear" });
+    // A confident yes with no bed is never recorded as accepted (CLAUDE.md rule 10): "none" must survive clean().
+    expect(readAvailability(attempt({ extracted_data: extracted("accepted", "high", "none") }), {})).toMatchObject({ outcome: "unclear" });
+    const bare = { "Referral outcome": { availability_outcome: { objective: "accepted", confidence_label: "high" }, bed_type: "none" } };
+    expect(readAvailability(attempt({ extracted_data: bare }), {})).toMatchObject({ outcome: "unclear" });
     expect(readAvailability(attempt({ termination_reason: "voicemail_reached" }), {})).toMatchObject({ outcome: "ivr_blocked" });
   });
 
