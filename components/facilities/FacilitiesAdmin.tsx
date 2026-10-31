@@ -1,15 +1,16 @@
 "use client";
 
-import { ChevronDown, Plus, Search } from "lucide-react";
-import { useEffect, useRef, useState } from "react";
+import { Plus, Search, SlidersHorizontal } from "lucide-react";
+import { useEffect, useState } from "react";
 import type { FacilityListItem } from "@/lib/modules/facility/facility.type";
 import type { Capability } from "@/lib/core/types";
-import { filterFacilities, groupByCategory } from "@/lib/ui/facility";
-import { PageHeader, Stat, cx } from "../ui";
+import { filterFacilities } from "@/lib/ui/facility";
+import { PageHeader, Stat } from "../ui";
 import { AddHospitalDrawer } from "./AddHospitalDrawer";
 import { FacilityDrawer } from "./FacilityDrawer";
 import { FacilityProfile } from "./FacilityProfile";
 import { FacilityTable, type Ratings } from "./FacilityTable";
+import { RequirementsDialog } from "./RequirementsDialog";
 
 /** The Hospitals page: find a hospital by name or by what it offers, open its details, and (admins) list or edit one. */
 export function FacilitiesAdmin({ initial, capabilities, canEdit }: { initial: FacilityListItem[]; capabilities: Capability[]; canEdit: boolean }) {
@@ -34,21 +35,6 @@ export function FacilitiesAdmin({ initial, capabilities, canEdit }: { initial: F
       alive = false;
     };
   }, []);
-  const filterRef = useRef<HTMLDivElement>(null);
-  // The requirements panel closes on a click outside it or on Escape.
-  useEffect(() => {
-    if (!showServices) return;
-    const away = (e: MouseEvent) => {
-      if (filterRef.current && !filterRef.current.contains(e.target as Node)) setShowServices(false);
-    };
-    const esc = (e: KeyboardEvent) => e.key === "Escape" && setShowServices(false);
-    document.addEventListener("mousedown", away);
-    document.addEventListener("keydown", esc);
-    return () => {
-      document.removeEventListener("mousedown", away);
-      document.removeEventListener("keydown", esc);
-    };
-  }, [showServices]);
   const reload = async () => {
     const res = await fetch("/api/facilities", { cache: "no-store" });
     if (res.ok) setRows((await res.json()).facilities);
@@ -88,39 +74,9 @@ export function FacilitiesAdmin({ initial, capabilities, canEdit }: { initial: F
               <input aria-label="Search hospitals" className="input pl-9" placeholder="Search by name, town or district" value={query} onChange={(e) => setQuery(e.target.value)} />
             </div>
             <span className="text-xs text-zinc-500">{shown.length} of {rows.length}</span>
-            <div ref={filterRef} className="relative ml-auto">
-              <button type="button" className="btn btn-secondary" aria-expanded={showServices} aria-haspopup="true" onClick={() => setShowServices((v) => !v)}>
-                Requirements{services.length > 0 ? ` (${services.length})` : ""}
-                <ChevronDown aria-hidden className={cx("size-4 transition", showServices && "rotate-180")} />
-              </button>
-              {showServices && (
-                <div className="absolute right-0 top-full z-30 mt-2 w-[min(34rem,calc(100vw-2rem))] rounded-2xl border border-line bg-white p-4 shadow-xl">
-                  <div className="mb-3 flex items-center justify-between gap-3">
-                    <p className="text-sm font-semibold">Show hospitals that offer all of these</p>
-                    {services.length > 0 && (
-                      <button type="button" className="btn btn-ghost min-h-8 px-2 text-xs" onClick={() => setServices([])}>Clear</button>
-                    )}
-                  </div>
-                  <div className="max-h-[60vh] space-y-3 overflow-y-auto">
-                    {groupByCategory(capabilities).map((g) => (
-                      <div key={g.category}>
-                        <div className="eyebrow mb-1.5">{g.title}</div>
-                        <div className="flex flex-wrap gap-2">
-                          {g.items.map((c) => {
-                            const on = services.includes(c.code);
-                            return (
-                              <button key={c.code} type="button" aria-pressed={on} className={cx("chip", on ? "chip-on" : "chip-off")} onClick={() => toggleService(c.code)}>
-                                {c.label}
-                              </button>
-                            );
-                          })}
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-            </div>
+            <button type="button" className="btn btn-secondary ml-auto" aria-haspopup="dialog" onClick={() => setShowServices(true)}>
+              <SlidersHorizontal aria-hidden className="size-4" /> Requirements{services.length > 0 ? ` (${services.length})` : ""}
+            </button>
           </div>
         </div>
         <FacilityTable rows={shown} ratings={ratings} onOpen={setViewId} />
@@ -128,6 +84,16 @@ export function FacilitiesAdmin({ initial, capabilities, canEdit }: { initial: F
         {rows.length > 0 && shown.length === 0 && <p className="p-10 text-center text-sm text-zinc-500">No hospital matches. Try fewer services.</p>}
       </div>
 
+      {showServices && (
+        <RequirementsDialog
+          capabilities={capabilities}
+          selected={services}
+          matches={shown.length}
+          onToggle={toggleService}
+          onClear={() => setServices([])}
+          onClose={() => setShowServices(false)}
+        />
+      )}
       {viewing && !editing && (
         <FacilityProfile
           key={viewing.id}
