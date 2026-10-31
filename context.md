@@ -1,6 +1,6 @@
 # Haazir — Code Quality Context
 
-Shared context for any AI coding assistant (Claude Code, Codex, Cursor, Copilot, …) and for humans. Read this, then `CLAUDE.md`, before changing code. **Last updated: 2026-10-31.**
+Shared context for any AI coding assistant (Claude Code, Codex, Cursor, Copilot, …) and for humans. Read this, then `CLAUDE.md`, before changing code. **Last updated: 2026-11-01.**
 
 ## How to maintain this file
 
@@ -87,10 +87,15 @@ Run `bun run lint && bun run typecheck && bun run test` after every phase (not `
 | 1 | `lib/core/`: `ApiError`, logger, route helpers; move config, clock, db, normalize, types. Mechanical; update imports | done: 3ec3f4e (118 tests) |
 | 2 | Split `orchestrator.ts`, `handlers.ts`, `repo.ts`, `events.ts` into `referral/` and `call/`; evaluate becomes planner (helper) + applier (service), with unit tests for every branch | done: 671dc67 (135 tests); bug fix 1afb484 |
 | 3 | Move the remaining `lib/*.ts` into modules and integrations; only `*.repository.ts` touches the database; request schemas per module | done: 7d3e0de (move), f69b46b (repositories, schemas) |
-| 4 | Split `LiveBoard.tsx`, `ReferralForm.tsx`, `FacilitiesAdmin.tsx`, `DemoPanel.tsx` into feature folders (`components/board`, `referral-form`, `facilities`, `demo`) | done: 9671d00 (board, form), next commit (facilities, demo); 147 tests |
+| 4 | Split `LiveBoard.tsx`, `ReferralForm.tsx`, `FacilitiesAdmin.tsx`, `DemoPanel.tsx` into feature folders (`components/board`, `referral-form`, `facilities`, `demo`); remaining loose components into `shell`, `auth`, `analytics` | done |
+| 6 | Leftovers from the audit: zod instead of casts (session claims, demo scenario), JSDoc on every export, shared status unions, line lengths, `AuthService`, `MissedCallService`, `readInbound`, `EvaluationService` split out of `ReferralService` | done |
 | 5 | Update the "Where things are" table in `CLAUDE.md` and the layout in `README.md` | done (with docs/02, docs/04, docs/whatsapp-templates paths) |
 
 ## 5. Decisions
+
+- 2026-11-01: left as plain `string` on purpose: Bolna's raw status (`bolna.client.ts`, the webhook log), because it is provider text; it is mapped to `AttemptStatus` at the edge by `mapBolnaStatus`.
+- 2026-11-01: long lines kept: Kannada and Hindi message templates, prompt text, regexes, scripted data rows and import lists. Wrapping them risks changing text people hear or read.
+- 2026-11-01: `ReferralService` is still about 400 lines (create, select, hold, confirm, cancel, close, widen). Split further only when a change needs it.
 
 - 2026-10-31: working with a second session (haazir-58) on the same checkout. Split agreed by message: haazir-be owns lib/**, app/api/**, tests/**, CLAUDE.md, README.md and import lines; haazir-58 owns what it is handed (prompts, docs/05, now the UI). Neither commits the other's files; haazir-be makes all commits, one per piece of work.
 - 2026-10-31: `scripts/` keep using `lib/core/db` directly (connect, migrate): they are infrastructure, not app code.
@@ -103,6 +108,8 @@ Run `bun run lint && bun run typecheck && bun run test` after every phase (not `
 - 2026-10-30: keep double quotes and the current formatting; adopt Divit's structure, not his quote style.
 
 ## 6. Changelog
+
+- 2026-11-01: audit leftovers done (phase 6). Routes are thin (login, WhatsApp inbound, missed call), `EvaluationService` is split out, loose components are in feature folders. Items kept on purpose are listed under Decisions.
 
 - 2026-10-31: phase 4 done: board, referral-form, facilities and demo split into feature folders; client-safe helpers in `lib/ui/board.ts`, `request-id.ts`, `demo.ts`; 147 tests. All phases done.
 - 2026-10-31: phase 3 and 5 done; 139 tests. Phase 4 waits for haazir-58's UI handover.
