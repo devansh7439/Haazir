@@ -1,0 +1,72 @@
+{
+  "name": "record_hospital_response",
+  "description": "Record the hospital's answer. Call this exactly once: after the staff member has clearly said whether they can accept the patient now and has confirmed your read-back, or when they decline, give a different number to call, or the answer is still unclear after asking twice. Never record accepted unless they clearly agreed.",
+  "pre_call_message": "Thank you, noting that.",
+  "parameters": {
+    "type": "object",
+    "properties": {
+      "attempt_id": {
+        "type": "string",
+        "description": "Internal attempt reference from the call context. It is filled in automatically; never ask for it and never say it."
+      },
+      "outcome": {
+        "type": "string",
+        "description": "One of: accepted, conditional, declined, redirected, unclear. Use conditional when they accept only with a condition."
+      },
+      "bed_type": {
+        "type": "string",
+        "description": "What they can offer right now. One of: icu_with_ventilator, icu, hdu, nicu, emergency_only, ward, none, unknown."
+      },
+      "specialist_available": {
+        "type": "string",
+        "description": "Whether the needed specialist is available now. One of: yes, on_call, no, unknown."
+      },
+      "ready_in_minutes": {
+        "type": "string",
+        "description": "Minutes until they are ready to receive the patient, as digits, for example 15. Leave empty if not said."
+      },
+      "contact_person": {
+        "type": "string",
+        "description": "Name or role the ambulance team should ask for, if they gave one."
+      },
+      "conditions": {
+        "type": "string",
+        "description": "Any condition attached to accepting, in a few words, for example: send the PHC case sheet with the patient."
+      },
+      "decline_reason": {
+        "type": "string",
+        "description": "Only if declined. One of: no_bed, no_ventilator, no_specialist, full, not_our_case, other, followed by a few words."
+      },
+      "alternate_number": {
+        "type": "string",
+        "description": "Only if redirected: the number they asked you to call, digits only, with country code if they said it."
+      },
+      "to_number": {
+        "type": "string",
+        "description": "The number you called. Filled in automatically; never ask for it."
+      }
+    },
+    "required": ["attempt_id", "outcome"]
+  },
+  "key": "custom_task",
+  "value": {
+    "method": "POST",
+    "param": {
+      "attempt_id": "%(attempt_id)s",
+      "outcome": "%(outcome)s",
+      "bed_type": "%(bed_type)s",
+      "specialist_available": "%(specialist_available)s",
+      "ready_in_minutes": "%(ready_in_minutes)s",
+      "contact_person": "%(contact_person)s",
+      "conditions": "%(conditions)s",
+      "decline_reason": "%(decline_reason)s",
+      "alternate_number": "%(alternate_number)s",
+      "to_number": "%(to_number)s"
+    },
+    "url": "https://YOUR_APP_URL/api/bolna/functions/record-response",
+    "api_token": "Bearer YOUR_BOLNA_FUNCTION_SECRET",
+    "headers": {
+      "Content-Type": "application/json"
+    }
+  }
+}

@@ -1,0 +1,218 @@
+@import "tailwindcss";
+@import "@fontsource-variable/inter";
+
+/* Haazir console design tokens: monochrome light console, near-black accent, zinc neutrals, hairline borders. */
+@theme {
+  --font-sans: "Inter Variable", ui-sans-serif, system-ui, -apple-system, "Segoe UI", "Noto Sans Kannada", "Noto Sans Devanagari", sans-serif;
+  --font-mono: ui-monospace, "SF Mono", "JetBrains Mono", Menlo, monospace;
+
+  --color-brand-50: #fafafa;
+  --color-brand-100: #f4f4f5;
+  --color-brand-200: #e4e4e7;
+  --color-brand-300: #d4d4d8;
+  --color-brand-400: #a1a1aa;
+  --color-brand-500: #52525b;
+  --color-brand-600: #27272a;
+  --color-brand-700: #18181b;
+  --color-brand-800: #111113;
+  --color-brand-900: #09090b;
+  --color-brand-950: #000000;
+
+  /* Monochrome: every hue the components use resolves to the zinc scale at the same step.
+     Status stays readable because every state also has an icon and text (lib/ui.ts). */
+  --color-sky-50: var(--color-zinc-50); --color-sky-100: var(--color-zinc-100); --color-sky-200: var(--color-zinc-200); --color-sky-300: var(--color-zinc-300); --color-sky-400: var(--color-zinc-400); --color-sky-500: var(--color-zinc-500); --color-sky-600: var(--color-zinc-600); --color-sky-700: var(--color-zinc-700); --color-sky-800: var(--color-zinc-800); --color-sky-900: var(--color-zinc-900); --color-sky-950: var(--color-zinc-950);
+  --color-amber-50: var(--color-zinc-50); --color-amber-100: var(--color-zinc-100); --color-amber-200: var(--color-zinc-200); --color-amber-300: var(--color-zinc-300); --color-amber-400: var(--color-zinc-400); --color-amber-500: var(--color-zinc-500); --color-amber-600: var(--color-zinc-600); --color-amber-700: var(--color-zinc-700); --color-amber-800: var(--color-zinc-800); --color-amber-900: var(--color-zinc-900); --color-amber-950: var(--color-zinc-950);
+  --color-emerald-50: var(--color-zinc-50); --color-emerald-100: var(--color-zinc-100); --color-emerald-200: var(--color-zinc-200); --color-emerald-300: var(--color-zinc-300); --color-emerald-400: var(--color-zinc-400); --color-emerald-500: var(--color-zinc-500); --color-emerald-600: var(--color-zinc-600); --color-emerald-700: var(--color-zinc-700); --color-emerald-800: var(--color-zinc-800); --color-emerald-900: var(--color-zinc-900); --color-emerald-950: var(--color-zinc-950);
+  --color-rose-50: var(--color-zinc-50); --color-rose-100: var(--color-zinc-100); --color-rose-200: var(--color-zinc-200); --color-rose-300: var(--color-zinc-300); --color-rose-400: var(--color-zinc-400); --color-rose-500: var(--color-zinc-500); --color-rose-600: var(--color-zinc-600); --color-rose-700: var(--color-zinc-700); --color-rose-800: var(--color-zinc-800); --color-rose-900: var(--color-zinc-900); --color-rose-950: var(--color-zinc-950);
+  --color-violet-50: var(--color-zinc-50); --color-violet-100: var(--color-zinc-100); --color-violet-200: var(--color-zinc-200); --color-violet-300: var(--color-zinc-300); --color-violet-400: var(--color-zinc-400); --color-violet-500: var(--color-zinc-500); --color-violet-600: var(--color-zinc-600); --color-violet-700: var(--color-zinc-700); --color-violet-800: var(--color-zinc-800); --color-violet-900: var(--color-zinc-900); --color-violet-950: var(--color-zinc-950);
+  --color-orange-50: var(--color-zinc-50); --color-orange-100: var(--color-zinc-100); --color-orange-200: var(--color-zinc-200); --color-orange-300: var(--color-zinc-300); --color-orange-400: var(--color-zinc-400); --color-orange-500: var(--color-zinc-500); --color-orange-600: var(--color-zinc-600); --color-orange-700: var(--color-zinc-700); --color-orange-800: var(--color-zinc-800); --color-orange-900: var(--color-zinc-900); --color-orange-950: var(--color-zinc-950);
+  --color-slate-50: var(--color-zinc-50); --color-slate-100: var(--color-zinc-100); --color-slate-200: var(--color-zinc-200); --color-slate-300: var(--color-zinc-300); --color-slate-400: var(--color-zinc-400); --color-slate-500: var(--color-zinc-500); --color-slate-600: var(--color-zinc-600); --color-slate-700: var(--color-zinc-700); --color-slate-800: var(--color-zinc-800); --color-slate-900: var(--color-zinc-900); --color-slate-950: var(--color-zinc-950);
+
+  --color-canvas: #f7f7f7;
+  --color-line: #e7e7e7;
+}
+
+html {
+  font-size: 16px;
+  -webkit-font-smoothing: antialiased;
+}
+
+body {
+  background: var(--color-canvas);
+  color: var(--color-zinc-900);
+  font-family: var(--font-sans);
+  font-feature-settings: "cv11", "ss01";
+}
+
+::selection {
+  background: var(--color-brand-100);
+}
+
+@layer components {
+  .btn {
+    @apply inline-flex min-h-11 select-none items-center justify-center gap-2 whitespace-nowrap rounded-lg px-3.5 text-sm font-medium transition active:translate-y-px
+      focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-500 disabled:pointer-events-none disabled:opacity-45 sm:min-h-10;
+  }
+  .btn-primary {
+    @apply bg-brand-600 text-white shadow-[0_1px_2px_rgba(16,24,40,0.08),inset_0_1px_0_rgba(255,255,255,0.12)] hover:bg-brand-700;
+  }
+  .btn-secondary {
+    @apply border border-line bg-white text-zinc-800 shadow-[0_1px_2px_rgba(16,24,40,0.04)] hover:border-zinc-300 hover:bg-zinc-50;
+  }
+  .btn-ghost {
+    @apply text-zinc-600 hover:bg-zinc-100 hover:text-zinc-900;
+  }
+  .btn-danger {
+    @apply border border-rose-200 bg-white text-rose-600 hover:bg-rose-50;
+  }
+  .btn-danger-solid {
+    @apply bg-red-600 text-white shadow-[0_1px_2px_rgba(16,24,40,0.08)] hover:bg-red-700 focus-visible:outline-red-500;
+  }
+  .btn-success {
+    @apply bg-emerald-600 text-white shadow-[0_1px_2px_rgba(16,24,40,0.08)] hover:bg-emerald-700;
+  }
+  .btn-lg {
+    @apply min-h-12 px-5 text-[15px];
+  }
+  .card {
+    @apply rounded-2xl border border-line bg-white shadow-[0_1px_2px_rgba(16,24,40,0.04)];
+  }
+  .input {
+    @apply min-h-11 w-full rounded-lg border border-line bg-white px-3 text-sm text-zinc-900 shadow-[0_1px_2px_rgba(16,24,40,0.03)] transition
+      placeholder:text-zinc-400 hover:border-zinc-300 focus:border-brand-400 focus:outline-none focus:ring-4 focus:ring-brand-100 sm:min-h-10;
+  }
+  /* One look for every dropdown: no browser arrow, our own chevron. */
+  select.input {
+    @apply cursor-pointer appearance-none bg-no-repeat pr-9;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 width=%2716%27 height=%2716%27 viewBox=%270 0 24 24%27 fill=%27none%27 stroke=%27%2371717a%27 stroke-width=%272.2%27 stroke-linecap=%27round%27 stroke-linejoin=%27round%27%3E%3Cpath d=%27m6 9 6 6 6-6%27/%3E%3C/svg%3E");
+    background-position: right 0.75rem center;
+  }
+  dialog[open] {
+    animation: dialog-in 0.14s ease-out;
+  }
+  .label {
+    @apply mb-1.5 block text-[13px] font-medium text-zinc-700;
+  }
+  .eyebrow {
+    @apply text-xs font-medium text-zinc-500;
+  }
+  .chip {
+    @apply inline-flex min-h-10 items-center gap-1.5 rounded-full border px-3.5 text-sm font-medium transition focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-500 sm:min-h-9;
+  }
+  .chip-off {
+    @apply border-line bg-white text-zinc-700 hover:border-zinc-300 hover:bg-zinc-50;
+  }
+  /* Solid, so the chosen case and needs are unmistakable at a glance (brand-50 is near-white in the monochrome theme). */
+  .chip-on {
+    @apply border-zinc-900 bg-zinc-900 text-white hover:bg-zinc-800;
+  }
+  .tag {
+    @apply inline-flex items-center gap-1 rounded-md bg-zinc-100 px-1.5 py-0.5 text-xs font-medium text-zinc-600;
+  }
+  .kbd-num {
+    @apply tabular-nums tracking-tight;
+  }
+}
+
+.leaflet-container {
+  font-family: var(--font-sans);
+  background: #eef0f3;
+}
+.leaflet-tooltip {
+  border-radius: 8px;
+  border: 1px solid var(--color-line);
+  box-shadow: 0 4px 16px rgba(16, 24, 40, 0.08);
+  font-size: 12px;
+}
+.haazir-pin {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 9999px;
+  border: 2.5px solid white;
+  color: white;
+  font-weight: 600;
+  font-size: 12px;
+  box-shadow: 0 2px 6px rgb(16 24 40 / 0.25);
+}
+.haazir-pin-wrap {
+  position: relative;
+  display: flex;
+  justify-content: center;
+}
+/* The drive time under a pin, so the numbers on the map match the cards without hovering. */
+.haazir-pin-chip {
+  position: absolute;
+  top: calc(100% + 3px);
+  left: 50%;
+  transform: translateX(-50%);
+  white-space: nowrap;
+  border-radius: 6px;
+  border: 1px solid var(--color-line);
+  background: white;
+  padding: 1px 6px;
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 16px;
+  color: var(--color-zinc-800);
+  box-shadow: 0 1px 3px rgb(16 24 40 / 0.18);
+}
+.haazir-pin-chip-origin {
+  background: var(--color-zinc-900);
+  border-color: var(--color-zinc-900);
+  color: white;
+}
+.haazir-pin-selected {
+  box-shadow: 0 0 0 4px rgb(21 128 61 / 0.3), 0 2px 8px rgb(16 24 40 / 0.35);
+}
+.haazir-pin-out {
+  opacity: 0.55;
+}
+.haazir-map-btn {
+  margin: 10px;
+  min-height: 32px;
+  cursor: pointer;
+  border-radius: 8px;
+  border: 1px solid var(--color-line);
+  background: white;
+  padding: 0 10px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--color-zinc-800);
+  box-shadow: 0 1px 3px rgb(16 24 40 / 0.18);
+}
+.haazir-map-btn:hover {
+  background: var(--color-zinc-50);
+}
+.haazir-pin-live {
+  animation: haazir-pulse 1.6s ease-out infinite;
+}
+@keyframes haazir-pulse {
+  0% { box-shadow: 0 0 0 0 rgb(24 24 27 / 0.4), 0 2px 6px rgb(16 24 40 / 0.25); }
+  100% { box-shadow: 0 0 0 12px rgb(24 24 27 / 0), 0 2px 6px rgb(16 24 40 / 0.25); }
+}
+@keyframes haazir-ping {
+  75%, 100% { transform: scale(2.2); opacity: 0; }
+}
+.live-dot::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: 9999px;
+  background: inherit;
+  animation: haazir-ping 1.4s cubic-bezier(0, 0, 0.2, 1) infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  .haazir-pin-live, .live-dot::after { animation: none; }
+}
+/* Greyscale basemap to match the monochrome console. */
+.haazir-tiles {
+  filter: grayscale(1) contrast(0.95) brightness(1.03);
+}
+
+@keyframes dialog-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px) scale(0.98);
+  }
+}

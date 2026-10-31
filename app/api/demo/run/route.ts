@@ -1,0 +1,15 @@
+import { NextResponse } from "next/server";
+import { handle, parseBody } from "@/lib/core/route";
+import { DemoService } from "@/lib/modules/demo/demo.service";
+import { requireDemoAdmin } from "@/lib/modules/auth/session.service";
+import { DemoRunBody } from "@/lib/modules/demo/demo.validation";
+
+// Starts the demo-krait-bite referral, live or simulated.
+export async function POST(req: Request) {
+  return handle(async () => {
+    await requireDemoAdmin();
+    const { simulate } = await parseBody(req, DemoRunBody);
+    const r = await DemoService.runReferral(simulate);
+    return NextResponse.json({ id: r.id, code: r.code, simulated: r.is_simulated }, { status: 201 });
+  });
+}

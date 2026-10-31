@@ -1,0 +1,115 @@
+{
+  "name": "demo-krait-bite",
+  "description": "Stage demo and simulation script. Six hospitals, six judge cards. Times are seconds after the call is dispatched. Status values use Bolna names so the simulator can feed the real webhook handler.",
+  "referral": {
+    "referrer_id": "00000000-0000-4000-8000-000000000201",
+    "case_type": "snakebite_neuro",
+    "required_capabilities": ["icu_bed", "ventilator"],
+    "acuity": "critical",
+    "age_value": 34,
+    "age_unit": "years",
+    "sex": "male",
+    "note": "Drooping eyelids and trouble swallowing 2 hrs after bite. Given 10 vials of ASV.",
+    "transport": "ambulance",
+    "search_radius_km": 40,
+    "patient": {
+      "patient_name": "Ramesh K. (Demo)",
+      "attendant_name": "Lakshmi",
+      "attendant_phone": "+910000000301",
+      "attendant_language": "kn",
+      "attendant_consent": true
+    }
+  },
+  "availability": {
+    "00000000-0000-4000-8000-000000000103": {
+      "facility": "Tamarind District Hospital (Demo)",
+      "judge_card": 1,
+      "language": "kn",
+      "steps": [
+        { "at_s": 3, "status": "ringing" },
+        { "at_s": 9, "status": "in-progress" },
+        { "at_s": 40, "function": "record-response", "params": { "outcome": "conditional", "bed_type": "icu_with_ventilator", "specialist_available": "yes", "ready_in_minutes": "10", "contact_person": "Dr Shashikala", "conditions": "send the PHC case sheet with the patient" } },
+        { "at_s": 46, "status": "call-disconnected" },
+        { "at_s": 50, "status": "completed", "termination_reason": "agent_ended_call" }
+      ]
+    },
+    "00000000-0000-4000-8000-000000000101": {
+      "facility": "Banyan Multispeciality Hospital (Demo)",
+      "judge_card": 2,
+      "language": "en",
+      "steps": [
+        { "at_s": 2, "status": "ringing" },
+        { "at_s": 6, "status": "in-progress" },
+        { "at_s": 32, "function": "record-response", "params": { "outcome": "accepted", "bed_type": "icu_with_ventilator", "specialist_available": "yes", "ready_in_minutes": "10", "contact_person": "Dr Kiran" } },
+        { "at_s": 37, "status": "call-disconnected" },
+        { "at_s": 41, "status": "completed", "termination_reason": "agent_ended_call" }
+      ]
+    },
+    "00000000-0000-4000-8000-000000000102": {
+      "facility": "Neem Trauma & Neuro Centre (Demo)",
+      "judge_card": 3,
+      "language": "en",
+      "steps": [
+        { "at_s": 3, "status": "ringing" },
+        { "at_s": 8, "status": "in-progress" },
+        { "at_s": 28, "function": "record-response", "params": { "outcome": "declined", "bed_type": "none", "decline_reason": "no_ventilator: ICU full, no ventilator free" } },
+        { "at_s": 32, "status": "call-disconnected" },
+        { "at_s": 36, "status": "completed", "termination_reason": "agent_ended_call" }
+      ]
+    },
+    "00000000-0000-4000-8000-000000000105": {
+      "facility": "Jasmine Heart Institute (Demo)",
+      "judge_card": 4,
+      "language": "en",
+      "steps": [
+        { "at_s": 3, "status": "ringing" },
+        { "at_s": 7, "status": "in-progress" },
+        { "at_s": 30, "function": "request-doctor", "params": { "reason": "wants to know if the patient is intubated", "contact_person": "Dr Anil" } },
+        { "at_s": 36, "status": "call-disconnected" },
+        { "at_s": 40, "status": "completed", "termination_reason": "agent_ended_call" }
+      ]
+    },
+    "00000000-0000-4000-8000-000000000104": {
+      "facility": "Mango Grove Medical College Hospital (Demo)",
+      "judge_card": 5,
+      "language": "en",
+      "steps": [
+        { "at_s": 4, "status": "ringing" },
+        { "at_s": 10, "status": "in-progress" },
+        { "at_s": 62, "function": "record-response", "params": { "outcome": "accepted", "bed_type": "icu_with_ventilator", "specialist_available": "on_call", "ready_in_minutes": "20", "contact_person": "Nurse Priya" } },
+        { "at_s": 67, "status": "call-disconnected" },
+        { "at_s": 71, "status": "completed", "termination_reason": "agent_ended_call" }
+      ]
+    },
+    "00000000-0000-4000-8000-000000000106": {
+      "facility": "Lotus Burns & Plastic Centre (Demo)",
+      "judge_card": 6,
+      "language": "hi",
+      "steps": [
+        { "at_s": 3, "status": "ringing" },
+        { "at_s": 35, "status": "no-answer", "termination_reason": "no_answer" }
+      ]
+    }
+  },
+  "doctor_selects": {
+    "facility_id": "00000000-0000-4000-8000-000000000103",
+    "why": "Fastest ETA (18 min); the condition is easy to meet"
+  },
+  "hold_confirm": {
+    "steps": [
+      { "at_s": 3, "status": "ringing" },
+      { "at_s": 7, "status": "in-progress" },
+      { "at_s": 25, "function": "record-hold", "params": { "confirmed": "yes", "contact_person": "Dr Shashikala" } },
+      { "at_s": 28, "status": "call-disconnected" },
+      { "at_s": 31, "status": "completed", "termination_reason": "agent_ended_call" }
+    ]
+  },
+  "release": {
+    "steps": [
+      { "at_s": 3, "status": "ringing" },
+      { "at_s": 6, "status": "in-progress" },
+      { "at_s": 18, "status": "call-disconnected" },
+      { "at_s": 21, "status": "completed", "termination_reason": "agent_ended_call" }
+    ]
+  }
+}

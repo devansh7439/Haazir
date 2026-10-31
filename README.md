@@ -7,27 +7,11 @@ When a small hospital can't treat a critically ill patient, Haazir phones every 
 
 The product thinking, architecture and contracts are in [`docs/`](docs/README.md). Start with `docs/01-product-blueprint.md` and `docs/07-build-plan.md`.
 
-## What works today
+## Safety and ethics
 
-| Area | Status |
-|---|---|
-| New referral form: case templates, needs, identifier guard, live "what hospitals will hear" preview, ranked hospitals with reasons | ✅ |
-| Matching (capability + radius + ETA + track record, IVR lines last), optional max ETA by acuity (C8) | ✅ |
-| Wave of 6 parallel Bolna calls, atomic wave claim, wave 2, *exhausted* with tap-to-call list, widen to 80 km | ✅ |
-| Bolna webhook (monotonic statuses), five mid-call function routes (always 200 + `instruction`), optional source-IP allowlist | ✅ |
-| **Missed-webhook recovery**: calls stuck in a status are re-read from Bolna; lost calls are closed after 15 min with an alert | ✅ |
-| Live board: map, grouped cards, timer, TTFA, activity feed, realtime (org-scoped) or tick refresh | ✅ |
-| Select → hold-confirm call → WhatsApp handoff → release calls; manual confirm; cancel; close; hold expiry | ✅ |
-| Needs-doctor banner, callbacks, busy redial, redirects, manual outcome and redial, extraction cross-check → *needs review* | ✅ |
-| **Background cron** (`/api/cron/tick`): next waves, callbacks, hold expiry and recovery with no console open | ✅ |
-| **Sign-in**: shared passcode, or per-user email/password with organisations; every route and page scoped to the caller's org | ✅ |
-| **Retention**: patient details, message bodies, drafts and raw webhook logs deleted N days after a referral ends | ✅ |
-| WhatsApp: Meta templates or plain text, Twilio; inbound webhook with signature checks | ✅ (needs a live provider test) |
-| `bun run bolna:agents`: builds the five agents from `bolna/` (dry run by default) | ✅ (verify payload shape before `--apply`) |
-| C1 family voice call · C2 WhatsApp text/voice-note intake · C3 missed-call callback · C4 portal-vs-desk flags · C5 analytics · C6 WhatsApp quick reply · C7 Aapat Setu link · C8 max ETA | ✅ |
-| Simulation through the same handlers, SIMULATED badge, Demo console | ✅ |
-| Demo tools: presenter **run sheet** (script, fallback ladder, 20 hard questions from `docs/08`, measured numbers filled in), printable **judge cards** with assigned phones, **voice test-matrix** tracker (20 scenarios × 2 passes, demo-ready gate) | ✅ |
-| Hardening: sign-in throttling, fail-closed production gate, safe post-login redirect, JSON-only console bodies, one referral per "Find a bed" press, live-referral cap per org, doctors refer as themselves | ✅ |
+> Haazir only calls hospital emergency lines, always says it is an automated assistant working for a named doctor, and never shares a patient's identity until a hospital has agreed to accept them. It records answers so that referrals are accountable, never makes medical decisions, never takes money for ranking, and leaves the final choice to the doctor. All testing was done with consenting hospitals and doctors, using clearly labelled calls and fictional patients.
+
+The family is messaged or called only when the referring doctor ticked that the attendant agreed (`docs/09-validation-safety-compliance.md` §3).
 
 ## Run it locally (no accounts needed)
 
@@ -48,7 +32,7 @@ Open http://localhost:3000, pick **Snakebite – neurotoxic signs**, set **Criti
 bun run lint && bun run typecheck && bun run test
 ```
 
-139 tests, including the ones `CLAUDE.md` asks for: the exact krait-bite spoken summary, the 10-digit note guard, monotonic statuses under replayed/out-of-order webhooks, the `%(x)s`/`None` normaliser, matching order on the seed (Tamarind 18 → Lotus 74 min), no identifiers in availability `user_data`, and an end-to-end simulated referral that reaches `confirmed` with exactly two release calls (Banyan, Mango Grove). Integration tests run on an in-memory Postgres (PGlite) with the real migrations. Route tests call the actual route handlers: Bolna auth and the always-200 contract, the IP allowlist, cron auth, passcode and user sign-in, organisation isolation, missed calls, signed WhatsApp webhooks, missed-webhook recovery, portal flags and the retention purge. Unit tests cover every branch of the evaluation planner (`tests/planner.test.ts`), so the rules that decide redials, waves and releases are tested without a database.
+193 tests, including the ones `CLAUDE.md` asks for: the exact krait-bite spoken summary, the 10-digit note guard, monotonic statuses under replayed/out-of-order webhooks, the `%(x)s`/`None` normaliser, matching order on the seed (Tamarind 18 → Lotus 74 min), no identifiers in availability `user_data`, and an end-to-end simulated referral that reaches `confirmed` with exactly two release calls (Banyan, Mango Grove). Integration tests run on an in-memory Postgres (PGlite) with the real migrations. Route tests call the actual route handlers: Bolna auth and the always-200 contract, the IP allowlist, cron auth, passcode and user sign-in, organisation isolation, missed calls, signed WhatsApp webhooks, missed-webhook recovery, portal flags and the retention purge. Unit tests cover every branch of the evaluation planner (`tests/planner.test.ts`), so the rules that decide redials, waves and releases are tested without a database.
 
 ## Deploy (Supabase + Vercel + Bolna)
 

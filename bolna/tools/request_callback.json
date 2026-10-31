@@ -1,0 +1,42 @@
+{
+  "name": "request_callback",
+  "description": "Use when the staff member needs more than a minute or two to check and agrees to be called back. After it returns, say you will call back in about that many minutes, thank them, and end the call.",
+  "pre_call_message": "Sure, let me note that.",
+  "parameters": {
+    "type": "object",
+    "properties": {
+      "attempt_id": {
+        "type": "string",
+        "description": "Internal attempt reference from the call context. Filled in automatically; never ask for it and never say it."
+      },
+      "minutes": {
+        "type": "string",
+        "description": "How many minutes from now to call back, as digits, for example 5."
+      },
+      "contact_person": {
+        "type": "string",
+        "description": "Whom to ask for on the callback, if given."
+      },
+      "to_number": {
+        "type": "string",
+        "description": "The number you called. Filled in automatically; never ask for it."
+      }
+    },
+    "required": ["attempt_id", "minutes"]
+  },
+  "key": "custom_task",
+  "value": {
+    "method": "POST",
+    "param": {
+      "attempt_id": "%(attempt_id)s",
+      "minutes": "%(minutes)s",
+      "contact_person": "%(contact_person)s",
+      "to_number": "%(to_number)s"
+    },
+    "url": "https://YOUR_APP_URL/api/bolna/functions/request-callback",
+    "api_token": "Bearer YOUR_BOLNA_FUNCTION_SECRET",
+    "headers": {
+      "Content-Type": "application/json"
+    }
+  }
+}
