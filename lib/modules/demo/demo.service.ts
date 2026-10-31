@@ -29,7 +29,7 @@ const phoneOrThrow = (raw: string, label: string): string => {
 };
 
 /** The demo story's referral input, a fresh copy each time. */
-const demoInput = (): ReferralInput => structuredClone(scenario.referral) as unknown as ReferralInput;
+const demoInput = (): ReferralInput => structuredClone(scenario.referral);
 
 /** The Demo page: phones for the fictional hospitals, test calls, and the stage referral (docs/06-ui-spec.md §4). */
 export const DemoService = {
@@ -49,7 +49,7 @@ export const DemoService = {
       .map((r) => ({
         facility_id: r.id,
         name: r.name,
-        judge_card: (scenario.availability[r.id] as { judge_card?: number } | undefined)?.judge_card ?? null,
+        judge_card: scenario.availability[r.id]?.judge_card ?? null,
         call_language: r.call_language,
         contact_id: r.contact_id,
         phone: r.phone,

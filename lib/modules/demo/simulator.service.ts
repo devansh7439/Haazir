@@ -1,4 +1,5 @@
 import "server-only";
+import { z } from "zod";
 import scenarioJson from "@/scenarios/demo-krait-bite.json";
 import { isSimulatedExecution } from "@/lib/integrations/bolna/bolna.client";
 import { secondsBetween } from "@/lib/core/clock";
@@ -8,28 +9,31 @@ import { CallRepository } from "@/lib/modules/call/call.repository";
 import { FunctionService } from "@/lib/modules/call/function.service";
 import { ReferralRepository } from "@/lib/modules/referral/referral.repository";
 import { WebhookService } from "@/lib/modules/call/webhook.service";
+import { ReferralBody } from "@/lib/modules/referral/referral.validation";
 
 // Replays scripted calls through the same handlers as real webhooks and function calls, with
 // outcome_source = 'simulation'. Step times are seconds after the call was dispatched.
 // State lives in the database (attempt status and outcome), so it works across serverless invocations.
 
-export interface Step {
-  at_s: number;
-  status?: string;
-  termination_reason?: string;
-  function?: "record-response" | "request-doctor" | "request-callback" | "record-hold";
-  params?: Record<string, string>;
-}
+const StepSchema = z.object({
+  at_s: z.number(),
+  status: z.string().optional(),
+  termination_reason: z.string().optional(),
+  function: z.enum(["record-response", "request-doctor", "request-callback", "record-hold"]).optional(),
+  params: z.record(z.string(), z.string()).optional(),
+});
+export type Step = z.infer<typeof StepSchema>;
 
-interface Scenario {
-  referral: Record<string, unknown>;
-  availability: Record<string, { facility: string; steps: Step[] }>;
-  hold_confirm: { steps: Step[] };
-  release: { steps: Step[] };
-  doctor_selects: { facility_id: string };
-}
+/** The scripted demo story. Parsed once at load, so a typo in the JSON fails at startup, not mid-demo. */
+const ScenarioSchema = z.object({
+  referral: ReferralBody,
+  availability: z.record(z.string(), z.object({ facility: z.string(), judge_card: z.number().optional(), steps: z.array(StepSchema) })),
+  hold_confirm: z.object({ steps: z.array(StepSchema) }),
+  release: z.object({ steps: z.array(StepSchema) }),
+  doctor_selects: z.object({ facility_id: z.string() }),
+});
 
-export const scenario = scenarioJson as unknown as Scenario;
+export const scenario = ScenarioSchema.parse(scenarioJson);
 
 /** Hospitals not in the script decline politely, so any referral can be simulated. */
 const DEFAULT_AVAILABILITY: Step[] = [
