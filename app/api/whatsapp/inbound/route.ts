@@ -1,8 +1,8 @@
 import { NextResponse, after } from "next/server";
 import { env } from "@/lib/core/config";
-import { parseMetaPayload, parseTwilioPayload, verifyMetaSignature, verifyTwilioSignature, type InboundMessage } from "@/lib/integrations/whatsapp/whatsapp.inbound";
-import { InboundService } from "@/lib/modules/intake/inbound.service";
 import { createLogger } from "@/lib/core/logger";
+import { readInbound } from "@/lib/integrations/whatsapp/whatsapp.inbound";
+import { InboundService } from "@/lib/modules/intake/inbound.service";
 
 const log = createLogger("whatsapp");
 
@@ -19,28 +19,13 @@ export async function GET(req: Request) {
 }
 
 export async function POST(req: Request) {
-  const raw = await req.text();
-  let messages: InboundMessage[] = [];
-  const isTwilio = (req.headers.get("content-type") ?? "").includes("application/x-www-form-urlencoded");
-  if (isTwilio) {
-    const params = Object.fromEntries(new URLSearchParams(raw));
-    const url = `${env.appBaseUrl.replace(/\/$/, "")}/api/whatsapp/inbound${new URL(req.url).search}`;
-    if (!verifyTwilioSignature(url, params, req.headers.get("x-twilio-signature"), env.twilioToken)) {
-      return new Response("unauthorized", { status: 401 });
-    }
-    messages = parseTwilioPayload(params);
-  } else {
-    if (!verifyMetaSignature(raw, req.headers.get("x-hub-signature-256"), env.metaAppSecret)) {
-      return new Response("unauthorized", { status: 401 });
-    }
-    try {
-      messages = parseMetaPayload(JSON.parse(raw));
-    } catch {
-      messages = [];
-    }
-  }
+  const read = readInbound(
+    { raw: await req.text(), contentType: req.headers.get("content-type") ?? "", url: req.url, headers: req.headers },
+    { appBaseUrl: env.appBaseUrl, twilioToken: env.twilioToken, metaAppSecret: env.metaAppSecret },
+  );
+  if (!read.ok) return new Response("unauthorized", { status: 401 });
   after(async () => {
-    for (const m of messages) {
+    for (const m of read.messages) {
       try {
         await InboundService.handle(m);
       } catch (err) {
@@ -48,7 +33,7 @@ export async function POST(req: Request) {
       }
     }
   });
-  return isTwilio
+  return read.provider === "twilio"
     ? new Response("<Response/>", { status: 200, headers: { "Content-Type": "text/xml" } })
     : NextResponse.json({ ok: true });
 }

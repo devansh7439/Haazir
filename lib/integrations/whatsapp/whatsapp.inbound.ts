@@ -60,3 +60,29 @@ export function parseTwilioPayload(params: Record<string, string>): InboundMessa
   const isAudio = Number(params.NumMedia ?? 0) > 0 && (params.MediaContentType0 ?? "").startsWith("audio/");
   return [{ from, text: params.Body?.trim() || null, audio: isAudio ? { provider: "twilio", url: params.MediaUrl0 } : null }];
 }
+
+/** What a webhook request turned out to be: its provider and messages, or a refusal when the signature is wrong. */
+export type InboundRead = { ok: true; provider: "twilio" | "meta"; messages: InboundMessage[] } | { ok: false };
+
+/**
+ * Tells Twilio (form body) from Meta (JSON body), checks that provider's signature and parses the messages.
+ * Unreadable Meta JSON gives no messages, not an error, so the provider doesn't keep retrying.
+ */
+export function readInbound(req: { raw: string; contentType: string; url: string; headers: Headers }, secrets: {
+  appBaseUrl: string;
+  twilioToken: string;
+  metaAppSecret: string;
+}): InboundRead {
+  if (req.contentType.includes("application/x-www-form-urlencoded")) {
+    const params = Object.fromEntries(new URLSearchParams(req.raw));
+    const url = `${secrets.appBaseUrl.replace(/\/$/, "")}/api/whatsapp/inbound${new URL(req.url).search}`;
+    if (!verifyTwilioSignature(url, params, req.headers.get("x-twilio-signature"), secrets.twilioToken)) return { ok: false };
+    return { ok: true, provider: "twilio", messages: parseTwilioPayload(params) };
+  }
+  if (!verifyMetaSignature(req.raw, req.headers.get("x-hub-signature-256"), secrets.metaAppSecret)) return { ok: false };
+  try {
+    return { ok: true, provider: "meta", messages: parseMetaPayload(JSON.parse(req.raw)) };
+  } catch {
+    return { ok: true, provider: "meta", messages: [] };
+  }
+}
