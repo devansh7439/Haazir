@@ -52,7 +52,7 @@ bun run lint && bun run typecheck && bun run test
 
 ## Deploy (Supabase + Vercel + Bolna)
 
-1. **Supabase**: create a project. Apply the schema with `DATABASE_URL=<connection string> bun run db:setup`, or paste `supabase/migrations/*.sql` then `supabase/seed.sql` into the SQL editor.
+1. **Supabase**: create a project in **ap-south-1 (Mumbai)**. `vercel.json` runs the app's functions in Mumbai (`bom1`) too; every request makes several sequential queries, so a database in another region adds ~200 ms per query (a "Find a bed" makes about 40). Apply the schema with `DATABASE_URL=<connection string> bun run db:setup`, or paste `supabase/migrations/*.sql` then `supabase/seed.sql` into the SQL editor.
 2. **Vercel**: import the repo and set the env vars from `.env.example`:
    - `DATABASE_URL`: the Supabase **transaction pooler** URI (port 6543).
    - `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`: browser Realtime (cards update within ~1 s instead of on the 5 s tick).

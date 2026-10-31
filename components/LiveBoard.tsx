@@ -26,6 +26,8 @@ const GROUP_TITLE: Record<Group, string> = {
 };
 const GROUP_ORDER: Group[] = ["accepted", "in_progress", "waiting", "not_available"];
 const TERMINAL = ["completed", "no_answer", "busy", "failed", "canceled"];
+/** How often the board re-reads its view when Realtime isn't connected. */
+const FAST_POLL_MS = 1000;
 
 export function LiveBoard({ initial }: { initial: ReferralView }) {
   const router = useRouter();
@@ -91,6 +93,18 @@ export function LiveBoard({ initial }: { initial: ReferralView }) {
     };
   }, [id, live, idle, refresh, view.tick_interval_ms]);
 
+  // Without Realtime the board would only see changes on the next tick (up to 5 s; the spec asks for 2 s).
+  // Until Realtime connects, re-read the view every second while the tab is visible. The tick (wave 2, callbacks,
+  // hold expiry) keeps its own slower pace, since only reading needs to be fast.
+  const [realtimeOn, setRealtimeOn] = useState(false);
+  useEffect(() => {
+    if (!live || idle || realtimeOn) return;
+    const t = setInterval(() => {
+      if (document.visibilityState === "visible") void refresh().catch(() => {});
+    }, FAST_POLL_MS);
+    return () => clearInterval(t);
+  }, [live, idle, realtimeOn, refresh]);
+
   // Realtime: any change to this referral's rows triggers a refetch of the (redacted) view.
   useEffect(() => {
     const sb = browserSupabase();
@@ -115,10 +129,13 @@ export function LiveBoard({ initial }: { initial: ReferralView }) {
         .on("postgres_changes", { event: "INSERT", schema: "public", table: "events", filter: `referral_id=eq.${id}` }, bump)
         .subscribe((status) => {
           if (status === "SUBSCRIBED") void refresh();
+          // Fall back to fast polling whenever the channel isn't delivering.
+          setRealtimeOn(status === "SUBSCRIBED");
         });
     });
     return () => {
       cancelled = true;
+      setRealtimeOn(false);
       clearInterval(reauth);
       if (pending) clearTimeout(pending);
       void sb.removeChannel(channel);
