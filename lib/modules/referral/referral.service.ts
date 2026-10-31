@@ -129,13 +129,19 @@ export const ReferralService = {
     if (!simulated) {
       const active = await ReferralRepository.countActiveLive(orgId, addMinutes(now(), -ACTIVE_LIVE_WINDOW_H * 60));
       if (active >= env.maxActiveLiveReferrals) {
-        throw ApiError.tooMany("TOO_MANY_ACTIVE_REFERRALS", `${active} referrals are already calling hospitals. Finish or cancel one first.`);
+        throw ApiError.tooMany(
+          "TOO_MANY_ACTIVE_REFERRALS",
+          `${active} referrals are already calling hospitals. Finish or cancel one first.`,
+        );
       }
     }
     const pt = input.patient;
     const attendantPhone = pt?.attendant_phone ? normalizePhone(pt.attendant_phone) : null;
     if (pt?.attendant_phone && !attendantPhone) {
-      throw ApiError.unprocessable("INVALID_ATTENDANT_PHONE", "The attendant's phone number doesn't look right. Use a 10-digit mobile number.");
+      throw ApiError.unprocessable(
+        "INVALID_ATTENDANT_PHONE",
+        "The attendant's phone number doesn't look right. Use a 10-digit mobile number.",
+      );
     }
 
     const t = now();

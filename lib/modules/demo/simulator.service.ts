@@ -85,7 +85,10 @@ function transcriptFor(steps: Step[]): string {
     const p = s.params ?? {};
     if (s.function === "record-response") {
       if (p.outcome === "accepted" || p.outcome === "conditional") {
-        lines.push(`Desk: Yes, we can take the patient.${p.ready_in_minutes ? ` Ready in ${p.ready_in_minutes} minutes.` : ""}${p.contact_person ? ` Ask for ${p.contact_person}.` : ""}${p.conditions ? ` Please ${p.conditions}.` : ""}`);
+        const ready = p.ready_in_minutes ? ` Ready in ${p.ready_in_minutes} minutes.` : "";
+        const ask = p.contact_person ? ` Ask for ${p.contact_person}.` : "";
+        const condition = p.conditions ? ` Please ${p.conditions}.` : "";
+        lines.push(`Desk: Yes, we can take the patient.${ready}${ask}${condition}`);
         lines.push("Agent: Thank you. I've read that back and noted it.");
       } else if (p.outcome === "declined") {
         lines.push(`Desk: Sorry, we can't take the patient now (${p.decline_reason ?? "no bed"}).`);

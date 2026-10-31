@@ -28,7 +28,8 @@ async function handleHospitalReply(m: InboundMessage): Promise<boolean> {
   // Open availability requests to this hospital in the last 3 hours, latest attempt per referral.
   const open = await InboundRepository.openRequests(facilityIds, addMinutes(now(), -180), OPEN_STATUSES, reply.code);
   if (open.length === 0) {
-    await WhatsAppService.reply(m.from, `Haazir: we couldn't find an open request${reply.code ? ` ${reply.code}` : ""} for your hospital. Thank you.`);
+    const asked = reply.code ? ` ${reply.code}` : "";
+    await WhatsAppService.reply(m.from, `Haazir: we couldn't find an open request${asked} for your hospital. Thank you.`);
     return true;
   }
   if (open.length > 1) {
@@ -52,7 +53,8 @@ async function handleHospitalReply(m: InboundMessage): Promise<boolean> {
   await WhatsAppService.reply(
     m.from,
     reply.answer === "yes"
-      ? `Haazir: noted, ${spokenName(target.facility_name)} can accept ${target.code}. The doctor will confirm shortly if they send the patient.`
+      ? `Haazir: noted, ${spokenName(target.facility_name)} can accept ${target.code}. ` +
+        "The doctor will confirm shortly if they send the patient."
       : `Haazir: noted, thank you for letting us know about ${target.code}.`,
   );
   return true;
@@ -82,7 +84,8 @@ async function handleDoctorIntake(m: InboundMessage): Promise<boolean> {
   const draft = await IntakeService.create({ orgId: doc.org_id, referrerId: doc.id, kind, transcript: text });
   const p = draft.parsed;
   const understood = p.matched.length ? `Understood: ${p.matched.join(", ")}.` : "Couldn't recognise the case type.";
-  const link = env.appBaseUrl ? ` Review and start: ${env.appBaseUrl.replace(/\/$/, "")}/?draft=${draft.id}` : " Open Haazir to review and start it.";
+  const base = env.appBaseUrl.replace(/\/$/, "");
+  const link = env.appBaseUrl ? ` Review and start: ${base}/?draft=${draft.id}` : " Open Haazir to review and start it.";
   await WhatsAppService.reply(m.from, `Haazir: draft referral saved. ${understood}${link}`);
   return true;
 }

@@ -18,14 +18,22 @@ export interface ParsedIntake {
 }
 
 const CASES: Array<{ case_type: string; label: string; re: RegExp }> = [
-  { case_type: "snakebite_haemo", label: "snakebite with bleeding", re: /\b(snake|krait|cobra|viper|saanp|saap|haavu)\b[\s\S]*\b(bleed|bleeding|haemorrh|hemorrh|wbct|clot)/i },
+  {
+    case_type: "snakebite_haemo",
+    label: "snakebite with bleeding",
+    re: /\b(snake|krait|cobra|viper|saanp|saap|haavu)\b[\s\S]*\b(bleed|bleeding|haemorrh|hemorrh|wbct|clot)/i,
+  },
   { case_type: "snakebite_neuro", label: "snakebite", re: /\b(snake ?bite|snake|krait|cobra|saanp|saap|haavu|asv)\b/i },
   { case_type: "stemi", label: "heart attack", re: /\b(stemi|heart attack|myocardial|chest pain|\bmi\b|cardiac arrest)/i },
   { case_type: "stroke", label: "stroke", re: /\b(stroke|hemipleg|paralys|facial droop|slurred)/i },
   { case_type: "head_injury", label: "head injury", re: /\b(head injury|head trauma|\btbi\b|skull|gcs \d)/i },
   { case_type: "polytrauma", label: "major trauma", re: /\b(polytrauma|rta|road traffic|accident|multiple fractures|trauma)\b/i },
   { case_type: "preterm_newborn", label: "newborn", re: /\b(preterm|premature|newborn|neonate|neonatal|nicu)\b/i },
-  { case_type: "obstetric_bleed", label: "obstetric bleeding", re: /\b(pph|postpartum|post-partum|antepartum|obstetric|placenta|eclampsia)\b/i },
+  {
+    case_type: "obstetric_bleed",
+    label: "obstetric bleeding",
+    re: /\b(pph|postpartum|post-partum|antepartum|obstetric|placenta|eclampsia)\b/i,
+  },
   { case_type: "major_burns", label: "burns", re: /\b(burns?|scald)\b/i },
   { case_type: "poisoning", label: "poisoning", re: /\b(poison|organophosph|\bop\b|pesticide|insecticide|overdose)\b/i },
 ];

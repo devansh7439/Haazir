@@ -20,7 +20,8 @@ export const FacilityService = {
   /** When nobody qualifies: which change would find a hospital ("widen radius to 80 km", "remove: ventilator"). */
   suggestionsFor: async (params: MatchParams, needs: Capability[]): Promise<string[]> => {
     const out: string[] = [];
-    if (params.radius_km < WIDE_RADIUS_KM && (await FacilityService.rankEligible({ ...params, radius_km: WIDE_RADIUS_KM }, [])).length > 0) {
+    const wider = params.radius_km < WIDE_RADIUS_KM ? await FacilityService.rankEligible({ ...params, radius_km: WIDE_RADIUS_KM }, []) : [];
+    if (wider.length > 0) {
       out.push(`widen radius to ${WIDE_RADIUS_KM} km`);
     }
     for (const n of needs) {

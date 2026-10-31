@@ -97,12 +97,25 @@ export const DemoRepository = {
     const t = now();
     return one<Referral>(
       `insert into referrals (status, referrer_id, origin_facility_id, origin_lat, origin_lng, case_type, acuity, age_value,
-         age_unit, sex, note, required_capabilities, spoken_summary, transport, is_simulated, is_demo, closed_at, close_reason, created_at, updated_at)
+         age_unit, sex, note, required_capabilities, spoken_summary, transport, is_simulated, is_demo, closed_at, close_reason,
+         created_at, updated_at)
        select 'closed', r.id, r.facility_id, f.lat, f.lng, $2, $3, $4, $5, $6, $7, $8::text[],
               $11, 'ambulance', $9, true, $10, 'test_call', $10, $10
        from referrers r join facilities f on f.id = r.facility_id where r.id = $1
        returning *`,
-      [r.referrer_id, r.case_type, r.acuity, r.age_value, r.age_unit, r.sex, r.note, r.required_capabilities, r.is_simulated, t, r.spoken_summary],
+      [
+        r.referrer_id,
+        r.case_type,
+        r.acuity,
+        r.age_value,
+        r.age_unit,
+        r.sex,
+        r.note,
+        r.required_capabilities,
+        r.is_simulated,
+        t,
+        r.spoken_summary,
+      ],
     );
   },
 };

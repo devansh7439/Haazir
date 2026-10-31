@@ -3,10 +3,12 @@ import { TIMEZONE } from "@/lib/core/config";
 import { q } from "@/lib/core/db";
 import type { HospitalStat, HourStat } from "@/lib/modules/analytics/analytics.type";
 
+type HospitalRow = Omit<HospitalStat, "last_called_at"> & { last_called_at: Date | null };
+
 /** The Analytics page's figures (C5). Availability calls only; simulated referrals only when asked for. */
 export const AnalyticsRepository = {
   /** Per hospital of the organisation, most-called first. */
-  hospitals: (orgId: string, includeSimulated: boolean): Promise<Array<Omit<HospitalStat, "last_called_at"> & { last_called_at: Date | null }>> =>
+  hospitals: (orgId: string, includeSimulated: boolean): Promise<HospitalRow[]> =>
     q(
       `select f.id as facility_id, f.name,
               count(a.id)::int as calls,

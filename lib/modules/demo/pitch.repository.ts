@@ -22,7 +22,8 @@ export const PitchRepository = {
          (select m.ttfa_seconds from referral_metrics m join referrals r on r.id = m.id
            where r.org_id = $1 and not r.is_simulated and m.ttfa_seconds is not null order by r.created_at desc limit 1) as latest,
          (select count(*)::int from call_attempts a join referrals r on r.id = a.referral_id
-           where r.org_id = $1 and not r.is_simulated and a.purpose = 'availability' and a.status in ('completed','no_answer','busy')) as calls,
+           where r.org_id = $1 and not r.is_simulated and a.purpose = 'availability'
+             and a.status in ('completed','no_answer','busy')) as calls,
          (select count(*)::int from call_attempts a join referrals r on r.id = a.referral_id
            where r.org_id = $1 and not r.is_simulated and a.purpose = 'availability' and a.answered_at is not null) as answered`,
       [orgId],

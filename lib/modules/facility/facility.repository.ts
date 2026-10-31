@@ -106,7 +106,8 @@ export const FacilityRepository = {
   /** Each hospital's declared or confirmed capabilities, by code. */
   capabilityCodesForOrg: (orgId: string): Promise<Array<{ facility_id: string; capability_code: string }>> =>
     q(
-      `select facility_id, capability_code from facility_capabilities where org_id = $1 and status in ('declared','confirmed') order by capability_code`,
+      `select facility_id, capability_code from facility_capabilities
+       where org_id = $1 and status in ('declared','confirmed') order by capability_code`,
       [orgId],
     ),
 
@@ -122,7 +123,8 @@ export const FacilityRepository = {
   insert: async (orgId: string, f: NewFacility): Promise<Facility> => {
     const t = now();
     const row = await one<Facility>(
-      `insert into facilities (name, kind, ownership, address, city, district, lat, lng, call_language, whatsapp_number, created_at, updated_at, org_id)
+      `insert into facilities (name, kind, ownership, address, city, district, lat, lng, call_language, whatsapp_number,
+         created_at, updated_at, org_id)
        values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $11, $12) returning *`,
       [f.name, f.kind, f.ownership, f.address, f.city, f.district, f.lat, f.lng, f.call_language, f.whatsapp_number, t, orgId],
     );

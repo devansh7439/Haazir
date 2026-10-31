@@ -175,8 +175,14 @@ export function eventText(e: EventLike, facilityName: (id: unknown) => string): 
     case "outcome_recorded": {
       const o = String(p.outcome);
       const words: Record<string, string> = {
-        accepted: "accepted", conditional: "accepted with a condition", declined: "declined", redirected: "gave another number",
-        unclear: "answer unclear", ivr_blocked: "reached a phone menu", needs_doctor: "wants to talk to you", callback_later: "asked for a callback",
+        accepted: "accepted",
+        conditional: "accepted with a condition",
+        declined: "declined",
+        redirected: "gave another number",
+        unclear: "answer unclear",
+        ivr_blocked: "reached a phone menu",
+        needs_doctor: "wants to talk to you",
+        callback_later: "asked for a callback",
       };
       return `${f()} ${words[o] ?? o}${p.source === "manual" ? " (entered by doctor)" : ""}`;
     }

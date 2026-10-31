@@ -14,7 +14,8 @@ export const JUDGE_CARDS: JudgeCard[] = [
     card: 1, facility_id: "00000000-0000-4000-8000-000000000103", role: "casualty desk", language: "Kannada speaker needed",
     lines: [
       "Answer in Kannada. You have an ICU bed with a ventilator free.",
-      "Accept, with a condition: “ರೋಗಿಯ ಜೊತೆ ಪಿಎಚ್‌ಸಿ ಕೇಸ್ ಶೀಟ್ ಕಳುಹಿಸಿ” (send the PHC case sheet with the patient). Ready in 10 minutes. Your name: Dr Shashikala.",
+      "Accept, with a condition: “ರೋಗಿಯ ಜೊತೆ ಪಿಎಚ್‌ಸಿ ಕೇಸ್ ಶೀಟ್ ಕಳುಹಿಸಿ” (send the PHC case sheet with the patient). " +
+        "Ready in 10 minutes. Your name: Dr Shashikala.",
       "A minute later you'll get a confirmation call: say yes, keep the bed ready. Then check WhatsApp.",
     ],
   },

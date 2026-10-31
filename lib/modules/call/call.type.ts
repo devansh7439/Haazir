@@ -2,7 +2,8 @@ import type { Attempt } from "@/lib/core/types";
 
 /** The columns a new call needs; everything else starts empty and `status` starts as queued. */
 export type NewAttempt = Pick<Attempt, "referral_id" | "purpose" | "to_number" | "call_language"> &
-  Partial<Pick<Attempt, "facility_id" | "contact_id" | "parent_attempt_id" | "wave" | "rank" | "distance_km" | "eta_minutes" | "rank_reasons">>;
+  Partial<Pick<Attempt, "facility_id" | "contact_id" | "parent_attempt_id" | "wave" | "rank">> &
+  Partial<Pick<Attempt, "distance_km" | "eta_minutes" | "rank_reasons">>;
 
 /** Who recorded an outcome. */
 export type OutcomeSource = NonNullable<Attempt["outcome_source"]>;
