@@ -45,7 +45,7 @@ erDiagram
 ### `facilities`
 - `call_language`: the Bolna language key the call starts in (`en`, `hi`, `kn`, …). It's sent as `agent_data.language`, so it must match a language configured on the agent.
 - `whatsapp_number`: where the pre-arrival note goes. If null, the message is stored as `simulated` and shown in the UI.
-- `is_demo`: demo rows are fictional; the Demo page can wipe and reseed them.
+- `is_demo`: demo rows are fictional seed data; their names carry "(Demo)", which is stripped before anything is spoken.
 
 ### `facility_contacts`
 - `priority`: 1 is tried first. **Non-IVR numbers always come before IVR numbers**, because Bolna documents no way for the agent to press keys and get through a phone menu.
@@ -66,7 +66,7 @@ erDiagram
 ### `call_attempts`
 - `purpose`: `availability | hold_confirm | release | family_update`.
 - `status` (our state) versus `bolna_status` (raw); see the mapping in `02-architecture.md` §5.3.
-- `outcome` + `outcome_source` (`function | extraction | manual | simulation`).
+- `outcome` + `outcome_source` (`function | extraction | manual | whatsapp`).
 - `extraction_outcome`: Bolna's post-call extraction result, kept separately so conflicts are visible. A conflict sets `needs_review = true`.
 - `parent_attempt_id`: redials and callbacks point at the original attempt.
 - `rank_reasons`: JSON array of short strings shown as "why this hospital" chips, e.g. `["18 min away","has ICU + ventilator","answered 4 of 5 calls"]`.
@@ -200,7 +200,7 @@ where a.callback_due_at <= now()
 | Peepal Women & Child Hospital (Demo) | Private | en | NICU, obstetrics | No (no adult ICU) |
 | Sandal Nursing Home (Demo) | Nursing home | kn | None | No |
 
-All seeded phone numbers are placeholders (`+9100000001xx`). Assign real phones you control on the Demo page before calling.
+All seeded phone numbers are placeholders (`+9100000001xx`). Put phones you control on the Hospitals page before calling.
 
 ---
 

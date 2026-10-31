@@ -28,7 +28,6 @@ export function ReferralForm(props: {
   referrerId: string;
   templates: CaseTemplate[];
   capabilities: Capability[];
-  defaultSimulate: boolean;
   bolnaReady: boolean;
   draft?: { id: string; parsed: ParsedIntake } | null;
 }) {
@@ -45,7 +44,6 @@ export function ReferralForm(props: {
   const [radius, setRadius] = useState(DEFAULT_RADIUS_KM);
   const [showPatient, setShowPatient] = useState(false);
   const [patient, setPatient] = useState<PatientFields>({ patient_name: "", attendant_name: "", attendant_phone: "", attendant_language: "en", attendant_consent: false });
-  const [simulate, setSimulate] = useState(props.defaultSimulate || !props.bolnaReady);
   // One id per press of "Find a bed": a double-click or a retry after a network error reuses it, so hospitals are
   // never called twice for the same patient.
   const [requestId] = useState(newRequestId);
@@ -91,7 +89,6 @@ export function ReferralForm(props: {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           ...body,
-          simulate,
           draft_id: props.draft?.id,
           client_request_id: requestId,
           patient: showPatient || patient.patient_name || patient.attendant_phone ? patient : undefined,
@@ -140,7 +137,7 @@ export function ReferralForm(props: {
           warnings={preview?.warnings ?? []}
         />
         <PatientDetails open={showPatient} onToggle={() => setShowPatient((s) => !s)} patient={patient} onChange={setPatient} />
-        <SearchOptions radius={radius} onRadius={setRadius} simulate={simulate} onSimulate={setSimulate} bolnaReady={props.bolnaReady} />
+        <SearchOptions radius={radius} onRadius={setRadius} bolnaReady={props.bolnaReady} />
         <SubmitBar
           canSubmit={canSubmit}
           submitting={submitting}

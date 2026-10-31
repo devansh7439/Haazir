@@ -23,7 +23,7 @@ import { setDb } from "@/lib/core/db";
 import { SESSION_COOKIE } from "@/lib/modules/auth/gate.helper";
 import { hashPassword } from "@/lib/modules/auth/password.helper";
 import { MaintenanceService } from "@/lib/modules/maintenance/maintenance.service";
-import { advanceSimulation, scenario } from "@/lib/modules/demo/simulator.service";
+import { KRAIT, advanceCalls, fakeBolna } from "./support/scripted-calls";
 import { DEFAULT_ORG_ID } from "@/lib/core/types";
 import { IDS, fakeClock, freshDb } from "./helpers";
 
@@ -36,7 +36,6 @@ import * as referralRoute from "@/app/api/referrals/[id]/route";
 import * as previewRoute from "@/app/api/referrals/preview/route";
 import * as facilitiesRoute from "@/app/api/facilities/route";
 import * as facilityRoute from "@/app/api/facilities/[id]/route";
-import * as demoStatusRoute from "@/app/api/demo/status/route";
 import * as missedCallRoute from "@/app/api/triggers/missed-call/route";
 import * as whatsappRoute from "@/app/api/whatsapp/inbound/route";
 import * as portalRoute from "@/app/api/portal-snapshots/route";
@@ -46,9 +45,8 @@ import { ReferralService } from "@/lib/modules/referral/referral.service";
 import { HoldService } from "@/lib/modules/referral/hold.service";
 import { EvaluationService } from "@/lib/modules/referral/evaluation.service";
 import { WebhookService } from "@/lib/modules/call/webhook.service";
-import type { ReferralInput } from "@/lib/modules/referral/referral.type";
+import { FunctionService } from "@/lib/modules/call/function.service";
 
-const KRAIT = scenario.referral as unknown as ReferralInput;
 const BASE = "https://app.example";
 
 function req(path: string, init: { method?: string; body?: unknown; headers?: Record<string, string>; raw?: string } = {}) {
@@ -73,6 +71,7 @@ beforeEach(async () => {
   vi.stubEnv("CRON_SECRET", "cronsec");
   vi.stubEnv("DEMO_PASSCODE", "");
   vi.stubEnv("AUTH_MODE", "passcode");
+  fakeBolna();
 });
 afterEach(async () => {
   await settle();
@@ -119,23 +118,25 @@ describe("cron tick", () => {
   it("needs CRON_SECRET and advances referrals with no console open", async () => {
     const clock = fakeClock();
     expect((await cronRoute.GET(req("/api/cron/tick", { method: "GET" }))).status).toBe(401);
-    const { referral } = await ReferralService.create(KRAIT, { simulate: true });
-    for (let t = 0; t < 45; t++) {
-      clock.advance(1);
-      const res = await cronRoute.GET(req("/api/cron/tick", { method: "GET", headers: { authorization: "Bearer cronsec" } }));
-      expect(res.status).toBe(200);
+    const { referral } = await ReferralService.create(KRAIT);
+    const a = (await CallRepository.listForReferral(referral.id))[0];
+    await (await FunctionService.requestCallback({ attempt_id: a.id, minutes: "3" })).followUp();
+    for (const status of ["in-progress", "call-disconnected", "completed"]) {
+      await (await WebhookService.handle({ id: a.bolna_execution_id, status })).followUp();
     }
-    const r = (await ReferralRepository.get(referral.id))!;
-    expect(r.status).toBe("options_ready");
-    expect(r.first_acceptance_at).not.toBeNull();
+    clock.advance(3 * 60 + 1);
+    const res = await cronRoute.GET(req("/api/cron/tick", { method: "GET", headers: { authorization: "Bearer cronsec" } }));
+    expect(res.status).toBe(200);
+    // The callback is dialled by the cron alone.
+    expect((await CallRepository.listForReferral(referral.id)).filter((x) => x.parent_attempt_id === a.id)).toHaveLength(1);
   });
 });
 
 describe("passcode mode (single organisation)", () => {
   it("creates a referral and rejects identifiers in the note", async () => {
-    const created = await referralsRoute.POST(req("/api/referrals", { body: { ...KRAIT, simulate: true } }));
+    const created = await referralsRoute.POST(req("/api/referrals", { body: { ...KRAIT } }));
     expect(created.status).toBe(201);
-    const bad = await referralsRoute.POST(req("/api/referrals", { body: { ...KRAIT, note: "son 9845012345", simulate: true } }));
+    const bad = await referralsRoute.POST(req("/api/referrals", { body: { ...KRAIT, note: "son 9845012345" } }));
     expect(bad.status).toBe(422);
     expect((await bad.json()).error.code).toBe("NOTE_CONTAINS_IDENTIFIER");
   });
@@ -187,19 +188,17 @@ describe("user accounts and organisation isolation", () => {
     expect((await referralsRoute.GET()).status).toBe(401);
   });
 
-  it("never shows one organisation's referrals, hospitals or demo console to another", async () => {
+  it("never shows one organisation's referrals or hospitals to another", async () => {
     await signIn("admin@demo.org", "password-demo-1");
-    const created = await referralsRoute.POST(req("/api/referrals", { body: { ...KRAIT, simulate: true } }));
+    const created = await referralsRoute.POST(req("/api/referrals", { body: { ...KRAIT } }));
     expect(created.status).toBe(201);
     const { id } = await created.json();
     expect((await referralRoute.GET(req(`/api/referrals/${id}`, { method: "GET" }), params(id))).status).toBe(200);
-    expect((await demoStatusRoute.GET()).status).toBe(200);
 
     await signIn("doc@other.org", "password-demo-1");
     expect((await referralRoute.GET(req(`/api/referrals/${id}`, { method: "GET" }), params(id))).status).toBe(404);
     expect((await (await referralsRoute.GET()).json()).referrals).toEqual([]);
     expect((await (await facilitiesRoute.GET()).json()).facilities).toEqual([]);
-    expect((await demoStatusRoute.GET()).status).toBe(403);
     // Using the demo org's referrer from org B is refused like an unknown referrer.
     const cross = await previewRoute.POST(req("/api/referrals/preview", { body: KRAIT }));
     expect(cross.status).toBe(422);
@@ -219,11 +218,11 @@ describe("missed-call trigger (C3) and family call (C1)", () => {
   it("calls the family back for their confirmed referral", async () => {
     vi.stubEnv("MISSED_CALL_SECRET", "mc");
     const clock = fakeClock();
-    const { referral } = await ReferralService.create(KRAIT, { simulate: true });
-    for (let t = 0; t < 45; t++) { await advanceSimulation(referral.id); await EvaluationService.evaluate(referral.id); clock.advance(1); }
+    const { referral } = await ReferralService.create(KRAIT);
+    for (let t = 0; t < 45; t++) { await advanceCalls(referral.id); await EvaluationService.evaluate(referral.id); clock.advance(1); }
     const tamarind = (await CallRepository.listForReferral(referral.id)).find((a) => a.facility_id === IDS.tamarind && a.purpose === "availability")!;
     await HoldService.select(referral.id, tamarind.id);
-    for (let t = 0; t < 40; t++) { await advanceSimulation(referral.id); await EvaluationService.evaluate(referral.id); clock.advance(1); }
+    for (let t = 0; t < 40; t++) { await advanceCalls(referral.id); await EvaluationService.evaluate(referral.id); clock.advance(1); }
     expect((await ReferralRepository.get(referral.id))!.status).toBe("confirmed");
     // The handoff placed one family call; its row holds only a masked number.
     let family = (await CallRepository.listForReferral(referral.id)).filter((a) => a.purpose === "family_update");
@@ -267,8 +266,8 @@ describe("WhatsApp inbound (C2, C6)", () => {
   it("records a desk's WhatsApp YES with the reference, and refuses to guess without one", async () => {
     fakeClock();
     await db.query(`update facilities set whatsapp_number = '+919800000101' where id = $1`, [IDS.banyan]);
-    const a = await ReferralService.create(KRAIT, { simulate: true });
-    const b = await ReferralService.create(KRAIT, { simulate: true });
+    const a = await ReferralService.create(KRAIT);
+    const b = await ReferralService.create(KRAIT);
     // Two open requests to Banyan: a bare "yes" is ambiguous.
     await whatsappRoute.POST(twilio({ From: "whatsapp:+919800000101", Body: "yes" }));
     await settle();
@@ -325,8 +324,8 @@ describe("missed-webhook recovery, portal flags, retention", () => {
       body: { snapshots: [{ facility_id: IDS.neem, source: "Test portal", icu_beds_free: 3, ventilators_free: 2, observed_at: new Date().toISOString() }] },
     }));
     expect(res.status).toBe(201);
-    const { referral } = await ReferralService.create(KRAIT, { simulate: true });
-    for (let t = 0; t < 40; t++) { await advanceSimulation(referral.id); await EvaluationService.evaluate(referral.id); clock.advance(1); }
+    const { referral } = await ReferralService.create(KRAIT);
+    for (let t = 0; t < 40; t++) { await advanceCalls(referral.id); await EvaluationService.evaluate(referral.id); clock.advance(1); }
     const flags = await db.query<{ payload: { detail: string } }>(`select payload from events where referral_id = $1 and type = 'portal_mismatch'`, [referral.id]);
     // Neem declines with "no ventilator: ICU full, no ventilator free"; the ventilator reading is the one that contradicts it first.
     expect(flags.map((f) => f.payload.detail)).toEqual(["portal showed 2 ventilators free"]);
@@ -334,7 +333,7 @@ describe("missed-webhook recovery, portal flags, retention", () => {
 
   it("purges identifiers 30 days after a referral ends, keeping the de-identified record", async () => {
     const clock = fakeClock();
-    const { referral } = await ReferralService.create(KRAIT, { simulate: true });
+    const { referral } = await ReferralService.create(KRAIT);
     await db.query(`update referrals set status = 'closed', closed_at = $2 where id = $1`, [referral.id, clock.now]);
     clock.advance(29 * 86400);
     expect((await MaintenanceService.purgeIdentifiers(30)).patient_details).toBe(0);

@@ -67,7 +67,6 @@ export interface NewReferral {
   spoken_summary: string;
   transport: string;
   search_radius_km: number;
-  is_simulated: boolean;
   is_demo: boolean;
   client_request_id: string | null;
 }

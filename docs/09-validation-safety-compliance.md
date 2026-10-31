@@ -73,7 +73,7 @@ Take notes; ask permission before quoting anyone by name on a slide.
 7. **No fake emergencies:** test only with consent and labelled calls.
 8. **Holds expire:** one active hold per referral, tied to a real referral and doctor, auto-expiring, fully logged.
 9. **Respect the desk:** bounded waves, one redial at most on busy, prompt release calls, honour opt-outs.
-10. **Be honest on stage:** label simulations; quote only measured numbers.
+10. **Be honest on stage:** show only real calls; quote only measured numbers.
 
 ---
 

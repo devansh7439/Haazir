@@ -38,7 +38,7 @@ The design goal: a tired doctor at 2 a.m. can start a referral in 30 seconds and
 | Right panel | Calls `POST /api/referrals/preview` (debounced 400 ms). Shows the exact spoken summary and the ranked hospitals that will be called, with reasons |
 | No eligible hospitals | "No hospital within 40 km has an ICU bed + ventilator. [Widen to 80 km] [Remove a need]" |
 | Find a bed | `POST /api/referrals`, then navigate to the live board. Disabled until the case, acuity and needs are set |
-| Demo only | A "Run as simulation" checkbox (sends `"simulate": true`) for an instant stage fallback without redeploying |
+| Bolna not configured | A note under the search radius: no hospital can be called until `BOLNA_API_KEY` and `BOLNA_AGENT_ID_AVAILABILITY` are set |
 
 ---
 
@@ -101,7 +101,7 @@ The design goal: a tired doctor at 2 a.m. can start a referral in 30 seconds and
 | Select | Enabled for accepted or conditional and not `needs_review`. Dialog: "Send the patient to Tamarind District Hospital (18 min)? Haazir will call to confirm the bed." **[Confirm & call]** **[I already confirmed by phone]** |
 | Needs review | Orange outline: "The answer is unclear: listen before selecting." Recording player plus **[Set outcome]** |
 | Manual outcome | Small form on each card (outcome, bed type, ready in, contact), for after the doctor's own call |
-| Tick | While the referral is active, call `POST /api/referrals/:id/tick` every 5 s (1 s if simulated) |
+| Tick | While the referral is active, call `POST /api/referrals/:id/tick` every 5 s |
 | Accessibility | `aria-live="polite"` region announces changes ("Banyan accepted"). All actions keyboard-reachable |
 
 ### 2.3 After selection: hold panel (replaces the header CTA)
@@ -118,10 +118,6 @@ When the hold expires: "Hold expired. Did the patient arrive? [Arrived] [Close]"
 
 "No hospital accepted after 2 rounds (12 calls). Call these desks directly:" followed by a ranked list with `tel:` buttons and the last known answer for each. Also **[Widen to 80 km and try again]**.
 
-### 2.5 Simulated
-
-A yellow **SIMULATED** badge in the header for any `is_simulated` referral. Never hide it.
-
 ---
 
 ## 3. Facilities (`/facilities`)
@@ -132,24 +128,13 @@ Empty state: "Add the hospitals you refer to most. A direct casualty or referral
 
 ---
 
-## 4. Demo (`/demo`)
+## 4. History (`/history`, should-have)
 
-| Section | Content |
-|---|---|
-| Phones | For each demo hospital: judge card number, phone input, WhatsApp toggle, **[Test call]**. Also the referring doctor's phone and the family phone |
-| Pre-flight checklist (static) | Bolna concurrency at least 10 · calling hours off · webhook URL set on demo agents · all phones off silent, unknown callers allowed · WhatsApp recipients have messaged our number · simulation scenario loaded |
-| Actions | **[Reset demo]** **[Run live demo referral]** **[Run simulated referral]** |
-| Status | Last webhook received (time), last function call (time). Shows whether Bolna can reach the app |
+List of referrals with code, case, status, **TTFA**, time to confirmed bed, and number of calls. Data from the `referral_metrics` view. Use it as the "proof" slide: real numbers from your test runs.
 
 ---
 
-## 5. History (`/history`, should-have)
-
-List of referrals with code, case, status, **TTFA**, time to confirmed bed, number of calls, and a simulated flag. Data from the `referral_metrics` view. Use it as the "proof" slide: real numbers from your test runs.
-
----
-
-## 6. Visual and interaction rules
+## 5. Visual and interaction rules
 
 - Large type: base 16 px, header timer 28 px or more. Tap targets 44 px or more.
 - High contrast (WCAG AA), and colour never carries meaning alone.

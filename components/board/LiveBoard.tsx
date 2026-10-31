@@ -8,7 +8,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { AttemptView, ReferralView } from "@/lib/modules/referral/view.type";
 import { GROUP_TITLE, cardsOf, groupCards, holdState, isCancellable, nextReferralId, pinsOf, searchTimes, withoutTimer } from "@/lib/ui/board";
 import { TONE, attemptDisplay, mmss, shortName } from "@/lib/ui/display";
-import { ReferralStatusPill, SectionTitle, SimBadge, cx } from "@/components/ui";
+import { ReferralStatusPill, SectionTitle, cx } from "@/components/ui";
 import { AlertCallout } from "./AlertCallout";
 import { AttemptCard } from "./AttemptCard";
 import { Callout } from "./Callout";
@@ -80,7 +80,6 @@ export function LiveBoard({ initial }: { initial: ReferralView }) {
               <span className={cx("rounded-md px-1.5 py-0.5 text-xs font-semibold capitalize", r.acuity === "critical" ? "bg-rose-50 text-rose-700" : r.acuity === "serious" ? "bg-amber-50 text-amber-800" : "bg-emerald-50 text-emerald-700")}>
                 {r.acuity}
               </span>
-              {r.is_simulated && <SimBadge />}
             </div>
             <p className="mt-0.5 text-sm text-zinc-500 sm:truncate">
               {view.referrer.name.replace(" (Demo)", "")}

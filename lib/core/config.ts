@@ -9,7 +9,6 @@ export const BUSY_REDIAL_AFTER_S = 45;
 export const MAX_REDIALS_PER_FACILITY = 2;
 export const DEFAULT_RADIUS_KM = 40;
 export const TICK_INTERVAL_MS = 5000;
-export const TICK_INTERVAL_SIM_MS = 1000;
 export const TIMEZONE = "Asia/Kolkata";
 /** Longest a hold call waits for the accepting call to end before dialling anyway. */
 export const HOLD_WAIT_MAX_S = 90;
@@ -37,7 +36,6 @@ function str(name: string): string {
 export const env = {
   get appBaseUrl() { return str("APP_BASE_URL"); },
   get demoPasscode() { return str("DEMO_PASSCODE"); },
-  get simulationMode() { return str("SIMULATION_MODE").toLowerCase() === "true"; },
   get databaseUrl() { return str("DATABASE_URL") || "pglite:./.data/pglite"; },
   get bolnaApiKey() { return str("BOLNA_API_KEY"); },
   get bolnaBaseUrl() { return str("BOLNA_BASE_URL") || "https://api.bolna.ai"; },

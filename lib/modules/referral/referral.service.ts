@@ -99,7 +99,7 @@ export const ReferralService = {
    * Creates the referral and calls the first wave. Idempotent on `client_request_id`: a repeat returns the first
    * referral with `duplicate`. Live referrals need Bolna configured and stay under the organisation's live cap.
    */
-  create: async (input: ReferralInput, opts: { simulate?: boolean; orgId?: string } = {}): Promise<Created> => {
+  create: async (input: ReferralInput, opts: { orgId?: string } = {}): Promise<Created> => {
     const p = await prepare(input, opts.orgId);
     const orgId = p.referrer.org_id;
     const repeat = await findRepeat(orgId, input.client_request_id);
@@ -108,21 +108,18 @@ export const ReferralService = {
       const suggestions = await FacilityService.suggestionsFor(p.params, p.needs);
       throw ApiError.conflict("NO_ELIGIBLE_FACILITIES", "No eligible hospital in range", { suggestions });
     }
-    const simulated = !!opts.simulate || env.simulationMode;
-    if (!simulated && (!env.bolnaApiKey || !env.agentId("availability"))) {
+    if (!env.bolnaApiKey || !env.agentId("availability")) {
       throw ApiError.unprocessable(
         "BOLNA_NOT_CONFIGURED",
-        "Live calls need BOLNA_API_KEY and BOLNA_AGENT_ID_AVAILABILITY. Run it as a simulation instead.",
+        "Calls need BOLNA_API_KEY and BOLNA_AGENT_ID_AVAILABILITY. Ask your administrator to set them.",
       );
     }
-    if (!simulated) {
-      const active = await ReferralRepository.countActiveLive(orgId, addMinutes(now(), -ACTIVE_LIVE_WINDOW_H * 60));
-      if (active >= env.maxActiveLiveReferrals) {
-        throw ApiError.tooMany(
-          "TOO_MANY_ACTIVE_REFERRALS",
-          `${active} referrals are already calling hospitals. Finish or cancel one first.`,
-        );
-      }
+    const active = await ReferralRepository.countActiveLive(orgId, addMinutes(now(), -ACTIVE_LIVE_WINDOW_H * 60));
+    if (active >= env.maxActiveLiveReferrals) {
+      throw ApiError.tooMany(
+        "TOO_MANY_ACTIVE_REFERRALS",
+        `${active} referrals are already calling hospitals. Finish or cancel one first.`,
+      );
     }
     const pt = input.patient;
     const attendantPhone = pt?.attendant_phone ? normalizePhone(pt.attendant_phone) : null;
@@ -150,7 +147,6 @@ export const ReferralService = {
         spoken_summary: p.spoken_summary,
         transport: input.transport ?? "ambulance",
         search_radius_km: p.params.radius_km,
-        is_simulated: simulated,
         is_demo: p.origin?.is_demo ?? false,
         client_request_id: input.client_request_id ?? null,
       },
@@ -177,7 +173,6 @@ export const ReferralService = {
       case_type: referral.case_type,
       acuity: referral.acuity,
       required_capabilities: referral.required_capabilities,
-      simulated,
     });
 
     const claimed = await ReferralRepository.claimWave(referral.id, 0);
@@ -248,7 +243,6 @@ export const ReferralService = {
             }
           : undefined,
       },
-      { simulate: r.is_simulated },
     );
     const closeReason = `widened to ${radiusKm} km: ${created.referral.code}`;
     await ReferralRepository.update(r.id, { status: "closed", closed_at: now(), close_reason: closeReason });

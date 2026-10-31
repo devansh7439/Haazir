@@ -73,7 +73,7 @@ export function HoldPanel(props: {
                     <MessageCircle aria-hidden className="size-4 text-zinc-400" />
                     <span className="flex-1 text-zinc-800">{label}</span>
                     <span className="kbd-num text-xs text-zinc-400">{m.to_masked || "no number"}</span>
-                    <StatusPill size="sm" tone={m.status === "failed" ? "red" : m.status === "simulated" ? "grey" : "green"} text={m.status} icon={m.status === "failed" ? "x" : "check"} />
+                    <StatusPill size="sm" tone={m.status === "failed" ? "red" : m.status === "simulated" ? "grey" : "green"} text={m.status === "simulated" ? "not sent" : m.status} icon={m.status === "failed" ? "x" : "check"} />
                   </li>
                 );
               })}

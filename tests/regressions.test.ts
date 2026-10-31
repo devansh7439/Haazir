@@ -2,8 +2,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { Db } from "@/lib/core/db";
 import { setClock } from "@/lib/core/clock";
 import { setDb } from "@/lib/core/db";
-import { advanceSimulation, scenario } from "@/lib/modules/demo/simulator.service";
-import { IDS, fakeClock, freshDb } from "./helpers";
+import { KRAIT } from "./support/scripted-calls";
+import { fakeClock, freshDb } from "./helpers";
 import { CallRepository } from "@/lib/modules/call/call.repository";
 import { CallService } from "@/lib/modules/call/call.service";
 import { FunctionService } from "@/lib/modules/call/function.service";
@@ -12,10 +12,8 @@ import { ReferralService } from "@/lib/modules/referral/referral.service";
 import { HoldService } from "@/lib/modules/referral/hold.service";
 import { EvaluationService } from "@/lib/modules/referral/evaluation.service";
 import { WebhookService } from "@/lib/modules/call/webhook.service";
-import type { ReferralInput } from "@/lib/modules/referral/referral.type";
 
 // Bugs found while debugging; each test fails on the code before the fix.
-const KRAIT = scenario.referral as unknown as ReferralInput;
 
 let db: Db;
 beforeEach(async () => {
@@ -43,27 +41,7 @@ function stubBolna() {
   return calls;
 }
 
-async function runSim(referralId: string, clock: { advance(s: number): void }, seconds: number) {
-  for (let t = 0; t < seconds; t++) {
-    await advanceSimulation(referralId);
-    await EvaluationService.evaluate(referralId);
-    clock.advance(1);
-  }
-}
-
 describe("debug regressions", () => {
-  it("simulated calls never count toward a hospital's track record", async () => {
-    const clock = fakeClock();
-    const { referral } = await ReferralService.create(KRAIT, { simulate: true });
-    await runSim(referral.id, clock, 80);
-    const [stats] = await db.query<{ availability_calls: number; accepted: number }>(
-      `select availability_calls::int, accepted::int from facility_stats where facility_id = $1`, [IDS.banyan],
-    );
-    expect(stats).toEqual({ availability_calls: 0, accepted: 0 });
-    const [contact] = await db.query<{ calls_made: number }>(`select calls_made from facility_contacts where facility_id = $1 and priority = 1`, [IDS.banyan]);
-    expect(contact.calls_made).toBe(0);
-  });
-
   it("the hold call waits until the accepting call has hung up", async () => {
     fakeClock();
     const calls = stubBolna();
@@ -96,8 +74,9 @@ describe("debug regressions", () => {
   it("refuses live calls when Bolna isn't configured, and a bad attendant number", async () => {
     vi.stubEnv("BOLNA_API_KEY", "");
     await expect(ReferralService.create(KRAIT)).rejects.toMatchObject({ code: "BOLNA_NOT_CONFIGURED" });
+    stubBolna();
     const bad = { ...KRAIT, patient: { ...KRAIT.patient, attendant_phone: "12345" } };
-    await expect(ReferralService.create(bad, { simulate: true })).rejects.toMatchObject({ code: "INVALID_ATTENDANT_PHONE" });
+    await expect(ReferralService.create(bad)).rejects.toMatchObject({ code: "INVALID_ATTENDANT_PHONE" });
     expect(await db.query(`select 1 from referrals`)).toHaveLength(0);
   });
 
@@ -129,7 +108,8 @@ describe("debug regressions", () => {
 
   it("widening is only allowed once every call has finished", async () => {
     fakeClock();
-    const { referral } = await ReferralService.create(KRAIT, { simulate: true });
+    stubBolna();
+    const { referral } = await ReferralService.create(KRAIT);
     await expect(ReferralService.widen(referral.id, 80)).rejects.toMatchObject({ code: "NOT_WIDENABLE" });
     expect((await ReferralRepository.get(referral.id))!.status).toBe("searching");
   });

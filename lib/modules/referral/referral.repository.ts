@@ -22,9 +22,9 @@ export const ReferralRepository = {
     return one<Referral>(
       `insert into referrals
          (status, referrer_id, origin_facility_id, origin_lat, origin_lng, case_type, acuity, age_value, age_unit, sex,
-          note, required_capabilities, spoken_summary, transport, search_radius_km, is_simulated, is_demo, created_at, updated_at,
+          note, required_capabilities, spoken_summary, transport, search_radius_km, is_demo, created_at, updated_at,
           client_request_id)
-       values ('searching', $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11::text[], $12, $13, $14, $15, $16, $17, $17, $18)
+       values ('searching', $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11::text[], $12, $13, $14, $15, $16, $16, $17)
        on conflict (org_id, client_request_id) where client_request_id is not null do nothing
        returning *`,
       [
@@ -42,7 +42,6 @@ export const ReferralRepository = {
         r.spoken_summary,
         r.transport,
         r.search_radius_km,
-        r.is_simulated,
         r.is_demo,
         at,
         r.client_request_id,
@@ -85,11 +84,11 @@ export const ReferralRepository = {
   reopenChoice: (id: string): Promise<Referral | null> =>
     ReferralRepository.update(id, { status: "options_ready", selected_attempt_id: null, selected_facility_id: null }, ["confirming"]),
 
-  /** Live referrals of an organisation still placing calls, created after `since`. */
+  /** Referrals of an organisation still placing calls, created after `since`. */
   countActiveLive: async (orgId: string, since: Date): Promise<number> => {
     const [row] = await q<{ n: number }>(
       `select count(*)::int as n from referrals
-       where org_id = $1 and not is_simulated and status in ('searching','confirming') and created_at > $2`,
+       where org_id = $1 and status in ('searching','confirming') and created_at > $2`,
       [orgId, since],
     );
     return row.n;

@@ -4,7 +4,7 @@ import { now, secondsBetween } from "@/lib/core/clock";
 import { createLogger } from "@/lib/core/logger";
 import { clean, normalizeYesNo, redactNumbers } from "@/lib/core/normalize";
 import type { Attempt } from "@/lib/core/types";
-import { getExecution, isSimulatedExecution, toBolnaStatus } from "@/lib/integrations/bolna/bolna.client";
+import { getExecution, toBolnaStatus } from "@/lib/integrations/bolna/bolna.client";
 import { PortalService } from "@/lib/modules/portal/portal.service";
 import { isAcceptance } from "@/lib/modules/call/call.helper";
 import { CallRepository } from "@/lib/modules/call/call.repository";
@@ -76,10 +76,7 @@ const reconcileOnTerminal = async (a: Attempt, body: Body): Promise<FollowUp> =>
     await CallRepository.update(a.id, { outcome, outcome_source: "extraction", outcome_at: now() }, { outcome: null });
   }
   const fresh = await CallRepository.get(a.id);
-  // Simulated calls never count toward a desk's answer rate (it feeds the real ranking).
-  if (!isSimulatedExecution(a.bolna_execution_id)) {
-    await CallRepository.bumpContactStats(a.contact_id, !!fresh?.answered_at, fresh?.outcome ?? a.status);
-  }
+  await CallRepository.bumpContactStats(a.contact_id, !!fresh?.answered_at, fresh?.outcome ?? a.status);
   return followUp;
 };
 
@@ -147,7 +144,7 @@ export const WebhookService = {
   },
 
   /**
-   * Asks Bolna about real calls whose status hasn't moved for a while (a webhook may have been lost) and feeds the
+   * Asks Bolna about calls whose status hasn't moved for a while (a webhook may have been lost) and feeds the
    * answer through `handle`. After LOST_TRACK_AFTER_S with no answer the call is marked failed. Safe to run from every
    * tick and the cron. Returns how many calls moved.
    */
@@ -156,7 +153,6 @@ export const WebhookService = {
     const candidates = await CallRepository.staleCandidates(referralId, new Date(t.getTime() - POLL_EVERY_S * 1000));
     let recovered = 0;
     for (const a of candidates) {
-      if (isSimulatedExecution(a.bolna_execution_id)) continue;
       if (secondsBetween(a.updated_at, t) < (STALE_AFTER_S[a.status] ?? 120)) continue;
       if (!(await CallRepository.claimPoll(a, t))) continue;
       try {

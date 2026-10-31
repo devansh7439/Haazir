@@ -15,7 +15,6 @@ export const ReferralBody = z.object({
   search_radius_km: z.number().int().min(1).max(300).default(40),
   origin_lat: z.number().min(-90).max(90).optional(),
   origin_lng: z.number().min(-180).max(180).optional(),
-  simulate: z.boolean().optional(),
   draft_id: z.string().uuid().optional(),
   client_request_id: z.string().uuid().optional(),
   patient: z
@@ -31,7 +30,7 @@ export const ReferralBody = z.object({
 export type ReferralBodyT = z.infer<typeof ReferralBody>;
 
 /** POST /api/referrals/preview: the same form, without identifiers or side effects. */
-export const PreviewBody = ReferralBody.omit({ patient: true, simulate: true, draft_id: true, client_request_id: true });
+export const PreviewBody = ReferralBody.omit({ patient: true, draft_id: true, client_request_id: true });
 
 export const SelectBody = z.object({ attempt_id: z.string().uuid(), force: z.boolean().default(false) });
 

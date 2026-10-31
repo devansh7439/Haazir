@@ -12,7 +12,7 @@ Everything you need to start building **Haazir** (working name), an emergency re
 |---|---|---|---|
 | 1 | `01-product-blueprint.md` | **Everyone** | Problem, evidence, insights, users, scope (MoSCoW), metrics, positioning, business, risks, where you stand vs other entrants |
 | 2 | `07-build-plan.md` | **Everyone** | Day-0 checklist, roles, milestones, 35 tickets with acceptance criteria, 7-day and 3-day plans, cut list |
-| 3 | `02-architecture.md` | Backend, frontend | Stack, flows, state machines, orchestrator pseudo-code, matching, summary builder, realtime, simulation, security, Bolna constraints |
+| 3 | `02-architecture.md` | Backend, frontend | Stack, flows, state machines, orchestrator pseudo-code, matching, summary builder, realtime, testing, security, Bolna constraints |
 | 4 | `03-data-model.md` | Backend | Tables, enums, privacy design, tested reference queries, demo directory |
 | 5 | `04-api-spec.md` | Backend, frontend | Every route with request and response examples, Bolna webhook and function contracts, WhatsApp templates, events |
 | 6 | `05-voice-agents.md` | Voice lead | Agent settings, `user_data`, languages, conversation rules, edge cases, 20-scenario test matrix |
@@ -32,7 +32,7 @@ Everything you need to start building **Haazir** (working name), an emergency re
 | `bolna/prompts/*.md` | Welcome messages (English, Hindi, Kannada) and system prompts for each agent |
 | `bolna/tools/*.json` | Custom function definitions to paste into Bolna |
 | `bolna/extractions.md` | Post-call extraction setup |
-| `scenarios/demo-krait-bite.json` | Stage-demo and simulation script |
+| `tests/support/krait-bite.json` | The krait-bite test script (how each hospital answers) |
 
 ---
 
@@ -52,7 +52,7 @@ Everything you need to start building **Haazir** (working name), an emergency re
 - **Doctor callback** instead of live transfer (a per-call transfer destination isn't documented in Bolna). A fixed-number transfer is optional for the stage demo.
 - **Our own scheduler** for waves, redials and callbacks (Bolna's `scheduled_at` and `retry_config` work in minutes).
 - **No patient identifiers** on availability calls; identifiers go to the accepting hospital on WhatsApp.
-- **Simulation mode** through the same handlers, as both a dev accelerator and the stage fallback.
+- **No simulation mode** in the app. Tests fake Bolna and play scripted calls through the same handlers.
 
 ## Still open (see blueprint §15)
 Name · first buyer · which hospital or doctor consents to test calls · WhatsApp provider · real dates and judging rubric.

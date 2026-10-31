@@ -46,9 +46,8 @@ const evaluateLater = (referralId: string): FollowUp => async () => {
 };
 
 /**
- * Bolna's mid-call custom functions (docs/04-api-spec.md §3). The routes and the simulator both call these, so a
- * simulated referral runs exactly the same code (CLAUDE.md rule 8). The answer is written before responding, so the
- * board turns green while the call is still live; everything else runs in `followUp`.
+ * Bolna's mid-call custom functions (docs/04-api-spec.md §3), also used by WhatsApp quick replies. The answer is
+ * written before responding, so the board turns green while the call is still live; everything else runs in `followUp`.
  */
 export const FunctionService = {
   /** record_hospital_response: the desk's answer to "can you take this patient?". */

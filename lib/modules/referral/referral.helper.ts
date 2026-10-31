@@ -37,11 +37,9 @@ const timeFormat = new Intl.DateTimeFormat("en-IN", { timeZone: TIMEZONE, hour: 
 export const formatTime = (d: Date | string): string => timeFormat.format(new Date(d));
 
 /**
- * Whether a referral is past evaluating: a draft, or a test call closed by the Demo page.
- * Evaluation of such a referral plans nothing.
+ * Whether a referral is past evaluating: a draft. Evaluation of such a referral plans nothing.
  */
-export const isInert = (r: Pick<Referral, "status" | "close_reason">): boolean =>
-  r.status === "draft" || (r.status === "closed" && r.close_reason === "test_call");
+export const isInert = (r: Pick<Referral, "status">): boolean => r.status === "draft";
 
 /**
  * The steps that bring a referral up to date, in the order they must run (docs/02-architecture.md §6.3).

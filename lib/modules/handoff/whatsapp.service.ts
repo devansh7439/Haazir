@@ -6,10 +6,10 @@ import { EventRepository } from "@/lib/modules/event/event.repository";
 import type { Rendered } from "@/lib/modules/handoff/message.helper";
 import { MessageRepository, type Audience } from "@/lib/modules/handoff/message.repository";
 
-/** WhatsApp messages about a referral: provider none (stored as simulated, shown in the UI), Meta or Twilio. */
+/** WhatsApp messages about a referral: provider none (stored unsent, shown in the UI), Meta or Twilio. */
 export const WhatsAppService = {
   /**
-   * Sends one message, or records it as simulated (simulated referral, no provider, or no valid number). Always
+   * Sends one message, or records it unsent (status `simulated`: no provider or no valid number). Always
    * stores the full message server-side and a redacted event for the board.
    */
   send: async (opts: {
@@ -17,13 +17,12 @@ export const WhatsAppService = {
     audience: Audience;
     to: string | null;
     rendered: Rendered;
-    simulated: boolean;
     eventType?: string;
     facilityId?: string | null;
   }): Promise<void> => {
     const to = opts.to && isE164(opts.to) ? opts.to : null;
     const result: SendResult =
-      opts.simulated || env.whatsappProvider === "none" || !to
+      env.whatsappProvider === "none" || !to
         ? { status: "simulated", provider: "none", provider_message_id: null, error: to ? null : "no WhatsApp number" }
         : await WhatsAppClient.deliver(to, opts.rendered);
     await MessageRepository.insert({ referral_id: opts.referral_id, audience: opts.audience, to, body: opts.rendered.body, result });

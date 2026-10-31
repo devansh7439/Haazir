@@ -1,9 +1,8 @@
 import "server-only";
-import { randomUUID } from "node:crypto";
 import { z } from "zod";
 import { env } from "@/lib/core/config";
 
-// Bolna REST client (docs/04-api-spec.md §6). In simulation, makeCall returns sim_<uuid> and never calls Bolna.
+// Bolna REST client (docs/04-api-spec.md §6).
 
 export interface MakeCallRequest {
   agent_id: string;
@@ -44,12 +43,6 @@ export class BolnaError extends Error {
   }
 }
 
-export const SIM_PREFIX = "sim_";
-
-export function isSimulatedExecution(executionId: string | null | undefined): boolean {
-  return !!executionId && executionId.startsWith(SIM_PREFIX);
-}
-
 /** One request to Bolna. The caller checks the shape of what comes back; nothing is assumed here. */
 async function request(method: string, path: string, body?: unknown): Promise<unknown> {
   if (!env.bolnaApiKey) throw new BolnaError("BOLNA_API_KEY is not configured", 0);
@@ -75,8 +68,7 @@ async function request(method: string, path: string, body?: unknown): Promise<un
   return data;
 }
 
-export async function makeCall(req: MakeCallRequest, opts: { simulate: boolean }): Promise<MakeCallResponse> {
-  if (opts.simulate) return { status: "queued", execution_id: `${SIM_PREFIX}${randomUUID()}` };
+export async function makeCall(req: MakeCallRequest): Promise<MakeCallResponse> {
   if (!req.agent_id) throw new BolnaError("Bolna agent ID is not configured for this call type", 0);
   const body: MakeCallRequest = { ...req };
   if (!body.from_phone_number) delete body.from_phone_number;
@@ -95,7 +87,6 @@ export async function makeCall(req: MakeCallRequest, opts: { simulate: boolean }
 
 /** Only works while the call is queued or scheduled. */
 export async function stopCall(executionId: string): Promise<void> {
-  if (isSimulatedExecution(executionId)) return;
   await request("POST", `/call/${encodeURIComponent(executionId)}/stop`);
 }
 

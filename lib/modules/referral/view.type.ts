@@ -65,7 +65,6 @@ export interface ReferralListItem {
   status: ReferralStatus;
   case_label: string;
   acuity: Acuity;
-  is_simulated: boolean;
   created_at: string;
   ttfa_seconds: number | null;
   time_to_confirmed_seconds: number | null;

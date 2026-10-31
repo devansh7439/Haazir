@@ -1,5 +1,5 @@
 import "server-only";
-import { TICK_INTERVAL_MS, TICK_INTERVAL_SIM_MS } from "@/lib/core/config";
+import { TICK_INTERVAL_MS } from "@/lib/core/config";
 import { ReferralRepository } from "@/lib/modules/referral/referral.repository";
 import { alertsOf, messagesOf, portalFlagsOf, withoutFamilyContent } from "@/lib/modules/referral/view.helper";
 import { ViewRepository } from "@/lib/modules/referral/view.repository";
@@ -26,7 +26,7 @@ export const ViewService = {
       events,
       messages: messagesOf(events),
       alerts: alertsOf(events, attempts),
-      tick_interval_ms: referral.is_simulated ? TICK_INTERVAL_SIM_MS : TICK_INTERVAL_MS,
+      tick_interval_ms: TICK_INTERVAL_MS,
       server_time: new Date().toISOString(),
     };
   },

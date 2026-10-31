@@ -1,6 +1,6 @@
 "use client";
 
-import { BarChart3, Building2, FlaskConical, History, LogOut, PlusCircle, Radio } from "lucide-react";
+import { BarChart3, Building2, History, LogOut, PlusCircle, Radio } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import type { ReactNode } from "react";
@@ -11,14 +11,12 @@ const NAV = [
   { href: "/history", label: "Referrals", icon: History, match: (p: string) => p.startsWith("/history") },
   { href: "/facilities", label: "Hospitals", icon: Building2, match: (p: string) => p.startsWith("/facilities") },
   { href: "/analytics", label: "Analytics", icon: BarChart3, match: (p: string) => p.startsWith("/analytics") },
-  { href: "/demo", label: "Demo console", icon: FlaskConical, match: (p: string) => p.startsWith("/demo") },
 ];
 
 interface ShellUser {
   name: string;
   facility: string | null;
   signOut: boolean;
-  showDemo: boolean;
 }
 
 async function signOut() {
@@ -26,10 +24,9 @@ async function signOut() {
   window.location.href = "/login";
 }
 
-export function AppShell(props: { children: ReactNode; user: ShellUser | null; mode: "live" | "simulation" }) {
+export function AppShell(props: { children: ReactNode; user: ShellUser | null; mode: "live" | "not_configured" }) {
   const pathname = usePathname();
   if (pathname === "/login") return <main className="min-h-screen">{props.children}</main>;
-  const nav = NAV.filter((n) => n.href !== "/demo" || props.user?.showDemo);
   const initials = (props.user?.name ?? "Dr")
     .replace(/^Dr\.?\s*/i, "")
     .split(/\s+/)
@@ -44,7 +41,7 @@ export function AppShell(props: { children: ReactNode; user: ShellUser | null; m
           <Link href="/" aria-label="Haazir home"><Logo /></Link>
         </div>
         <nav aria-label="Main" className="flex-1 space-y-0.5 px-3 py-2">
-          {nav.map((n) => {
+          {NAV.map((n) => {
             const active = n.match(pathname);
             return (
               <Link
@@ -70,7 +67,7 @@ export function AppShell(props: { children: ReactNode; user: ShellUser | null; m
             )}
           >
             <Radio aria-hidden className="size-3.5" />
-            {props.mode === "live" ? "Live calling enabled" : "Simulation mode"}
+            {props.mode === "live" ? "Live calling enabled" : "Calls not configured"}
           </div>
           {props.user && (
             <div className="flex items-center gap-3">
@@ -94,11 +91,11 @@ export function AppShell(props: { children: ReactNode; user: ShellUser | null; m
         <div className="flex h-14 items-center justify-between px-4">
           <Link href="/" aria-label="Haazir home"><Logo /></Link>
           <span className={cx("rounded-full px-2 py-0.5 text-[11px] font-semibold", props.mode === "live" ? "bg-emerald-50 text-emerald-800" : "bg-amber-50 text-amber-900")}>
-            {props.mode === "live" ? "Live" : "Simulation"}
+            {props.mode === "live" ? "Live" : "Not configured"}
           </span>
         </div>
         <nav aria-label="Main" className="flex gap-1 overflow-x-auto px-3 pb-2">
-          {nav.map((n) => {
+          {NAV.map((n) => {
             const active = n.match(pathname);
             return (
               <Link

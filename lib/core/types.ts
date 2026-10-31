@@ -86,7 +86,6 @@ export interface Referral {
   confirmed_at: Date | string | null;
   closed_at: Date | string | null;
   close_reason: string | null;
-  is_simulated: boolean;
   is_demo: boolean;
   created_at: Date | string;
   updated_at: Date | string;
@@ -114,7 +113,7 @@ export interface Attempt {
   bolna_status: string | null;
   termination_reason: string | null;
   outcome: Outcome | null;
-  outcome_source: "function" | "extraction" | "manual" | "simulation" | "whatsapp" | null;
+  outcome_source: "function" | "extraction" | "manual" | "whatsapp" | null;
   extraction_outcome: string | null;
   needs_review: boolean;
   bed_type: string | null;

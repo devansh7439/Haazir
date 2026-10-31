@@ -2,7 +2,7 @@ import { ArrowRight } from "lucide-react";
 import Link from "next/link";
 import { DraftsList } from "@/components/referral-form/DraftsList";
 import { ReferralForm } from "@/components/referral-form/ReferralForm";
-import { PageHeader, ReferralStatusPill, SimBadge } from "@/components/ui";
+import { PageHeader, ReferralStatusPill } from "@/components/ui";
 import { env } from "@/lib/core/config";
 import { IntakeService } from "@/lib/modules/intake/intake.service";
 import { FacilityRepository } from "@/lib/modules/facility/facility.repository";
@@ -45,8 +45,7 @@ export default async function NewReferralPage({ searchParams }: { searchParams: 
         referrerId={referrer.id}
         templates={templates}
         capabilities={capabilities}
-        defaultSimulate={env.simulationMode || !bolnaReady}
-        bolnaReady={bolnaReady && !env.simulationMode}
+        bolnaReady={bolnaReady}
       />
       {recent.length > 0 && (
         <section aria-labelledby="recent-h" className="card mt-6 overflow-hidden">
@@ -64,7 +63,6 @@ export default async function NewReferralPage({ searchParams }: { searchParams: 
                   <span className="min-w-40 flex-1 text-zinc-700">{r.case_label}</span>
                   <ReferralStatusPill status={r.status} size="sm" />
                   <span className="kbd-num w-24 text-right text-zinc-500">{r.ttfa_seconds !== null ? `yes in ${mmss(r.ttfa_seconds)}` : "—"}</span>
-                  {r.is_simulated && <SimBadge />}
                 </Link>
               </li>
             ))}

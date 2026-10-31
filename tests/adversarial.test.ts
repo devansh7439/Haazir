@@ -19,7 +19,7 @@ import { hashPassword } from "@/lib/modules/auth/password.helper";
 import { parseQuickReply } from "@/lib/modules/intake/quick-reply.helper";
 import { safeNext } from "@/lib/modules/auth/safe-next.helper";
 import { sessionFromCookies } from "@/lib/modules/auth/session.service";
-import { advanceSimulation, scenario } from "@/lib/modules/demo/simulator.service";
+import { KRAIT, advanceCalls } from "./support/scripted-calls";
 import { IDS, fakeClock, freshDb } from "./helpers";
 import * as loginRoute from "@/app/api/login/route";
 import * as referralsRoute from "@/app/api/referrals/route";
@@ -30,9 +30,7 @@ import { ReferralService } from "@/lib/modules/referral/referral.service";
 import { HoldService } from "@/lib/modules/referral/hold.service";
 import { EvaluationService } from "@/lib/modules/referral/evaluation.service";
 import { WebhookService } from "@/lib/modules/call/webhook.service";
-import type { ReferralInput } from "@/lib/modules/referral/referral.type";
 
-const KRAIT = scenario.referral as unknown as ReferralInput;
 const B = "https://app.example";
 const json = (path: string, body: unknown, headers: Record<string, string> = {}) =>
   new Request(B + path, { method: "POST", headers: { "content-type": "application/json", ...headers }, body: JSON.stringify(body) });
@@ -104,7 +102,7 @@ describe("access", () => {
 
   it("console routes only accept JSON bodies (a cross-site form post can't drive them)", async () => {
     const form = new Request(B + "/api/referrals", {
-      method: "POST", headers: { "content-type": "text/plain" }, body: JSON.stringify({ ...KRAIT, simulate: true }),
+      method: "POST", headers: { "content-type": "text/plain" }, body: JSON.stringify({ ...KRAIT }),
     });
     expect((await referralsRoute.POST(form)).status).toBe(415);
   });
@@ -118,7 +116,8 @@ describe("access", () => {
     const login = await loginRoute.POST(json("/api/login", { email: "doc@x.org", password: "right-password-1" }));
     const [n, v] = login.headers.get("set-cookie")!.split(";")[0].split("=");
     jar.set(n, v);
-    const res = await referralsRoute.POST(json("/api/referrals", { ...KRAIT, referrer_id: IDS.referrer, simulate: true }));
+    stubBolna();
+    const res = await referralsRoute.POST(json("/api/referrals", { ...KRAIT, referrer_id: IDS.referrer }));
     expect(res.status).toBe(201);
     const r = await ReferralRepository.get((await res.json()).id);
     expect(r!.referrer_id).toBe(other.id);
@@ -150,7 +149,6 @@ describe("abuse and cost", () => {
     await ReferralService.create(KRAIT);
     await ReferralService.create(KRAIT);
     await expect(ReferralService.create(KRAIT)).rejects.toMatchObject({ code: "TOO_MANY_ACTIVE_REFERRALS" });
-    await expect(ReferralService.create(KRAIT, { simulate: true })).resolves.toBeTruthy(); // simulations don't call anyone
   });
 
   it("a desk that keeps saying 'call me back' is called back at most twice", async () => {
@@ -209,11 +207,12 @@ describe("safety: never a false yes", () => {
 describe("privacy and accuracy", () => {
   it("the family call's transcript (their name, the patient's details) is never stored where the browser can read it", async () => {
     const clock = fakeClock();
-    const { referral } = await ReferralService.create(KRAIT, { simulate: true });
-    for (let t = 0; t < 45; t++) { await advanceSimulation(referral.id); await EvaluationService.evaluate(referral.id); clock.advance(1); }
+    stubBolna();
+    const { referral } = await ReferralService.create(KRAIT);
+    for (let t = 0; t < 45; t++) { await advanceCalls(referral.id); await EvaluationService.evaluate(referral.id); clock.advance(1); }
     const tam = (await CallRepository.listForReferral(referral.id)).find((x) => x.facility_id === IDS.tamarind && x.purpose === "availability")!;
     await HoldService.select(referral.id, tam.id);
-    for (let t = 0; t < 80; t++) { await advanceSimulation(referral.id); await EvaluationService.evaluate(referral.id); clock.advance(1); }
+    for (let t = 0; t < 80; t++) { await advanceCalls(referral.id); await EvaluationService.evaluate(referral.id); clock.advance(1); }
     const fam = (await CallRepository.listForReferral(referral.id)).find((x) => x.purpose === "family_update")!;
     await db.query(`update call_attempts set status = 'wrapping_up', transcript = null where id = $1`, [fam.id]);
     await (await WebhookService.handle({ id: fam.bolna_execution_id, status: "completed", transcript: "Agent: Hello Lakshmi, about Ramesh…", telephony_data: { recording_url: "https://rec/1" } })).followUp();

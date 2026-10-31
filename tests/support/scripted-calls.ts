@@ -1,7 +1,6 @@
-import "server-only";
+import { vi } from "vitest";
 import { z } from "zod";
-import scenarioJson from "@/scenarios/demo-krait-bite.json";
-import { isSimulatedExecution } from "@/lib/integrations/bolna/bolna.client";
+import scenarioJson from "./krait-bite.json";
 import { secondsBetween } from "@/lib/core/clock";
 import { canTransition, isTerminal, mapBolnaStatus } from "@/lib/modules/call/status.helper";
 import type { Attempt } from "@/lib/core/types";
@@ -10,10 +9,10 @@ import { FunctionService } from "@/lib/modules/call/function.service";
 import { ReferralRepository } from "@/lib/modules/referral/referral.repository";
 import { WebhookService } from "@/lib/modules/call/webhook.service";
 import { ReferralBody } from "@/lib/modules/referral/referral.validation";
+import type { ReferralInput } from "@/lib/modules/referral/referral.type";
 
-// Replays scripted calls through the same handlers as real webhooks and function calls, with
-// outcome_source = 'simulation'. Step times are seconds after the call was dispatched.
-// State lives in the database (attempt status and outcome), so it works across serverless invocations.
+// Test-only: plays scripted hospital calls through the real webhook and function handlers, as Bolna would.
+// Step times are seconds after the call was dispatched. State lives in the database (attempt status and outcome).
 
 const StepSchema = z.object({
   at_s: z.number(),
@@ -24,19 +23,19 @@ const StepSchema = z.object({
 });
 export type Step = z.infer<typeof StepSchema>;
 
-/** The scripted demo story. Parsed once at load, so a typo in the JSON fails at startup, not mid-demo. */
+/** The krait-bite story (docs/02-architecture.md §8). */
 const ScenarioSchema = z.object({
   referral: ReferralBody,
-  availability: z.record(z.string(), z.object({ facility: z.string(), judge_card: z.number().optional(), steps: z.array(StepSchema) })),
+  availability: z.record(z.string(), z.object({ facility: z.string(), steps: z.array(StepSchema) })),
   hold_confirm: z.object({ steps: z.array(StepSchema) }),
   release: z.object({ steps: z.array(StepSchema) }),
   doctor_selects: z.object({ facility_id: z.string() }),
 });
 
-/** The scripted demo story, checked against its schema when the module loads. */
 export const scenario = ScenarioSchema.parse(scenarioJson);
+export const KRAIT = scenario.referral as unknown as ReferralInput;
 
-/** Hospitals not in the script decline politely, so any referral can be simulated. */
+/** Hospitals not in the script decline politely, so any referral can be played. */
 const DEFAULT_AVAILABILITY: Step[] = [
   { at_s: 3, status: "ringing" },
   { at_s: 8, status: "in-progress" },
@@ -78,7 +77,7 @@ export function scriptFor(a: Attempt): Step[] {
 
 function transcriptFor(steps: Step[]): string {
   const lines = [
-    "(Simulated call: no audio was recorded.)",
+    "(Scripted call: no audio was recorded.)",
     "Agent: Hello, this is an automated assistant calling about an emergency referral. This call is recorded.",
   ];
   for (const s of steps) {
@@ -136,7 +135,7 @@ async function applyStep(a: Attempt, step: Step, steps: Step[]): Promise<boolean
       "request-callback": FunctionService.requestCallback,
       "record-hold": FunctionService.recordHold,
     }[step.function];
-    const res = await handler(params, "simulation");
+    const res = await handler(params, "function");
     await res.followUp();
     return true;
   }
@@ -144,12 +143,11 @@ async function applyStep(a: Attempt, step: Step, steps: Step[]): Promise<boolean
 }
 
 /** Applies every scripted step that is due. Safe to call repeatedly (each step is applied at most once). */
-export async function advanceSimulation(referralId: string): Promise<number> {
-  const r = await ReferralRepository.get(referralId);
-  if (!r?.is_simulated) return 0;
+export async function advanceCalls(referralId: string): Promise<number> {
+  if (!(await ReferralRepository.get(referralId))) return 0;
   let applied = 0;
   const attempts = (await CallRepository.listForReferral(referralId)).filter(
-    (a) => isSimulatedExecution(a.bolna_execution_id) && a.dispatched_at && !isTerminal(a.status),
+    (a) => a.bolna_execution_id && a.dispatched_at && !isTerminal(a.status),
   );
   for (const initial of attempts) {
     const steps = scriptFor(initial);
@@ -161,4 +159,24 @@ export async function advanceSimulation(referralId: string): Promise<number> {
     }
   }
   return applied;
+}
+
+/**
+ * Bolna with every agent configured and no telephony: POST /call queues `exec-<n>`, anything else answers `{}`.
+ * Returns the request bodies of the calls placed.
+ */
+export function fakeBolna(): Array<Record<string, unknown>> {
+  vi.stubEnv("BOLNA_API_KEY", "test-key");
+  vi.stubEnv("BOLNA_AGENT_ID_AVAILABILITY", "agent-avail");
+  vi.stubEnv("BOLNA_AGENT_ID_HOLD_CONFIRM", "agent-hold");
+  vi.stubEnv("BOLNA_AGENT_ID_RELEASE", "agent-release");
+  vi.stubEnv("BOLNA_AGENT_ID_FAMILY", "agent-family");
+  const calls: Array<Record<string, unknown>> = [];
+  let n = 0;
+  vi.stubGlobal("fetch", vi.fn(async (url: string, init?: RequestInit) => {
+    if (!String(url).endsWith("/call")) return new Response("{}", { status: 200 });
+    calls.push(JSON.parse(String(init?.body ?? "{}")));
+    return new Response(JSON.stringify({ status: "queued", execution_id: `exec-${++n}` }), { status: 200 });
+  }));
+  return calls;
 }

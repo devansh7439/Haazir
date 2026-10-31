@@ -62,7 +62,6 @@ Creates the referral and dispatches wave 1.
   "id": "4f0c2a8e-…",
   "code": "R-4821",
   "status": "searching",
-  "simulated": false,
   "wave": 1,
   "attempts": [
     { "id": "a1…", "facility_id": "…0103", "facility_name": "Tamarind District Hospital (Demo)", "rank": 1, "eta_minutes": 18, "distance_km": 6.4, "call_language": "kn", "status": "queued", "rank_reasons": ["18 min away", "has ICU bed + ventilator"] }
@@ -73,7 +72,7 @@ Creates the referral and dispatches wave 1.
 | Rule | Detail |
 |---|---|
 | Required | `referrer_id`, `case_type`, `acuity`, `required_capabilities` (can be empty only for `other`) |
-| `simulate` (optional) | `true` runs this referral through the simulator (`02-architecture.md` §10) and marks it `is_simulated`, so the board shows a SIMULATED badge |
+| Bolna not configured | 422 `BOLNA_NOT_CONFIGURED` when `BOLNA_API_KEY` or `BOLNA_AGENT_ID_AVAILABILITY` is missing |
 | `note` | 160 characters max. **Rejected** (422 `NOTE_CONTAINS_IDENTIFIER`) if it has 9 or more consecutive digits, an Aadhaar-like pattern, or an email. **Warned** for honorific + capitalised word |
 | No eligible hospitals | 409 `NO_ELIGIBLE_FACILITIES` with `suggestions: ["widen radius to 80 km", "remove: neurosurgeon"]` |
 | Partial dispatch failure | Still 201. The failed attempts have `status: "failed"`, and an event records the Bolna error |
@@ -102,7 +101,7 @@ For when the doctor already spoke to the hospital. `{ "attempt_id": "a1…", "co
 `{ "reason": "arrived" | "hold_expired" | "transferred_elsewhere" | "other", "note": "…" }` → `closed`.
 
 ### 2.8 `POST /api/referrals/:id/tick`
-Runs `evaluateReferral`. In simulation mode it also advances the scenario. Called by the open console every 5 s (1 s in simulation).
+Runs `evaluateReferral` and re-reads stuck calls from Bolna. Called by the open console every 5 s.
 ```jsonc
 // 200
 { "changed": true, "actions": ["wave_2_dispatched"], "status": "searching" }
@@ -127,13 +126,6 @@ Sets `outcome_source = "manual"` and runs `evaluateReferral`.
 | `PUT /api/facilities/:id/capabilities` | `{ "codes": ["icu_bed","ventilator"] }` replaces the static capabilities |
 | `POST /api/facilities/:id/contacts` | `{ "role": "casualty_desk", "phone": "+91…", "priority": 1, "is_ivr": false }` |
 | `PATCH /api/contacts/:id` | Edit or deactivate a number |
-
-### 2.12 Demo
-| Route | Purpose |
-|---|---|
-| `POST /api/demo/reset` | Delete `is_demo` referrals (cascades), rerun the seed, reset contact stats |
-| `POST /api/demo/assign-numbers` | `{ "assignments": [{ "facility_id": "…0103", "phone": "+91…", "whatsapp": "+91…" }], "referrer_phone": "+91…", "family_phone": "+91…" }` |
-| `POST /api/demo/test-call` | `{ "facility_id": "…", "consented_test": false }` places one availability call with the fictional demo summary, to rehearse each phone. Set `consented_test: true` for calls to real consenting desks: it fills `call_prefix` so the call opens with "This is a test call agreed with your hospital." |
 
 ---
 
@@ -243,7 +235,7 @@ Normalise the code (`R4821`, `R 4 8 2 1` → `R-4821`). Match the referral by co
 
 Hospitals page extras: `POST /api/facilities` (admin) takes `capabilities` (codes) and `contacts` (up to 5 desk numbers) with the hospital and writes nothing if any is invalid. `GET /api/facilities/ratings` (any signed-in user) returns `{ enabled, ratings: { <facility id>: { rating, count, url } } }` from Google Places; `enabled` is false and `ratings` empty without `GOOGLE_PLACES_API_KEY`. Only the Google place id is stored (`facilities.google_place_id`); ratings are held in memory for an hour, as Google's terms don't allow storing them.
 
-Sent by `WhatsAppService.send` (`lib/modules/handoff/whatsapp.service.ts`) with provider `meta`, `twilio` or `none`. With `none`, or if a send fails, the row is stored as `simulated` or `failed` and the UI shows the preview. Every send also writes an event with a **redacted** preview.
+Sent by `WhatsAppService.send` (`lib/modules/handoff/whatsapp.service.ts`) with provider `meta`, `twilio` or `none`. With `none`, or if a send fails, the row is stored as `simulated` (meaning not sent) or `failed` and the UI shows the preview. Every send also writes an event with a **redacted** preview.
 
 **Provider note:** business-initiated WhatsApp messages need either an approved template (Meta) or an open session where the recipient messaged you first (Twilio sandbox: recipients send the join code). For the demo, have every demo phone message your WhatsApp number beforehand.
 
@@ -284,7 +276,7 @@ Map link format: `https://www.google.com/maps/search/?api=1&query={lat},{lng}`
 
 | `type` | When | `payload` (never patient identifiers) |
 |---|---|---|
-| `referral_created` | 2.2 | `{case_type, acuity, required_capabilities, simulated}` |
+| `referral_created` | 2.2 | `{case_type, acuity, required_capabilities}` |
 | `wave_dispatched` | Each wave | `{wave, facility_ids}` |
 | `call_queued` / `call_ringing` / `call_answered` / `call_ended` | Webhook | `{facility_id, status, termination_reason}` |
 | `outcome_recorded` | Function, extraction or manual | `{facility_id, outcome, bed_type, ready_in_minutes, source}` |

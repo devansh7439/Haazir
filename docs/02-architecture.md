@@ -1,6 +1,6 @@
 # 02 · Architecture
 
-How Haazir works end to end: stack, flows, state machines, orchestration, matching, realtime, simulation, security and deployment.
+How Haazir works end to end: stack, flows, state machines, orchestration, matching, realtime, testing, security and deployment.
 
 ---
 
@@ -64,12 +64,11 @@ flowchart LR
 | Matching | `lib/modules/facility/matching.helper.ts` (SQL in `facility.repository.ts`) | Eligibility (SQL in `03-data-model.md` §5.1), ranking, contact choice, "why this hospital" reasons |
 | Summary builder | `lib/modules/referral/summary.helper.ts` | Deterministic spoken summary; identifier guard on the note |
 | Orchestrator | `lib/modules/referral/evaluation.service.ts`, `referral.helper.ts`, `lib/modules/call/call.service.ts` | `CallService.dispatchWave`; `EvaluationService.evaluate` applies the steps `planEvaluation` plans (callbacks, waves, hold expiry, releases). Idempotent |
-| Bolna client | `lib/integrations/bolna/bolna.client.ts` | `makeCall()`, `getExecution()`, `stopCall()`; swapped for the simulator in simulation mode |
+| Bolna client | `lib/integrations/bolna/bolna.client.ts` | `makeCall()`, `getExecution()`, `stopCall()` |
 | Status mapper | `lib/modules/call/status.helper.ts` | Bolna status → our status, monotonic ordering, termination reason → outcome hints |
 | Webhook route | `app/api/bolna/webhook/route.ts` | Auth, raw log, status update, reconcile on `completed`, evaluate |
 | Function routes | `app/api/bolna/functions/*/route.ts` | Mid-call writes: response, doctor callback, call back later, hold confirmation |
 | Messaging | `lib/modules/handoff/whatsapp.service.ts` (providers in `lib/integrations/whatsapp/`) | Provider adapter (`meta`, `twilio`, `none`); always writes `messages` plus a redacted `events` entry |
-| Simulator | `lib/modules/demo/simulator.service.ts` | Replays `scenarios/*.json` through the same handlers (§10) |
 | Realtime UI | `app/referrals/[id]/page.tsx` | Subscribes to `referrals`, `call_attempts` and `events` for one referral |
 
 ---
@@ -249,7 +248,7 @@ stateDiagram-v2
 | Road factor (in the matching SQL, `lib/modules/facility/facility.repository.ts`) | 1.4 | Straight-line to road distance |
 | Average speed (same SQL) | 30 km/h | Ambulance speed estimate. ETA = km × 1.4 ÷ 30 × 60 |
 | `DEFAULT_RADIUS_KM` | 40 | Search radius |
-| `TICK_INTERVAL_MS` | 5000 (1000 in simulation) | Console tick while a referral is active |
+| `TICK_INTERVAL_MS` | 5000 | Console tick while a referral is active |
 
 ### 6.2 Where the clock lives
 
@@ -382,15 +381,13 @@ Load the full state once with `GET /api/referrals/:id`, then apply realtime chan
 
 ---
 
-## 10. Simulation mode
+## 10. Testing without telephony
 
-**Why:** the frontend can be built before telephony works, and it's the stage fallback if the venue network or telephony fails.
+The app has no simulation mode: every referral places real calls. Tests run the whole flow without telephony instead.
 
-- `SIMULATION_MODE=true` simulates every referral. On the demo deployment you can also send `"simulate": true` on a single `POST /api/referrals` (the "Run as simulation" checkbox), so the stage fallback needs no redeploy.
-- A simulated referral is marked `is_simulated`, and `bolna.makeCall()` returns `sim_<uuid>` instead of calling Bolna.
-- `scenarios/demo-krait-bite.json` scripts each facility: when it rings, answers, which outcome and details it gives, and when it ends.
-- Each **tick** (every 1 s in simulation) applies scripted steps that are due **through the same handlers** the real webhook and function routes use, with `outcome_source = 'simulation'`. The board can't tell the difference, so it's a faithful test of the UI and orchestrator.
-- The UI shows a **SIMULATED** badge. On stage, say so if you fall back to it.
+- `tests/support/scripted-calls.ts` fakes Bolna at the network (`POST /call` queues `exec-<n>`) and plays scripted calls.
+- `tests/support/krait-bite.json` scripts each facility: when it rings, answers, which outcome and details it gives, and when it ends.
+- `advanceCalls` applies the steps that are due **through the same handlers** the real webhook and function routes use, so the tests exercise the orchestrator exactly as Bolna would drive it.
 
 ---
 
@@ -445,7 +442,6 @@ haazir/
 │  ├─ page.tsx                         # new referral + recent referrals
 │  ├─ referrals/[id]/page.tsx          # live board
 │  ├─ facilities/page.tsx              # directory admin
-│  ├─ demo/page.tsx                    # demo control panel
 │  ├─ history/page.tsx                 # TTFA per referral (should-have)
 │  └─ api/
 │     ├─ referrals/route.ts            # POST create
@@ -461,12 +457,11 @@ haazir/
 │     ├─ facilities/route.ts, facilities/[id]/route.ts
 │     ├─ facilities/[id]/capabilities/route.ts, facilities/[id]/contacts/route.ts
 │     ├─ contacts/[id]/route.ts
-│     ├─ demo/reset/route.ts, demo/assign-numbers/route.ts, demo/test-call/route.ts
 │     └─ bolna/
 │        ├─ webhook/route.ts
 │        └─ functions/{record-response,request-doctor,request-callback,record-hold,inbound-callback}/route.ts
-├─ lib/  (config, bolna, simulator, orchestrator, matching, summary, statusMap, whatsapp, supabase, validation)
-├─ scenarios/demo-krait-bite.json
+├─ lib/  (config, bolna, orchestrator, matching, summary, statusMap, whatsapp, supabase, validation)
+├─ tests/support/krait-bite.json
 ├─ supabase/migrations/0001_init.sql
 ├─ supabase/seed.sql
 ├─ bolna/  (prompts and tool JSON from this pack)

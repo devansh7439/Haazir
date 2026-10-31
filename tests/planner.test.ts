@@ -16,7 +16,7 @@ const referral = (o: Partial<Referral> = {}): Referral => ({
   origin_lat: 13, origin_lng: 77, case_type: "snakebite_neuro", acuity: "critical", age_value: 34, age_unit: "years",
   sex: "male", note: null, required_capabilities: [], spoken_summary: "", transport: "ambulance", search_radius_km: 40,
   current_wave: 1, wave_started_at: ago(30), selected_facility_id: null, selected_attempt_id: null, hold_expires_at: null,
-  first_acceptance_at: null, confirmed_at: null, closed_at: null, close_reason: null, is_simulated: true, is_demo: true,
+  first_acceptance_at: null, confirmed_at: null, closed_at: null, close_reason: null, is_demo: true,
   created_at: ago(60), updated_at: ago(30), ...o,
 });
 
@@ -42,9 +42,8 @@ const plan = (r: Referral, attempts: Attempt[], contacts = new Map<string, Conta
 const kinds = (steps: EvaluationStep[]) => steps.map((s) => s.kind);
 
 describe("planEvaluation", () => {
-  it("plans nothing for a draft or a closed test call", () => {
+  it("plans nothing for a draft", () => {
     expect(plan(referral({ status: "draft" }), [attempt()])).toEqual([]);
-    expect(plan(referral({ status: "closed", close_reason: "test_call" }), [attempt({ outcome: "accepted" })])).toEqual([]);
   });
 
   it("releases every yes on cancel, including one under review, and only once", () => {

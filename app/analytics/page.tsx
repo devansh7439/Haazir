@@ -1,4 +1,3 @@
-import Link from "next/link";
 import { HourChart } from "@/components/analytics/HourChart";
 import { PageHeader, Stat, cx } from "@/components/ui";
 import { AnalyticsService } from "@/lib/modules/analytics/analytics.service";
@@ -24,10 +23,9 @@ function RateBar({ n, d }: { n: number; d: number }) {
   );
 }
 
-export default async function AnalyticsPage({ searchParams }: { searchParams: Promise<{ sim?: string }> }) {
+export default async function AnalyticsPage() {
   const s = await pageSession();
-  const includeSim = (await searchParams).sim === "1";
-  const [hospitals, hours] = await Promise.all([AnalyticsService.hospitalStats(s.org, includeSim), AnalyticsService.hourStats(s.org, includeSim)]);
+  const [hospitals, hours] = await Promise.all([AnalyticsService.hospitalStats(s.org), AnalyticsService.hourStats(s.org)]);
   const calls = hospitals.reduce((n, h) => n + h.calls, 0);
   const answered = hospitals.reduce((n, h) => n + h.answered, 0);
   const accepted = hospitals.reduce((n, h) => n + h.accepted, 0);
@@ -41,15 +39,9 @@ export default async function AnalyticsPage({ searchParams }: { searchParams: Pr
       <PageHeader
         title="Analytics"
         description="Which desks answer, which accept, and when. Built from every recorded call, so it improves the ranking over time."
-        actions={
-          <div className="flex rounded-lg bg-zinc-100 p-1 text-sm" role="group" aria-label="Data shown">
-            <Link href="/analytics" aria-current={!includeSim ? "true" : undefined} className={cx("rounded-md px-3 py-1.5 font-medium", !includeSim ? "bg-white shadow-sm" : "text-zinc-600")}>Real calls</Link>
-            <Link href="/analytics?sim=1" aria-current={includeSim ? "true" : undefined} className={cx("rounded-md px-3 py-1.5 font-medium", includeSim ? "bg-white shadow-sm" : "text-zinc-600")}>Include simulated</Link>
-          </div>
-        }
       />
       <div className="mb-6 grid grid-cols-2 gap-3 lg:grid-cols-4">
-        <Stat label="Availability calls" value={calls} hint={includeSim ? "including simulations" : "real calls only"} />
+        <Stat label="Availability calls" value={calls} hint={`to ${hospitals.filter((h) => h.calls > 0).length} hospitals`} />
         <Stat label="Answer rate" value={answerRate === null ? "—" : `${Math.round(answerRate)}%`} hint={`${answered} answered`} accent="brand" />
         <Stat label="Acceptance rate" value={acceptRate === null ? "—" : `${Math.round(acceptRate)}%`} hint={`${accepted} of ${answered} answered calls`} accent="green" />
         <Stat label="Portal vs desk mismatches" value={mismatches} hint={medians.length ? `median answer in ${mmss(medians[Math.floor(medians.length / 2)])}` : "no answers yet"} />

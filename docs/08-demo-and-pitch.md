@@ -54,11 +54,11 @@ Use phones **you control** (team, friends). Don't depend on collecting judges' n
 ## 3. Stage checklist (T-30 minutes)
 
 - [ ] Bolna wallet topped up; concurrency 10 or more; demo agents point at the production URL.
-- [ ] `/demo` → **Reset demo** → numbers assigned → one **Test call** per phone answered.
+- [ ] Hospitals page → each demo hospital's desk number set to a phone you control → one test call per phone from the Bolna dashboard answered.
 - [ ] All phones charged, volume max, silent and Do Not Disturb off, unknown callers allowed, numbered stickers, cards attached.
 - [ ] WhatsApp: every demo phone has messaged your WhatsApp number in the last 24 h (or use `none` with previews on screen).
 - [ ] Laptop on a reliable connection, plus a backup hotspot. Browser zoom 125%. Notifications off.
-- [ ] Second tab open with **Run simulated referral** ready. Backup video on the desktop.
+- [ ] Backup video on the desktop.
 - [ ] Rehearsed three times with the same people holding the same cards.
 
 ---
@@ -69,7 +69,7 @@ Use phones **you control** (team, friends). Don't depend on collecting judges' n
 |---|---|---|
 | One phone doesn't ring | Carry on | "No answer: that's why we call six at once." |
 | A call goes off-script | Carry on; the board shows the honest outcome | "This is a live call." |
-| Telephony or Bolna down | Switch to the **simulated** tab (badge visible) | "The network's down, so this is the same flow replayed from this morning's run." |
+| Telephony or Bolna down | Open a finished referral from this morning's rehearsal, then play the backup video | "The network's down, so here's the board and the recording from this morning's run." |
 | Laptop or network dead | Play the backup video | "Here's the run we recorded an hour ago." |
 
 ---

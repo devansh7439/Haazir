@@ -25,15 +25,15 @@ export const ViewRepository = {
   recentEvents: (referralId: string): Promise<EventRow[]> =>
     q<EventRow>(`select * from events where referral_id = $1 order by created_at desc, id desc limit ${EVENT_LIMIT}`, [referralId]),
 
-  /** An organisation's referrals, newest first, without Demo-page test calls. */
+  /** An organisation's referrals, newest first. */
   list: (orgId: string, limit: number): Promise<Array<Omit<ReferralListItem, "created_at"> & { created_at: Date }>> =>
     q(
-      `select r.id, r.code, r.status, t.label as case_label, r.acuity, r.is_simulated, r.created_at, r.close_reason,
+      `select r.id, r.code, r.status, t.label as case_label, r.acuity, r.created_at, r.close_reason,
               m.ttfa_seconds, m.time_to_confirmed_seconds, m.calls_total::int as calls_total
        from referrals r
        join case_templates t on t.case_type = r.case_type
        join referral_metrics m on m.id = r.id
-       where r.org_id = $2 and coalesce(r.close_reason, '') <> 'test_call'
+       where r.org_id = $2
        order by r.created_at desc
        limit $1`,
       [limit, orgId],

@@ -43,19 +43,11 @@ export async function getSession(): Promise<Session | null> {
   return sessionFromCookies((name) => jar.get(name)?.value);
 }
 
-/** The demo console works on the fictional demo directory, which lives in the demo organisation. */
-export async function requireDemoAdmin(): Promise<Session> {
-  const s = await requireSession({ admin: true });
-  if (s.org !== DEFAULT_ORG_ID) throw ApiError.forbidden("The demo console is only available in the demo organisation");
-  return s;
-}
-
 /** For server pages: the session, or a redirect to sign-in. */
-export async function pageSession(opts: { admin?: boolean; demo?: boolean } = {}): Promise<Session> {
+export async function pageSession(opts: { admin?: boolean } = {}): Promise<Session> {
   const s = await getSession();
   if (!s) redirect("/login");
-  if ((opts.admin || opts.demo) && s.role !== "admin") notFound();
-  if (opts.demo && s.org !== DEFAULT_ORG_ID) notFound();
+  if (opts.admin && s.role !== "admin") notFound();
   return s;
 }
 

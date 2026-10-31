@@ -3,7 +3,6 @@ import { AppShell } from "@/components/shell/AppShell";
 import { env } from "@/lib/core/config";
 import { ReferralRepository } from "@/lib/modules/referral/referral.repository";
 import { getSession } from "@/lib/modules/auth/session.service";
-import { DEFAULT_ORG_ID } from "@/lib/core/types";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -25,7 +24,6 @@ async function currentUser() {
       name: s.name || strip(row?.name) || "Console",
       facility: strip(row?.facility),
       signOut: env.authMode === "users" || !!env.demoPasscode,
-      showDemo: s.role === "admin" && s.org === DEFAULT_ORG_ID,
     };
   } catch {
     return null;
@@ -33,11 +31,11 @@ async function currentUser() {
 }
 
 export default async function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
-  const live = !env.simulationMode && !!env.bolnaApiKey && !!env.agentId("availability");
+  const live = !!env.bolnaApiKey && !!env.agentId("availability");
   return (
     <html lang="en">
       <body className="min-h-screen">
-        <AppShell user={await currentUser()} mode={live ? "live" : "simulation"}>
+        <AppShell user={await currentUser()} mode={live ? "live" : "not_configured"}>
           {children}
         </AppShell>
       </body>

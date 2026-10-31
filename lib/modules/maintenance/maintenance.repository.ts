@@ -8,9 +8,9 @@ const ENDED_BEFORE = `select id from referrals where status in ('closed','cancel
 /** The background loop's reads and the retention purge (docs/03-data-model.md §7). */
 export const MaintenanceRepository = {
   /** Referrals created after `since` that can still change on their own: open ones, and cancelled ones with calls still live. */
-  activeReferrals: (since: Date): Promise<Array<{ id: string; is_simulated: boolean }>> =>
-    q<{ id: string; is_simulated: boolean }>(
-      `select r.id, r.is_simulated from referrals r
+  activeReferrals: (since: Date): Promise<Array<{ id: string }>> =>
+    q<{ id: string }>(
+      `select r.id from referrals r
        where r.created_at > $1
          and (r.status in ('searching','options_ready','confirming','confirmed','exhausted')
               or (r.status = 'cancelled' and exists (

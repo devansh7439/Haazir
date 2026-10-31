@@ -161,7 +161,7 @@ export function eventText(e: EventLike, facilityName: (id: unknown) => string): 
   const f = () => facilityName(p.facility_id);
   switch (e.type) {
     case "referral_created":
-      return `Referral created${p.simulated ? " (simulated)" : ""}`;
+      return "Referral created";
     case "wave_dispatched":
       return `Calling ${(p.facility_ids as unknown[] | undefined)?.length ?? 0} hospitals (round ${p.wave})`;
     case "call_queued":

@@ -97,7 +97,6 @@ export const CallService = {
         audience: "availability_ping",
         to: f.whatsapp_number,
         rendered,
-        simulated: ctx.referral.is_simulated,
         eventType: "bed_request_sent",
         facilityId: f.id,
       });
@@ -158,11 +157,10 @@ export const CallService = {
           agent_data: { language: attempt.call_language },
           bypass_call_guardrails: true,
         },
-        { simulate: r.is_simulated },
       );
       await CallRepository.update(attempt.id, {
         bolna_execution_id: res.execution_id,
-        bolna_agent_id: r.is_simulated ? "simulation" : agentId,
+        bolna_agent_id: agentId,
         bolna_status: res.status ?? "queued",
         dispatched_at: now(),
       });
@@ -234,11 +232,11 @@ export const CallService = {
 
   /**
    * C1: a voice call to the attendant in their language after the bed is confirmed (and again on a missed call, C3).
-   * Live calls need BOLNA_AGENT_ID_FAMILY; simulated referrals always place one. At most one every FAMILY_CALL_GAP_MIN.
+   * Needs BOLNA_AGENT_ID_FAMILY. At most one every FAMILY_CALL_GAP_MIN.
    * Null when no call was placed.
    */
   dispatchFamilyCall: async (r: Referral, reason: "handoff" | "missed_call"): Promise<Attempt | null> => {
-    if (!r.is_simulated && !env.agentId("family_update")) return null;
+    if (!env.agentId("family_update")) return null;
     if (!r.selected_attempt_id) return null;
     const patient = await ReferralRepository.patient(r.id);
     // No call to a private person who hasn't agreed to one (docs/09 §3).

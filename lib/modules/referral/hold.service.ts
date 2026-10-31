@@ -16,7 +16,7 @@ import { CONFIRMABLE, SELECTABLE, handoffFacts, holdUntil } from "@/lib/modules/
 import { EvaluationService } from "@/lib/modules/referral/evaluation.service";
 import { ReferralRepository } from "@/lib/modules/referral/referral.repository";
 
-/** A hold call's result, from the function, the call's extraction, the simulator or a WhatsApp reply. */
+/** A hold call's result, from the function, the call's extraction or a WhatsApp reply. */
 export interface HoldResult {
   confirmed: "yes" | "no";
   contact_person: string | null;
@@ -159,14 +159,12 @@ export const HoldService = {
     if (!selected || !facility) return;
     const contactPerson = hold?.contact_person || selected.contact_person;
     const facts = handoffFacts({ ctx, selected, facility, patient, contactPerson, now: now() });
-    const simulated = r.is_simulated;
     const prearrival = preArrivalNote(facts);
     await WhatsAppService.send({
       referral_id: r.id,
       audience: "receiving_facility",
       to: facility.whatsapp_number,
       rendered: prearrival,
-      simulated,
     });
     await ReferralRepository.markSharedWithFacility(r.id);
     await WhatsAppService.send({
@@ -174,12 +172,11 @@ export const HoldService = {
       audience: "referrer",
       to: ctx.referrer.phone_e164,
       rendered: doctorConfirmation(facts),
-      simulated,
     });
     // The family hears from us only if the doctor recorded that the attendant agreed (docs/09 §3).
     if (patient?.attendant_phone_e164 && patient.attendant_consent_at) {
       const rendered = familyMessage(facts, patient.attendant_language);
-      await WhatsAppService.send({ referral_id: r.id, audience: "family", to: patient.attendant_phone_e164, rendered, simulated });
+      await WhatsAppService.send({ referral_id: r.id, audience: "family", to: patient.attendant_phone_e164, rendered });
       if (env.familyCalls) await CallService.dispatchFamilyCall(r, "handoff");
     }
   },

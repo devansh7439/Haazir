@@ -49,14 +49,6 @@ export function ReferralStatusPill({ status, size }: { status: string; size?: "s
   return <StatusPill tone={s.tone} text={s.text} live={s.live} size={size} />;
 }
 
-export function SimBadge() {
-  return (
-    <span className="inline-flex items-center gap-1 rounded-full bg-amber-100 px-2 py-0.5 text-[11px] font-semibold uppercase tracking-wide text-amber-900 ring-1 ring-inset ring-amber-300">
-      Simulated
-    </span>
-  );
-}
-
 export function PageHeader({ title, description, actions }: { title: ReactNode; description?: ReactNode; actions?: ReactNode }) {
   return (
     <div className="mb-6 flex flex-wrap items-end justify-between gap-4">

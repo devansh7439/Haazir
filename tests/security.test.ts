@@ -27,7 +27,7 @@ import { migrate, setDb } from "@/lib/core/db";
 import { setClock } from "@/lib/core/clock";
 import { SESSION_COOKIE, signSession } from "@/lib/modules/auth/gate.helper";
 import { hashPassword } from "@/lib/modules/auth/password.helper";
-import { advanceSimulation, scenario } from "@/lib/modules/demo/simulator.service";
+import { KRAIT, advanceCalls, fakeBolna } from "./support/scripted-calls";
 import { redactNumbers } from "@/lib/core/normalize";
 import { DEFAULT_ORG_ID } from "@/lib/core/types";
 import { IDS, fakeClock, freshDb } from "./helpers";
@@ -42,7 +42,6 @@ import { HoldService } from "@/lib/modules/referral/hold.service";
 import { EvaluationService } from "@/lib/modules/referral/evaluation.service";
 import type { ReferralInput } from "@/lib/modules/referral/referral.type";
 
-const KRAIT = scenario.referral as unknown as ReferralInput;
 const ORG_B = "00000000-0000-4000-8000-0000000000b0";
 const SECRET = "s".repeat(40);
 const PASSWORD = "password-demo-1";
@@ -53,8 +52,7 @@ const SELF_AUTHED = ["bolna/", "cron/", "whatsapp/", "triggers/", "login", "logo
 // [route, method] pairs only an admin may call. Kept in step with the source by the "admin list is complete" test.
 const ADMIN_ONLY = [
   "POST facilities", "PATCH facilities/[id]", "PUT facilities/[id]/capabilities", "POST facilities/[id]/contacts",
-  "PATCH contacts/[id]", "POST portal-snapshots", "POST demo/assign-numbers", "POST demo/portal-sample",
-  "POST demo/reset", "POST demo/run", "GET demo/status", "POST demo/test-call",
+  "PATCH contacts/[id]", "POST portal-snapshots",
 ];
 
 type Handler = (req: Request, ctx: { params: Promise<{ id: string }> }) => Promise<Response>;
@@ -123,6 +121,7 @@ beforeEach(async () => {
   vi.stubEnv("DEMO_PASSCODE", "");
   vi.stubEnv("BOLNA_WEBHOOK_SECRET", "whsec");
   vi.stubEnv("BOLNA_FUNCTION_SECRET", "fnsec");
+  fakeBolna();
   routes ??= await discoverRoutes();
   await db.query(`insert into organisations (id, name) values ($1, 'Other hospital network')`, [ORG_B]);
   const [refB] = await db.query<{ id: string }>(
@@ -141,6 +140,7 @@ beforeEach(async () => {
 afterEach(async () => {
   await settle();
   vi.unstubAllEnvs();
+  vi.unstubAllGlobals();
   setClock(null);
   setDb(null);
   await db.close();
@@ -151,7 +151,7 @@ const key = (r: Route) => `${r.method} ${r.path}`;
 
 describe("route access control", () => {
   it("finds every API route", () => {
-    expect(routes.length).toBeGreaterThan(40);
+    expect(routes.length).toBeGreaterThan(30);
   });
 
   it("every console route refuses a request with no session (401), before reading the body", async () => {
@@ -177,7 +177,7 @@ describe("route access control", () => {
     const fromSource = new Set<string>();
     for (const r of routes) {
       const fn = r.source.split(/export async function /).find((s) => s.startsWith(`${r.method}(`)) ?? "";
-      if (/requireSession\(\{ admin: true \}\)|requireDemoAdmin\(/.test(fn)) fromSource.add(key(r));
+      if (/requireSession\(\{ admin: true \}\)/.test(fn)) fromSource.add(key(r));
     }
     expect([...fromSource].sort()).toEqual([...ADMIN_ONLY].sort());
   });
@@ -194,7 +194,7 @@ describe("route access control", () => {
 
   it("an admin from another organisation gets 404 from every route that takes an id from this one", async () => {
     vi.stubEnv("AUTH_MODE", "passcode"); // create demo-org data through the orchestrator
-    const { referral, attempts } = await ReferralService.create(KRAIT, { simulate: true, orgId: DEFAULT_ORG_ID });
+    const { referral, attempts } = await ReferralService.create(KRAIT, { orgId: DEFAULT_ORG_ID });
     vi.stubEnv("AUTH_MODE", "users");
     const [contact] = await db.query<{ id: string }>(`select id from facility_contacts where facility_id = $1 limit 1`, [IDS.tamarind]);
     const ids: Record<string, string> = {
@@ -230,8 +230,8 @@ describe("route access control", () => {
   });
 
   it("an accepted answer from another referral can't be selected or confirmed", async () => {
-    const a = await ReferralService.create(KRAIT, { simulate: true, orgId: DEFAULT_ORG_ID });
-    const b = await ReferralService.create({ ...KRAIT, client_request_id: "00000000-0000-4000-8000-0000000000c1" } as ReferralInput, { simulate: true, orgId: DEFAULT_ORG_ID });
+    const a = await ReferralService.create(KRAIT, { orgId: DEFAULT_ORG_ID });
+    const b = await ReferralService.create({ ...KRAIT, client_request_id: "00000000-0000-4000-8000-0000000000c1" } as ReferralInput, { orgId: DEFAULT_ORG_ID });
     await db.query(`update call_attempts set outcome = 'accepted', bed_type = 'icu_with_ventilator' where id = $1`, [a.attempts[0].id]);
     await db.query(`update referrals set status = 'options_ready' where id = $1`, [b.referral.id]);
     await expect(HoldService.select(b.referral.id, a.attempts[0].id)).rejects.toMatchObject({ status: 409 });
@@ -285,12 +285,12 @@ describe("no identifiers reach the browser", () => {
   it("referral responses never contain the patient's or family's details, even after handoff", async () => {
     const clock = fakeClock();
     await signIn("admin@demo.org");
-    const created = await referralsRoute.POST(req("referrals", "POST", { ...KRAIT, simulate: true }));
+    const created = await referralsRoute.POST(req("referrals", "POST", { ...KRAIT }));
     expect(created.status).toBe(201);
     const { id } = (await created.json()) as { id: string };
     let selected = false;
     for (let t = 0; t <= 240; t++) {
-      await advanceSimulation(id);
+      await advanceCalls(id);
       await EvaluationService.evaluate(id);
       const r = await ReferralRepository.get(id);
       if (!selected && r!.status === "options_ready" && t >= 45) {
@@ -359,7 +359,7 @@ describe("database exposure (Supabase roles)", () => {
     await sb.exec(SUPABASE_LIKE);
     await migrate(sb);
     setDb(sb);
-    await ReferralService.create(KRAIT, { simulate: true, orgId: DEFAULT_ORG_ID });
+    await ReferralService.create(KRAIT, { orgId: DEFAULT_ORG_ID });
     await sb.query(`insert into organisations (id, name) values ($1, 'Other hospital network')`, [ORG_B]);
     await sb.query(`insert into patient_details (referral_id, patient_name) select id, 'Ramesh' from referrals on conflict do nothing`);
   });

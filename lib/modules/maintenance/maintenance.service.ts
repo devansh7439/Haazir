@@ -3,7 +3,6 @@ import { env } from "@/lib/core/config";
 import { now } from "@/lib/core/clock";
 import { createLogger } from "@/lib/core/logger";
 import { WebhookService } from "@/lib/modules/call/webhook.service";
-import { advanceSimulation } from "@/lib/modules/demo/simulator.service";
 import { MaintenanceRepository } from "@/lib/modules/maintenance/maintenance.repository";
 import type { PurgeResult } from "@/lib/modules/maintenance/maintenance.type";
 import { EvaluationService } from "@/lib/modules/referral/evaluation.service";
@@ -22,7 +21,7 @@ const ACTIVE_WINDOW_MS = 24 * HOUR_MS;
  */
 export const MaintenanceService = {
   /** Referrals from the last 24 h that can still change on their own. */
-  activeReferrals: (): Promise<Array<{ id: string; is_simulated: boolean }>> =>
+  activeReferrals: (): Promise<Array<{ id: string }>> =>
     MaintenanceRepository.activeReferrals(new Date(now().getTime() - ACTIVE_WINDOW_MS)),
 
   /**
@@ -39,7 +38,6 @@ export const MaintenanceService = {
     let actions = 0;
     for (const r of referrals) {
       try {
-        if (r.is_simulated) actions += await advanceSimulation(r.id);
         actions += (await EvaluationService.evaluate(r.id)).length;
       } catch (err) {
         log.error({ err, referralId: r.id }, "Cron evaluate failed");

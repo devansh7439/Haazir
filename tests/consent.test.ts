@@ -4,7 +4,7 @@ import type { Db } from "@/lib/core/db";
 import { setDb } from "@/lib/core/db";
 import { CallRepository } from "@/lib/modules/call/call.repository";
 import { CallService } from "@/lib/modules/call/call.service";
-import { advanceSimulation, scenario } from "@/lib/modules/demo/simulator.service";
+import { advanceCalls, fakeBolna, scenario } from "./support/scripted-calls";
 import { EvaluationService } from "@/lib/modules/referral/evaluation.service";
 import { HoldService } from "@/lib/modules/referral/hold.service";
 import { ReferralRepository } from "@/lib/modules/referral/referral.repository";
@@ -16,10 +16,12 @@ import { IDS, fakeClock, freshDb } from "./helpers";
 let db: Db;
 beforeEach(async () => {
   db = await freshDb();
+  fakeBolna();
   vi.stubEnv("FAMILY_CALLS", "on");
 });
 afterEach(async () => {
   vi.unstubAllEnvs();
+  vi.unstubAllGlobals();
   setClock(null);
   setDb(null);
   await db.close();
@@ -30,10 +32,10 @@ async function confirmed(consent: boolean | undefined) {
   const clock = fakeClock();
   const input = structuredClone(scenario.referral);
   input.patient = { ...input.patient!, attendant_consent: consent };
-  const { referral } = await ReferralService.create(input, { simulate: true });
+  const { referral } = await ReferralService.create(input);
   let selected = false;
   for (let t = 0; t <= 240; t++) {
-    await advanceSimulation(referral.id);
+    await advanceCalls(referral.id);
     await EvaluationService.evaluate(referral.id);
     const r = await ReferralRepository.get(referral.id);
     if (!selected && r!.status === "options_ready" && t >= 45) {

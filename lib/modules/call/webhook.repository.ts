@@ -15,17 +15,4 @@ export const WebhookLogRepository = {
       [executionId, status, json(payload), now()],
     );
   },
-
-  /** When Bolna last sent a status webhook and a function call, for the Demo page. */
-  lastContact: async (): Promise<{ last_webhook_at: string | null; last_function_at: string | null }> => {
-    const [w] = await q<{ at: Date | null }>(
-      `select max(received_at) as at from bolna_webhook_log
-       where status is null or (status not like 'function:%' and status not like 'poll:%' and status not like 'inbound_%')`,
-    );
-    const [f] = await q<{ at: Date | null }>(`select max(received_at) as at from bolna_webhook_log where status like 'function:%'`);
-    return {
-      last_webhook_at: w?.at ? new Date(w.at).toISOString() : null,
-      last_function_at: f?.at ? new Date(f.at).toISOString() : null,
-    };
-  },
 };

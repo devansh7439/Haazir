@@ -8,8 +8,8 @@ export type NewAttempt = Pick<Attempt, "referral_id" | "purpose" | "to_number" |
 /** Who recorded an outcome. */
 export type OutcomeSource = NonNullable<Attempt["outcome_source"]>;
 
-/** Where a mid-call answer came from: a Bolna function, the simulator, or a WhatsApp quick reply. */
-export type Source = Extract<OutcomeSource, "function" | "simulation" | "whatsapp">;
+/** Where a mid-call answer came from: a Bolna function or a WhatsApp quick reply. */
+export type Source = Extract<OutcomeSource, "function" | "whatsapp">;
 
 /** A number to dial, and the directory row it came from when there is one. */
 export interface DialTarget {
@@ -28,7 +28,7 @@ export interface RedialPlan {
   reason: RedialReason;
 }
 
-/** Work that runs after the HTTP response (routes use `after()`, the simulator awaits it). */
+/** Work that runs after the HTTP response (routes use `after()`; tests await it). */
 export type FollowUp = () => Promise<void>;
 
 export const noFollowUp: FollowUp = async () => {};

@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { Db } from "@/lib/core/db";
 import { setClock } from "@/lib/core/clock";
 import { setDb } from "@/lib/core/db";
-import { advanceSimulation, scenario } from "@/lib/modules/demo/simulator.service";
+import { KRAIT, advanceCalls, fakeBolna } from "./support/scripted-calls";
 import { DEFAULT_ORG_ID } from "@/lib/core/types";
 import { IDS, fakeClock, freshDb } from "./helpers";
 import { CallRepository } from "@/lib/modules/call/call.repository";
@@ -13,9 +13,7 @@ import { ReferralService } from "@/lib/modules/referral/referral.service";
 import { HoldService } from "@/lib/modules/referral/hold.service";
 import { EvaluationService } from "@/lib/modules/referral/evaluation.service";
 import { WebhookService } from "@/lib/modules/call/webhook.service";
-import type { ReferralInput } from "@/lib/modules/referral/referral.type";
 
-const KRAIT = scenario.referral as unknown as ReferralInput;
 const NAME_PARTS = ["Ramesh", "Lakshmi", "+910000000301"];
 
 let db: Db;
@@ -69,17 +67,17 @@ describe("matching on seed data", () => {
   });
 });
 
-describe("simulated demo-krait-bite referral", () => {
+describe("krait-bite referral, hospitals answering as scripted", () => {
   it("reaches confirmed with exactly two release calls (Banyan, Mango Grove)", async () => {
     const clock = fakeClock();
-    const { referral, attempts } = await ReferralService.create(KRAIT, { simulate: true });
-    expect(referral.is_simulated).toBe(true);
+    fakeBolna();
+    const { referral, attempts } = await ReferralService.create(KRAIT);
     expect(attempts).toHaveLength(6);
     expect(attempts.every((a) => a.status === "queued")).toBe(true);
 
     let selected = false;
     for (let t = 0; t <= 240; t++) {
-      await advanceSimulation(referral.id);
+      await advanceCalls(referral.id);
       await EvaluationService.evaluate(referral.id);
       const r = await ReferralRepository.get(referral.id);
       if (!selected && r!.status === "options_ready" && t >= 45) {

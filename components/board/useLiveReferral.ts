@@ -12,7 +12,7 @@ const IDLE_TICK_MS = 30_000;
 const REAUTH_MS = 50 * 60_000;
 
 /**
- * Keeps one referral's view current: ticks the server (wave 2, callbacks, hold expiry, the simulator), re-reads on
+ * Keeps one referral's view current: ticks the server (wave 2, callbacks, hold expiry, missed webhooks), re-reads on
  * every Realtime change, and polls every second until Realtime connects. `nowMs` is the server's clock, ticking each
  * second. `post` runs a console action, then re-reads; its error is shown in `actionError`.
  */

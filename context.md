@@ -70,7 +70,6 @@ lib/modules/
   handoff/           WhatsApp message texts and sending
   intake/            WhatsApp intake drafts, parsing, voice notes
   auth/              session, gate, password, throttle, org scope, safe redirects
-  demo/              demo console, simulator, run sheet, judge cards, test matrix
   maintenance/       cron tick, retention purge
   analytics/ portal/
 lib/ui/              client-safe display helpers (tones, labels, timeline text)
