@@ -4,7 +4,7 @@ Extractions run on the transcript after the call and arrive in the `completed` w
 `extracted_data → <category> → <extraction name> → { subjective, objective, confidence, confidence_label, … }` **[B13]**.
 We use them to **cross-check** the mid-call function result (`02-architecture.md` §5.4) and as a **fallback** when the function wasn't called.
 
-Set them up in the agent's **Extractions** tab. The category model defaults to `gpt-4.1-mini`.
+They are defined as data in `lib/integrations/bolna/bolna.extractions.ts` and applied with `bun run bolna:extractions -- --apply` (rerunnable: it updates by name). The tables below describe them; change the code, not the dashboard. The category model is `gpt-4.1-mini`.
 
 ---
 

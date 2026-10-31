@@ -2,8 +2,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { Db } from "@/lib/core/db";
 import { setDb } from "@/lib/core/db";
 import { DEFAULT_ORG_ID } from "@/lib/core/types";
-import { distanceMetres } from "@/lib/integrations/google/google.places";
 import { DirectoryService } from "@/lib/modules/facility/directory.service";
+import { MATCH_RADIUS_M, RATING_TTL_MS, distanceMetres, isFresh, isSamePlace } from "@/lib/modules/facility/rating.helper";
 import { RatingService, resetRatingCache } from "@/lib/modules/facility/rating.service";
 import { shortCount, starFills } from "@/lib/ui/rating";
 import { freshDb } from "./helpers";
@@ -26,6 +26,21 @@ describe("star rating helpers", () => {
     const d = distanceMetres({ lat: 13.07, lng: 77.8 }, { lat: 13.08, lng: 77.8 });
     expect(d).toBeGreaterThan(1100);
     expect(d).toBeLessThan(1120);
+  });
+
+  it("remembers an answer for an hour", () => {
+    const at = Date.parse("2026-11-01T10:00:00Z");
+    expect(isFresh(at, new Date(at + RATING_TTL_MS - 1))).toBe(true);
+    expect(isFresh(at, new Date(at + RATING_TTL_MS))).toBe(false);
+  });
+
+  it("takes a search hit as the hospital only within the match radius, and never without a location", () => {
+    const listed = { lat: 13.07, lng: 77.8 };
+    expect(isSamePlace(listed, { lat: 13.0702, lng: 77.8001 })).toBe(true);
+    // 0.01 degrees of latitude is about 1.1 km, just past the radius.
+    expect(distanceMetres(listed, { lat: 13.08, lng: 77.8 })).toBeGreaterThan(MATCH_RADIUS_M);
+    expect(isSamePlace(listed, { lat: 13.08, lng: 77.8 })).toBe(false);
+    expect(isSamePlace(listed, null)).toBe(false);
   });
 });
 
@@ -101,5 +116,17 @@ describe("RatingService", () => {
       url.endsWith("places:searchText") ? Response.json({ places: [searchHit] }) : new Response("nope", { status: 403 }),
     );
     expect((await RatingService.forOrg(DEFAULT_ORG_ID)).ratings).toEqual({});
+  });
+
+  it("logs why a Google request failed, without the API key", async () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    await DirectoryService.create(DEFAULT_ORG_ID, listing());
+    fetchMock.mockImplementation(async () => new Response("nope", { status: 403 }));
+    expect((await RatingService.forOrg(DEFAULT_ORG_ID)).ratings).toEqual({});
+    const logged = JSON.stringify(warn.mock.calls);
+    expect(logged).toContain("Google place search failed");
+    expect(logged).toContain("403");
+    expect(logged).not.toContain("test-key");
+    warn.mockRestore();
   });
 });

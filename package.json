@@ -12,6 +12,9 @@
     "db:setup": "bun --conditions=react-server scripts/db-setup.ts",
     "user:create": "bun --conditions=react-server scripts/create-user.ts",
     "bolna:agents": "bun --conditions=react-server scripts/bolna-agents.ts",
+    "bolna:kb": "bun scripts/bolna-kb.ts",
+    "bolna:extractions": "bun --conditions=react-server scripts/bolna-extractions.ts",
+    "bolna:test-call": "bun --conditions=react-server scripts/bolna-test-call.ts",
     "serve": "next build && next start"
   },
   "dependencies": {

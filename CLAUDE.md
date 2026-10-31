@@ -27,7 +27,7 @@ ngrok http 3000      # public URL for Bolna callbacks; put it in APP_BASE_URL an
 5. Dispatch a wave only after the **atomic claim**: `update referrals set current_wave = current_wave + 1 … where id = $1 and current_wave = $2 returning …`.
 6. The spoken case summary is built **deterministically** in `lib/modules/referral/summary.helper.ts`, never by an LLM.
 7. Server-only secrets: `BOLNA_API_KEY`, `SUPABASE_SERVICE_ROLE_KEY`, `BOLNA_WEBHOOK_SECRET`, `BOLNA_FUNCTION_SECRET`. Never import server modules into client components.
-8. Simulation runs through the **same handlers** as real webhooks and functions (`lib/modules/demo/simulator.service.ts`), with `outcome_source = 'simulation'`.
+8. There is no simulation mode. Tests fake Bolna at the network and play scripted calls through the **same handlers** as real webhooks and functions (`tests/support/scripted-calls.ts`).
 9. Validate every route body with zod.
 10. Never record `accepted` from ambiguous data. When the function result and extraction disagree, set `needs_review`.
 
@@ -39,7 +39,7 @@ ngrok http 3000      # public URL for Bolna callbacks; put it in APP_BASE_URL an
 - Migrations are tracked in `haazir_migrations`; `bun run db:setup` (and the embedded DB on connect) applies only new files.
 - `WebhookService.recoverStale` re-reads stuck calls from Bolna; `MaintenanceService.tick` is the background loop.
 - **Safety rules added after a devil's-advocate review** (tests in `tests/adversarial.test.ts`): function routes only accept an id for the right kind of call; "accepted" with bed `none` goes to review; a yes after the patient is placed is released on the same call (`CallService.recordInCallRelease`); no TTFA after cancel/close; at most two redials or callbacks per hospital, then the doctor is asked to call; family-call transcripts and recordings are never stored; `parseBody` requires `application/json`; `ReferralService.create` is idempotent on `client_request_id`.
-- Handlers return `{ instruction, followUp }`; routes run `followUp` with `after()`, the simulator awaits it.
+- Handlers return `{ instruction, followUp }`; routes run `followUp` with `after()`, tests await it.
 - No shadcn/ui: a small in-house design system instead. Tokens and component classes (`btn`, `card`, `input`, `chip`, `tag`) live in `app/globals.css` (monochrome: near-black `brand-*` accent, zinc neutrals, every other hue mapped to zinc; `line` hairline border, Inter). Primitives are in `components/ui.tsx` (`StatusPill`, `PageHeader`, `Stat`, `SectionTitle`, `Logo`), with `lucide-react` line icons. Never use emoji as icons; every status shows an icon or dot plus text.
 
 ## Bolna essentials
@@ -51,14 +51,15 @@ ngrok http 3000      # public URL for Bolna callbacks; put it in APP_BASE_URL an
 - Webhooks and function calls come from `13.203.39.153`, `13.126.9.249`, `13.202.133.53`.
 - Custom function `param` values use `%(name)s`; POST sends `param` as a JSON body. Prompt variables passed in `user_data` (like `attempt_id`) are auto-filled into `param`.
 - `POST /v2/agent` returns 201 with `state` (not `status`); `toolchain.pipelines` is an array of arrays.
+- A knowledge base attaches as `llm_agent.agent_type: "knowledgebase_agent"` with `llm_config.rag_config.vector_store` (the API reference's `llm_config.vector_store` is silently dropped). `PATCH /v2/agent/{id}` can't change tools or the LLM; use `PUT` (`bun run bolna:agents -- --update`). `llm_agent.routes` (semantic routes) is documented but silently dropped too; read an agent back with `GET /v2/agent/{id}` after every push.
 - Full gotchas: https://www.bolna.ai/docs/AGENTS.md · Bolna Skills: `npx skills add bolna-ai/skills -a claude-code`.
 
 ## Where things are
 | Path | What |
 |---|---|
 | `supabase/migrations/0001_init.sql`, `supabase/seed.sql` | Schema (tested on Postgres 16) and demo data |
-| `bolna/prompts/*.md`, `bolna/tools/*.json`, `bolna/extractions.md` | Agent prompts, tool definitions, extraction setup |
-| `scenarios/demo-krait-bite.json` | Simulation and stage-demo script |
+| `bolna/prompts/*.md`, `bolna/tools/*.json`, `bolna/extractions.md`, `bolna/knowledge/desk-faq.md` | Agent prompts, tool definitions, extraction setup, knowledge base. Applied by `bun run bolna:agents -- --update`, `bolna:extractions -- --apply` and `bolna:kb -- --upload`; `bolna:test-call` calls a phone with real `user_data` |
+| `tests/support/krait-bite.json`, `tests/support/scripted-calls.ts` | The krait-bite test script, the scripted-call driver and the fake Bolna |
 | `context.md` | Code-quality rules and the refactor plan: read it before changing code |
 | `lib/core/` | Config, clock, db, `ApiError`, logger, route helpers (`parseBody`, `handle`), normalisers, row types |
 | `lib/integrations/` | Bolna (client, auth, agent builder), WhatsApp (send, inbound signatures and parsing), Sarvam, Supabase browser client |
@@ -66,7 +67,7 @@ ngrok http 3000      # public URL for Bolna callbacks; put it in APP_BASE_URL an
 | `lib/modules/referral/` | `ReferralService` (create, cancel, close, widen), `HoldService` (select, hold, confirm, handoff); `referral.helper.ts` `planEvaluation` plans the steps of `docs/02-architecture.md` §6.3, `EvaluationService.evaluate` applies them; browser view; spoken summary |
 | `lib/modules/call/` | Placing calls (waves, redials, releases, holds, family calls), Bolna status webhook and mid-call functions, status map, `user_data` |
 | `lib/modules/facility/` | Directory, eligibility SQL (`facility.repository.ts`) and ranking (`matching.helper.ts`, `docs/02-architecture.md` §7) |
-| `lib/modules/{handoff,intake,portal,analytics,maintenance,demo,auth,event,setting}/` | WhatsApp handoff, WhatsApp intake, portal flags, analytics, cron and purge, Demo page and simulator, sign-in and org scope, audit events, settings |
+| `lib/modules/{handoff,intake,portal,analytics,maintenance,auth,event,setting}/` | WhatsApp handoff, WhatsApp intake, portal flags, analytics, cron and purge, sign-in and org scope, audit events, settings |
 | `lib/ui/display.ts` | Client-safe display helpers (tones, labels, timeline text) |
 
 ## Unverified against live services
@@ -78,7 +79,7 @@ Bolna's v2 agent payload (`lib/integrations/bolna/bolna.agents.ts`), Google Plac
 - Function payload normaliser: `%(bed_type)s`, `"None"` and `""` become `null`.
 - Matching on seed data returns Tamarind, Banyan, Neem, Jasmine, Mango Grove, Lotus, in that order, with ETAs 18, 35, 37, 46, 55, 74.
 - Privacy: availability `user_data` never contains `patient_name`, `attendant_name` or `attendant_phone`.
-- Integration: a simulated `demo-krait-bite` referral reaches `confirmed`, with exactly two release calls (Banyan, Mango Grove).
+- Integration: the scripted krait-bite referral reaches `confirmed`, with exactly two release calls (Banyan, Mango Grove).
 
 ## Style
 Follow `context.md` §2 (layers, errors and logging, comments, formatting, tests, components). In short: thin routes, services that order the work, repositories that hold the SQL, pure helpers with unit tests. Server components for data loading; client components only for realtime, the map and forms.

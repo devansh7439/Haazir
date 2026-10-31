@@ -1,7 +1,6 @@
 {
   "name": "request_doctor_callback",
   "description": "Use when the hospital wants to speak to the referring doctor before deciding, or asks clinical questions that the patient summary does not answer. After it returns, tell them the doctor will call them back on this number within about two minutes, thank them, and end the call.",
-  "pre_call_message": "One moment, I'm alerting the doctor.",
   "parameters": {
     "type": "object",
     "properties": {

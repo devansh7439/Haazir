@@ -1,7 +1,6 @@
 {
   "name": "report_inbound_callback",
   "description": "Use on an inbound call when a hospital is calling back about a referral, once you know which hospital it is and what they want to tell the doctor.",
-  "pre_call_message": "Thank you, passing this to the doctor.",
   "parameters": {
     "type": "object",
     "properties": {

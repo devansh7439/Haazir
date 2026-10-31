@@ -1,16 +1,20 @@
-// Creates Haazir's Bolna agents from bolna/prompts/*.md and bolna/tools/*.json.
+// Creates or updates Haazir's Bolna agents from bolna/prompts/*.md and bolna/tools/*.json.
 //
 //   bun run bolna:agents                       → dry run: writes bolna/generated/<agent>.json for review
 //   bun run bolna:agents -- --apply            → POST /v2/agent for each, prints the env lines to copy
+//   bun run bolna:agents -- --update           → PUT /v2/agent/{id} for each agent whose BOLNA_AGENT_ID_* is set
 //   options: --only availability,release  --suffix " (dev)"  --language kn  --llm-model gpt-4.1-mini
+//   --kb <rag_id>     (knowledge base from `bun run bolna:kb`; default BOLNA_KNOWLEDGE_BASE_ID)
 //   --demo-transfer   (demo availability agent only, after adding the Transfer Call tool in Bolna: docs/05 §7)
-//            --voice <Bulbul v3 voice id>  --tts-model bulbul:v3  --stt-model saaras:v4  --telephony plivo
+//            --voice <Bulbul v3 voice id>  --speed 0.9  --tts-model bulbul:v3  --stt-model saaras:v4  --telephony plivo
 //
-// Needs APP_BASE_URL, BOLNA_WEBHOOK_SECRET, BOLNA_FUNCTION_SECRET (and BOLNA_API_KEY for --apply).
+// --update replaces the whole agent (Bolna's PATCH can't change tools or the LLM type), so settings made only in the
+// dashboard, such as languages and extractions, must be set again afterwards.
+// Needs APP_BASE_URL, BOLNA_WEBHOOK_SECRET, BOLNA_FUNCTION_SECRET (and BOLNA_API_KEY for --apply and --update).
 // The payload shape is described at the top of lib/integrations/bolna/bolna.agents.ts.
 import fs from "node:fs";
 import path from "node:path";
-import { AGENT_ENV, buildAgent, parsePromptDoc, type ToolDef } from "../lib/integrations/bolna/bolna.agents";
+import { AGENT_ENV, DEFAULT_TTS_SPEED, buildAgent, parsePromptDoc, type ToolDef } from "../lib/integrations/bolna/bolna.agents";
 
 function arg(name: string, fallback: string): string {
   const i = process.argv.indexOf(`--${name}`);
@@ -19,14 +23,19 @@ function arg(name: string, fallback: string): string {
 
 async function main() {
   const apply = process.argv.includes("--apply");
+  const update = process.argv.includes("--update");
+  if (apply && update) throw new Error("Use --apply (create) or --update, not both");
   const env = (k: string) => (process.env[k] ?? "").trim();
   const appUrl = env("APP_BASE_URL");
   const webhookSecret = env("BOLNA_WEBHOOK_SECRET");
   const functionSecret = env("BOLNA_FUNCTION_SECRET");
   if (!appUrl || !webhookSecret || !functionSecret) throw new Error("Set APP_BASE_URL, BOLNA_WEBHOOK_SECRET and BOLNA_FUNCTION_SECRET");
-  if (apply && !env("BOLNA_API_KEY")) throw new Error("Set BOLNA_API_KEY for --apply");
+  if ((apply || update) && !env("BOLNA_API_KEY")) throw new Error("Set BOLNA_API_KEY for --apply and --update");
 
   const only = arg("only", "availability,hold-confirm,release,family-update,inbound-callback").split(",").map((s) => s.trim());
+  const knowledgeBaseId = arg("kb", env("BOLNA_KNOWLEDGE_BASE_ID")) || null;
+  const ttsSpeed = Number(arg("speed", String(DEFAULT_TTS_SPEED)));
+  if (!(ttsSpeed >= 0.5 && ttsSpeed <= 2)) throw new Error("--speed must be between 0.5 and 2.0");
   const outDir = path.join("bolna", "generated");
   fs.mkdirSync(outDir, { recursive: true });
   const envLines: string[] = [];
@@ -47,34 +56,47 @@ async function main() {
       ttsModel: arg("tts-model", "bulbul:v3"),
       // A male voice: the Hindi lines use masculine verbs ("रहा हूँ"), docs/05 §2.
       ttsVoice: arg("voice", "shubh"),
+      ttsSpeed,
       telephony: arg("telephony", "plivo"),
       startLanguage: arg("language", "en"),
       suffix: arg("suffix", ""),
       demoTransfer: process.argv.includes("--demo-transfer"),
+      knowledgeBaseId,
     });
     const file = path.join(outDir, `${key}.json`);
     fs.writeFileSync(file, JSON.stringify(payload, null, 2) + "\n");
-    if (!apply) {
+    if (!apply && !update) {
       console.log(`wrote ${file}  (${tools.length} tool${tools.length === 1 ? "" : "s"})`);
       continue;
     }
-    const res = await fetch(`${env("BOLNA_BASE_URL") || "https://api.bolna.ai"}/v2/agent`, {
-      method: "POST",
+    const agentId = env(AGENT_ENV[key]);
+    if (update && !agentId) {
+      console.log(`skipped ${key}: ${AGENT_ENV[key]} is not set`);
+      continue;
+    }
+    const base = env("BOLNA_BASE_URL") || "https://api.bolna.ai";
+    const res = await fetch(update ? `${base}/v2/agent/${agentId}` : `${base}/v2/agent`, {
+      method: update ? "PUT" : "POST",
       headers: { Authorization: `Bearer ${env("BOLNA_API_KEY")}`, "Content-Type": "application/json" },
       body: JSON.stringify(payload),
+      signal: AbortSignal.timeout(30_000),
     });
     const text = await res.text();
     if (!res.ok) throw new Error(`${key}: Bolna returned ${res.status}: ${text.slice(0, 500)}`);
-    const data = JSON.parse(text) as { agent_id?: string; id?: string; state?: string };
+    const data = JSON.parse(text) as { agent_id?: string; id?: string; state?: string; status?: string };
+    if (update) {
+      console.log(`updated ${key}: ${agentId} (${data.status ?? data.state ?? "?"})`);
+      continue;
+    }
     const id = data.agent_id ?? data.id;
     console.log(`created ${key}: ${id} (${data.state ?? "?"})`);
     envLines.push(`${AGENT_ENV[key]}=${id}`);
   }
-  if (apply) {
-    console.log("\nAdd to your environment:\n" + envLines.join("\n"));
-    console.log("\nThen in the dashboard: languages en/kn/hi with auto-switch, noise cancellation on, calling hours off, extractions (bolna/extractions.md).");
+  if (apply) console.log("\nAdd to your environment:\n" + envLines.join("\n"));
+  if (apply || update) {
+    console.log("\nThen in the dashboard: languages en/kn/hi with auto-switch, calling hours off, extractions (bolna/extractions.md).");
   } else {
-    console.log("\nDry run only. Check one file against Bolna's API reference, then rerun with --apply.");
+    console.log("\nDry run only. Check one file against Bolna's API reference, then rerun with --apply or --update.");
   }
 }
 

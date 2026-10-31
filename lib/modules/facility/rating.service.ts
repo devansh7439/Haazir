@@ -1,26 +1,56 @@
 import "server-only";
 import { now } from "@/lib/core/clock";
 import { env } from "@/lib/core/config";
-import { findPlaceId, fetchRating, type GoogleRating } from "@/lib/integrations/google/google.places";
+import { createLogger } from "@/lib/core/logger";
+import type { Facility } from "@/lib/core/types";
+import { fetchRating, searchPlace, type GoogleRating } from "@/lib/integrations/google/google.places";
 import { FacilityRepository } from "@/lib/modules/facility/facility.repository";
+import { MATCH_RADIUS_M, isFresh, isSamePlace } from "@/lib/modules/facility/rating.helper";
 
-/** How long a rating is kept in memory. Google's terms don't allow storing it, so it is never written to the database. */
-const TTL_MS = 60 * 60 * 1000;
+const log = createLogger("ratings");
+
 /** At most this many Google requests at once, so one page load can't flood the API. */
 const BATCH = 5;
 
+/** Ratings by place id, in memory only: Google's terms don't allow storing them. */
 const ratings = new Map<string, { at: number; value: GoogleRating | null }>();
 /** Hospitals we looked for on Google and didn't find, so every page load doesn't search again. */
 const unmatched = new Map<string, number>();
 
-const fresh = (at: number): boolean => now().getTime() - at < TTL_MS;
+/** Runs a Google request; null when it fails, with the cause logged. A rating is a nice-to-have, never an error for the page. */
+const orNull = async <T>(what: string, facilityId: string, request: () => Promise<T>): Promise<T | null> => {
+  try {
+    return await request();
+  } catch (err) {
+    log.warn({ err, facility_id: facilityId }, what);
+    return null;
+  }
+};
 
-const ratingOf = async (placeId: string): Promise<GoogleRating | null> => {
-  const hit = ratings.get(placeId);
-  if (hit && fresh(hit.at)) return hit.value;
-  const value = await fetchRating(placeId);
+/** A place's rating, from memory while fresh. Null when Google has none or the lookup failed; either is remembered for a while. */
+const ratingOf = async (placeId: string, facilityId: string): Promise<GoogleRating | null> => {
+  const known = ratings.get(placeId);
+  if (known && isFresh(known.at, now())) return known.value;
+  const value = await orNull("Google rating lookup failed", facilityId, () => fetchRating(placeId));
   ratings.set(placeId, { at: now().getTime(), value });
   return value;
+};
+
+/**
+ * The hospital's Google place id. Found once by name and location, then stored. Null when no hit is near enough or the
+ * search failed; either is remembered for a while, so a hospital that isn't on Google isn't searched on every page load.
+ */
+const placeIdOf = async (f: Facility): Promise<string | null> => {
+  if (f.google_place_id) return f.google_place_id;
+  const tried = unmatched.get(f.id);
+  if (tried !== undefined && isFresh(tried, now())) return null;
+  const hit = await orNull("Google place search failed", f.id, () => searchPlace(f, MATCH_RADIUS_M));
+  if (!hit || !isSamePlace(f, hit.location)) {
+    unmatched.set(f.id, now().getTime());
+    return null;
+  }
+  await FacilityRepository.setGooglePlaceId(f.id, hit.id);
+  return hit.id;
 };
 
 /** Forgets everything held in memory. For tests. */
@@ -42,16 +72,9 @@ export const RatingService = {
     for (let i = 0; i < hospitals.length; i += BATCH) {
       await Promise.all(
         hospitals.slice(i, i + BATCH).map(async (f) => {
-          let placeId = f.google_place_id;
-          if (!placeId) {
-            const tried = unmatched.get(f.id);
-            if (tried !== undefined && fresh(tried)) return;
-            placeId = await findPlaceId(f);
-            if (!placeId) return void unmatched.set(f.id, now().getTime());
-            await FacilityRepository.setGooglePlaceId(f.id, placeId);
-          }
-          const r = await ratingOf(placeId);
-          if (r) out[f.id] = r;
+          const placeId = await placeIdOf(f);
+          const rating = placeId ? await ratingOf(placeId, f.id) : null;
+          if (rating) out[f.id] = rating;
         }),
       );
     }

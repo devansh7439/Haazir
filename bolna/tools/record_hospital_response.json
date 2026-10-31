@@ -1,7 +1,6 @@
 {
   "name": "record_hospital_response",
   "description": "Record the hospital's answer. Call this exactly once: after the staff member has clearly said whether they can accept the patient now and has confirmed your read-back, or when they decline, give a different number to call, or the answer is still unclear after asking twice. Never record accepted unless they clearly agreed.",
-  "pre_call_message": "Thank you, noting that.",
   "parameters": {
     "type": "object",
     "properties": {

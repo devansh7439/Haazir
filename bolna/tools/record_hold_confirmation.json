@@ -1,7 +1,6 @@
 {
   "name": "record_hold_confirmation",
   "description": "Record whether the hospital will keep the bed ready for this patient. Call this once, after they have answered and confirmed your read-back.",
-  "pre_call_message": "Thank you, noting that.",
   "parameters": {
     "type": "object",
     "properties": {
