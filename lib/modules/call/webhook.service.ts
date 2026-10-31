@@ -4,7 +4,7 @@ import { now, secondsBetween } from "@/lib/core/clock";
 import { createLogger } from "@/lib/core/logger";
 import { clean, normalizeYesNo, redactNumbers } from "@/lib/core/normalize";
 import type { Attempt } from "@/lib/core/types";
-import { getExecution, isSimulatedExecution } from "@/lib/integrations/bolna/bolna.client";
+import { getExecution, isSimulatedExecution, toBolnaStatus } from "@/lib/integrations/bolna/bolna.client";
 import { PortalService } from "@/lib/modules/portal/portal.service";
 import { isAcceptance } from "@/lib/modules/call/call.helper";
 import { CallRepository } from "@/lib/modules/call/call.repository";
@@ -93,7 +93,7 @@ export const WebhookService = {
     const b: Body = body && typeof body === "object" ? (body as Body) : {};
     const executionId = executionIdOf(b);
     const rawStatus = typeof b.status === "string" ? b.status : null;
-    if (opts.log !== false) await WebhookLogRepository.log(executionId, rawStatus, b);
+    if (opts.log !== false) await WebhookLogRepository.log(executionId, toBolnaStatus(rawStatus), b);
 
     let attempt = executionId ? await CallRepository.findByExecution(executionId) : null;
     if (!attempt) {

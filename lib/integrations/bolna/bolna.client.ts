@@ -1,5 +1,6 @@
 import "server-only";
 import { randomUUID } from "node:crypto";
+import { z } from "zod";
 import { env } from "@/lib/core/config";
 
 // Bolna REST client (docs/04-api-spec.md §6). In simulation, makeCall returns sim_<uuid> and never calls Bolna.
@@ -13,10 +14,24 @@ export interface MakeCallRequest {
   bypass_call_guardrails: true;
 }
 
-export interface MakeCallResponse {
-  status: string;
-  execution_id: string;
-}
+/** Every execution status Bolna documents (CLAUDE.md, "Bolna essentials"). */
+export const BOLNA_STATUSES = [
+  "queued", "scheduled", "rescheduled", "initiated", "ringing", "in-progress", "call-disconnected", "completed",
+  "no-answer", "busy", "failed", "canceled", "stopped", "error", "balance-low",
+] as const;
+export type BolnaStatus = (typeof BOLNA_STATUSES)[number];
+
+/** The status if it is one Bolna documents; null for anything else. */
+export const toBolnaStatus = (raw: unknown): BolnaStatus | null => BOLNA_STATUSES.find((s) => s === raw) ?? null;
+
+/** POST /call's answer. A status we don't know becomes null rather than an error: the call was still queued. */
+const MakeCallResponseSchema = z
+  .object({ execution_id: z.string().min(1), status: z.string().optional() })
+  .transform((r) => ({ execution_id: r.execution_id, status: toBolnaStatus(r.status) }));
+export type MakeCallResponse = z.infer<typeof MakeCallResponseSchema>;
+
+/** The text under `key` when `obj` is an object; undefined otherwise. */
+const field = (obj: unknown, key: string): unknown => (obj && typeof obj === "object" ? (obj as Record<string, unknown>)[key] : undefined);
 
 export class BolnaError extends Error {
   constructor(
@@ -35,7 +50,8 @@ export function isSimulatedExecution(executionId: string | null | undefined): bo
   return !!executionId && executionId.startsWith(SIM_PREFIX);
 }
 
-async function request<T>(method: string, path: string, body?: unknown): Promise<T> {
+/** One request to Bolna. The caller checks the shape of what comes back; nothing is assumed here. */
+async function request(method: string, path: string, body?: unknown): Promise<unknown> {
   if (!env.bolnaApiKey) throw new BolnaError("BOLNA_API_KEY is not configured", 0);
   const res = await fetch(`${env.bolnaBaseUrl}${path}`, {
     method,
@@ -51,12 +67,11 @@ async function request<T>(method: string, path: string, body?: unknown): Promise
     data = { raw: text };
   }
   if (!res.ok) {
-    const d = (data ?? {}) as Record<string, unknown>;
-    const message = String(d.message ?? d.error ?? d.detail ?? `Bolna ${method} ${path} failed with ${res.status}`);
-    const retry = Number(d.retry_after_seconds ?? res.headers.get("retry-after"));
+    const message = String(field(data, "message") ?? field(data, "error") ?? field(data, "detail") ?? `Bolna ${method} ${path} failed with ${res.status}`);
+    const retry = Number(field(data, "retry_after_seconds") ?? res.headers.get("retry-after"));
     throw new BolnaError(message, res.status, Number.isFinite(retry) && retry > 0 ? retry : null);
   }
-  return data as T;
+  return data;
 }
 
 export async function makeCall(req: MakeCallRequest, opts: { simulate: boolean }): Promise<MakeCallResponse> {
@@ -66,12 +81,12 @@ export async function makeCall(req: MakeCallRequest, opts: { simulate: boolean }
   if (!body.from_phone_number) delete body.from_phone_number;
   // retry_config and scheduled_at are omitted on purpose: we redial and schedule ourselves.
   try {
-    return await request<MakeCallResponse>("POST", "/call", body);
+    return MakeCallResponseSchema.parse(await request("POST", "/call", body));
   } catch (err) {
     // 429: a newly bought number still activating. Wait once if the delay is short.
     if (err instanceof BolnaError && err.httpStatus === 429 && err.retryAfterSeconds && err.retryAfterSeconds <= 5) {
       await new Promise((r) => setTimeout(r, err.retryAfterSeconds! * 1000));
-      return request<MakeCallResponse>("POST", "/call", body);
+      return MakeCallResponseSchema.parse(await request("POST", "/call", body));
     }
     throw err;
   }
@@ -85,5 +100,6 @@ export async function stopCall(executionId: string): Promise<void> {
 
 /** Recover a missed webhook. */
 export async function getExecution(executionId: string): Promise<Record<string, unknown>> {
-  return request("GET", `/executions/${encodeURIComponent(executionId)}`);
+  const data = await request("GET", `/executions/${encodeURIComponent(executionId)}`);
+  return data && typeof data === "object" && !Array.isArray(data) ? Object.fromEntries(Object.entries(data)) : {};
 }
