@@ -1,9 +1,9 @@
 // Builds Bolna agent definitions from bolna/prompts/*.md and bolna/tools/*.json (pure; used by scripts/bolna-agents.ts).
 //
-// VERIFY BEFORE --apply: the request shape below follows Bolna's v2 agent API as documented when this was written
-// (agent_config + agent_prompts, tools_config.api_tools, toolchain.pipelines as an array of arrays). Bolna's docs
-// were not reachable from the build environment, so compare one generated file with
-// https://www.bolna.ai/docs/api-reference before creating agents, and adjust `buildAgent` if fields have moved.
+// Checked on 2026-10-31 against https://www.bolna.ai/docs/api-reference/agent/v2/create.md and the Sarvam pages
+// (sarvam-voice.md, sarvam-transcriber.md): Sarvam voices need both `voice` and `voice_id`, `tools_params.param` is a
+// JSON template string, and task_config fields are the documented ones only. Multilingual config and extractions are
+// still set in the dashboard.
 
 export interface PromptDoc {
   key: string;
@@ -60,14 +60,13 @@ export interface ToolDef {
   value: { method: string; param: Record<string, string>; url: string; api_token: string; headers?: Record<string, string> };
 }
 
-/** Fills YOUR_APP_URL and YOUR_BOLNA_FUNCTION_SECRET in a tool definition. */
+/** Fills YOUR_APP_URL and YOUR_BOLNA_FUNCTION_SECRET in a tool definition. The app URL's own scheme is kept. */
 export function fillTool(tool: ToolDef, appUrl: string, functionSecret: string): ToolDef {
-  const host = appUrl.replace(/^https?:\/\//, "").replace(/\/$/, "");
   return {
     ...tool,
     value: {
       ...tool.value,
-      url: tool.value.url.replace("YOUR_APP_URL", host),
+      url: tool.value.url.replace(/^https?:\/\/YOUR_APP_URL/, appUrl.replace(/\/$/, "")),
       api_token: tool.value.api_token.replace("YOUR_BOLNA_FUNCTION_SECRET", functionSecret),
     },
   };
@@ -92,6 +91,7 @@ export interface BuildOptions {
   sttModel: string;
   ttsProvider: string;
   ttsModel: string;
+  /** Sarvam voice id, e.g. "shubh". Its display name is the id capitalised, as in Bolna's Bulbul v3 list. */
   ttsVoice: string;
   telephony: string;
   startLanguage: string;
@@ -136,7 +136,12 @@ export function buildAgent(doc: PromptDoc, tools: ToolDef[], o: BuildOptions): R
             transcriber: { provider: o.sttProvider, model: o.sttModel, language: o.startLanguage, stream: true, endpointing: 300 },
             synthesizer: {
               provider: o.ttsProvider,
-              provider_config: { model: o.ttsModel, voice: o.ttsVoice, language: o.startLanguage },
+              provider_config: {
+                model: o.ttsModel,
+                voice: o.ttsVoice.charAt(0).toUpperCase() + o.ttsVoice.slice(1),
+                voice_id: o.ttsVoice,
+                language: o.startLanguage,
+              },
               stream: true,
             },
             input: { provider: o.telephony, format: "wav" },
@@ -147,7 +152,8 @@ export function buildAgent(doc: PromptDoc, tools: ToolDef[], o: BuildOptions): R
                     tools: filled.map((t) => ({
                       name: t.name, description: t.description, pre_call_message: t.pre_call_message, parameters: t.parameters, key: t.key,
                     })),
-                    tools_params: Object.fromEntries(filled.map((t) => [t.name, t.value])),
+                    // Bolna's schema takes `param` as a JSON template string; it fills the %(name)s tokens and POSTs it.
+                    tools_params: Object.fromEntries(filled.map((t) => [t.name, { ...t.value, param: JSON.stringify(t.value.param) }])),
                   },
                 }
               : {}),
@@ -158,11 +164,13 @@ export function buildAgent(doc: PromptDoc, tools: ToolDef[], o: BuildOptions): R
             hangup_after_silence: 40,
             ambient_noise: false,
             voicemail: false,
+            auto_reschedule: false,
+            noise_cancellation_level: 85,
             call_cancellation_prompt: doc.hangupPrompt,
-            optimize_latency: true,
             number_of_words_for_interruption: 2,
+            check_if_user_online: true,
             trigger_user_online_message_after: 15,
-            check_user_online_message: "I'm still here, please take your time.",
+            ...(Object.keys(doc.finalMessage).length ? { call_hangup_message: doc.finalMessage } : {}),
           },
         },
       ],

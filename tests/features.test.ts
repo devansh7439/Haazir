@@ -163,6 +163,27 @@ describe("Bolna agent builder", () => {
     expect(Object.keys(avail.welcome).sort()).toEqual(["en", "hi", "kn"]);
   });
 
+  it("matches Bolna's v2 schema: Sarvam voice id, param as a JSON string, the app's own scheme", () => {
+    const doc = parsePromptDoc("availability", fs.readFileSync("bolna/prompts/availability.md", "utf8"));
+    const tools = doc.toolFiles.map((f) => JSON.parse(fs.readFileSync(f, "utf8")) as ToolDef);
+    const agent = buildAgent(doc, tools, {
+      appUrl: "http://localhost:3000", webhookSecret: "wh", functionSecret: "fn", llmProvider: "openai", llmModel: "m",
+      sttProvider: "sarvam", sttModel: "saaras:v4", ttsProvider: "sarvam", ttsModel: "bulbul:v3", ttsVoice: "shubh",
+      telephony: "plivo", startLanguage: "en", suffix: "",
+    });
+    const task = (agent as { agent_config: { tasks: Array<Record<string, Record<string, unknown>>> } }).agent_config.tasks[0];
+    const tc = task.tools_config as {
+      synthesizer: { provider_config: Record<string, string> };
+      api_tools: { tools_params: Record<string, { url: string; param: unknown }> };
+    };
+    expect(tc.synthesizer.provider_config).toEqual({ model: "bulbul:v3", voice: "Shubh", voice_id: "shubh", language: "en" });
+    const record = tc.api_tools.tools_params.record_hospital_response;
+    expect(record.url).toBe("http://localhost:3000/api/bolna/functions/record-response");
+    expect(typeof record.param).toBe("string");
+    expect(JSON.parse(record.param as string)).toMatchObject({ attempt_id: "%(attempt_id)s", outcome: "%(outcome)s" });
+    expect(task.task_config).toMatchObject({ check_if_user_online: true, call_hangup_message: { en: expect.any(String) } });
+  });
+
   it("parses a Windows (CRLF) checkout the same as LF", () => {
     const lf = fs.readFileSync("bolna/prompts/availability.md", "utf8").replace(/\r\n/g, "\n");
     expect(parsePromptDoc("availability", lf.replace(/\n/g, "\r\n"))).toEqual(parsePromptDoc("availability", lf));

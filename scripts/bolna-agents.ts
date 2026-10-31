@@ -1,13 +1,13 @@
 // Creates Haazir's Bolna agents from bolna/prompts/*.md and bolna/tools/*.json.
 //
-//   npm run bolna:agents                       → dry run: writes bolna/generated/<agent>.json for review
-//   npm run bolna:agents -- --apply            → POST /v2/agent for each, prints the env lines to copy
+//   bun run bolna:agents                       → dry run: writes bolna/generated/<agent>.json for review
+//   bun run bolna:agents -- --apply            → POST /v2/agent for each, prints the env lines to copy
 //   options: --only availability,release  --suffix " (dev)"  --language kn  --llm-model gpt-4.1-mini
 //   --demo-transfer   (demo availability agent only, after adding the Transfer Call tool in Bolna: docs/05 §7)
-//            --voice <voice id>  --tts-model bulbul:v2  --stt-model saarika:v2.5  --telephony plivo
+//            --voice <Bulbul v3 voice id>  --tts-model bulbul:v3  --stt-model saaras:v4  --telephony plivo
 //
 // Needs APP_BASE_URL, BOLNA_WEBHOOK_SECRET, BOLNA_FUNCTION_SECRET (and BOLNA_API_KEY for --apply).
-// Read the VERIFY note in lib/bolnaAgents.ts before the first --apply.
+// The payload shape is described at the top of lib/integrations/bolna/bolna.agents.ts.
 import fs from "node:fs";
 import path from "node:path";
 import { AGENT_ENV, buildAgent, parsePromptDoc, type ToolDef } from "../lib/integrations/bolna/bolna.agents";
@@ -41,10 +41,12 @@ async function main() {
       llmProvider: arg("llm-provider", "openai"),
       llmModel: arg("llm-model", "gpt-4.1-mini"),
       sttProvider: arg("stt-provider", "sarvam"),
-      sttModel: arg("stt-model", "saarika:v2.5"),
+      // saarika:v2.5 is deprecated and bulbul:v2 can no longer be selected (Bolna's Sarvam pages, 2026-10-31).
+      sttModel: arg("stt-model", "saaras:v4"),
       ttsProvider: arg("tts-provider", "sarvam"),
-      ttsModel: arg("tts-model", "bulbul:v2"),
-      ttsVoice: arg("voice", "anushka"),
+      ttsModel: arg("tts-model", "bulbul:v3"),
+      // A male voice: the Hindi lines use masculine verbs ("रहा हूँ"), docs/05 §2.
+      ttsVoice: arg("voice", "shubh"),
       telephony: arg("telephony", "plivo"),
       startLanguage: arg("language", "en"),
       suffix: arg("suffix", ""),
