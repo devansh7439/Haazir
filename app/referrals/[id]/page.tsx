@@ -1,5 +1,5 @@
 import { notFound } from "next/navigation";
-import { LiveBoard } from "@/components/LiveBoard";
+import { LiveBoard } from "@/components/board/LiveBoard";
 import { pageSession } from "@/lib/modules/auth/session.service";
 import { ViewService } from "@/lib/modules/referral/view.service";
 import { ReferralRepository } from "@/lib/modules/referral/referral.repository";

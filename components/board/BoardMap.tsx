@@ -4,17 +4,7 @@ import "leaflet/dist/leaflet.css";
 import L from "leaflet";
 import { memo, useEffect, useMemo } from "react";
 import { MapContainer, Marker, TileLayer, Tooltip, useMap } from "react-leaflet";
-
-export interface MapPin {
-  id: string;
-  lat: number;
-  lng: number;
-  label: string;
-  color: string;
-  live?: boolean;
-  title: string;
-  detail: string;
-}
+import type { MapPin } from "@/lib/ui/board";
 
 // Same look, same icon object: Leaflet swaps a marker's DOM node whenever the icon changes identity, which restarts the pulse and drops hover.
 const iconCache = new Map<string, L.DivIcon>();

@@ -1,7 +1,7 @@
 import { ArrowRight } from "lucide-react";
 import Link from "next/link";
 import { DraftsList } from "@/components/DraftsList";
-import { ReferralForm } from "@/components/ReferralForm";
+import { ReferralForm } from "@/components/referral-form/ReferralForm";
 import { PageHeader, ReferralStatusPill, SimBadge } from "@/components/ui";
 import { env } from "@/lib/core/config";
 import { IntakeService } from "@/lib/modules/intake/intake.service";
