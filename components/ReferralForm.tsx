@@ -3,9 +3,9 @@
 import { AudioLines, ChevronDown, Info, Loader2, Lock, MapPin, ShieldCheck, Sparkles } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
-import type { ParsedIntake } from "@/lib/intakeParse";
+import type { ParsedIntake } from "@/lib/modules/intake/intake.helper";
 import type { Capability, CaseTemplate } from "@/lib/core/types";
-import { LANGUAGE_LABEL, shortName } from "@/lib/ui";
+import { LANGUAGE_LABEL, shortName } from "@/lib/ui/display";
 import { cx } from "./ui";
 
 interface Eligible {

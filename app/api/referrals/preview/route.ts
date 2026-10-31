@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { handle, parseBody } from "@/lib/core/route";
-import { requireSession } from "@/lib/session";
+import { requireSession } from "@/lib/modules/auth/session.service";
 import { PreviewBody } from "@/lib/validation";
 import { ApiError } from "@/lib/core/error";
 import { ReferralService } from "@/lib/modules/referral/referral.service";

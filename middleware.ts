@@ -1,5 +1,5 @@
 import { NextResponse, type NextRequest } from "next/server";
-import { GATE_COOKIE, SESSION_COOKIE, gateToken, verifySession } from "./lib/gate";
+import { GATE_COOKIE, SESSION_COOKIE, gateToken, verifySession } from "@/lib/modules/auth/gate.helper";
 
 // Routes that authenticate with their own secrets or signatures, plus the sign-in page.
 const PUBLIC = ["/api/bolna", "/api/cron", "/api/whatsapp", "/api/triggers", "/login", "/api/login", "/api/logout"];

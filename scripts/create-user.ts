@@ -3,7 +3,7 @@
 //     [--org "Hoskote PHC network" | --org-id <uuid>] [--role admin|doctor] [--referrer-phone +91… --facility-id <uuid>]
 // Without --org/--org-id the user joins the demo organisation.
 import { connect } from "../lib/core/db";
-import { hashPassword } from "../lib/password";
+import { hashPassword } from "../lib/modules/auth/password.helper";
 import { normalizePhone } from "../lib/core/normalize";
 import { DEFAULT_ORG_ID } from "../lib/core/types";
 

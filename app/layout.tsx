@@ -2,7 +2,7 @@ import type { Metadata, Viewport } from "next";
 import { AppShell } from "@/components/AppShell";
 import { env } from "@/lib/core/config";
 import { one } from "@/lib/core/db";
-import { getSession } from "@/lib/session";
+import { getSession } from "@/lib/modules/auth/session.service";
 import { DEFAULT_ORG_ID } from "@/lib/core/types";
 import "./globals.css";
 

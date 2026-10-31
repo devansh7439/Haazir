@@ -1,8 +1,8 @@
 import { NextResponse } from "next/server";
 import { handle, parseBody } from "@/lib/core/route";
-import { patchContact } from "@/lib/directory";
-import { contactFor } from "@/lib/scope";
-import { requireSession } from "@/lib/session";
+import { patchContact } from "@/lib/modules/facility/directory.service";
+import { contactFor } from "@/lib/modules/auth/scope.service";
+import { requireSession } from "@/lib/modules/auth/session.service";
 import { ContactPatchBody } from "@/lib/validation";
 
 export async function PATCH(req: Request, { params }: { params: Promise<{ id: string }> }) {

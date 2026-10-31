@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { GATE_COOKIE, SESSION_COOKIE } from "@/lib/gate";
+import { GATE_COOKIE, SESSION_COOKIE } from "@/lib/modules/auth/gate.helper";
 
 export async function POST() {
   const res = NextResponse.json({ ok: true });

@@ -1,16 +1,16 @@
 import fs from "node:fs";
 import { createHmac } from "node:crypto";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { buildAgent, parsePromptDoc, type ToolDef } from "@/lib/bolnaAgents";
-import { signSession, verifySession } from "@/lib/gate";
-import { parseIntake } from "@/lib/intakeParse";
+import { buildAgent, parsePromptDoc, type ToolDef } from "@/lib/integrations/bolna/bolna.agents";
+import { signSession, verifySession } from "@/lib/modules/auth/gate.helper";
+import { parseIntake } from "@/lib/modules/intake/intake.helper";
 import { applyEtaCap } from "@/lib/modules/facility/matching.helper";
-import { bedRequestMessage, preArrivalNote, templateParam, type HandoffFacts } from "@/lib/messages";
-import { hashPassword, verifyPassword } from "@/lib/password";
-import { portalMismatch } from "@/lib/portalCheck";
-import { parseQuickReply } from "@/lib/quickReply";
-import { metaPayload } from "@/lib/whatsapp";
-import { parseMetaPayload, parseTwilioPayload, verifyMetaSignature, verifyTwilioSignature } from "@/lib/whatsappInbound";
+import { bedRequestMessage, preArrivalNote, templateParam, type HandoffFacts } from "@/lib/modules/handoff/message.helper";
+import { hashPassword, verifyPassword } from "@/lib/modules/auth/password.helper";
+import { portalMismatch } from "@/lib/modules/portal/portal.helper";
+import { parseQuickReply } from "@/lib/modules/intake/quick-reply.helper";
+import { metaPayload } from "@/lib/modules/handoff/whatsapp.service";
+import { parseMetaPayload, parseTwilioPayload, verifyMetaSignature, verifyTwilioSignature } from "@/lib/modules/intake/inbound.service";
 
 afterEach(() => vi.unstubAllEnvs());
 
@@ -171,7 +171,7 @@ describe("Bolna agent builder", () => {
 
 describe("pitch and proof tooling", () => {
   it("reads the script, fallback ladder and hard questions from docs/08", async () => {
-    const { fillPlaceholders, readPitchDoc, tableUnder } = await import("@/lib/pitch");
+    const { fillPlaceholders, readPitchDoc, tableUnder } = await import("@/lib/modules/demo/pitch.helper");
     const md = readPitchDoc();
     const script = tableUnder(md, "The 3-minute script")!;
     expect(script.header).toEqual(["Time", "On screen", "Say (roughly)"]);
@@ -188,7 +188,7 @@ describe("pitch and proof tooling", () => {
   });
 
   it("is demo-ready only at 20/20 twice with no false-yes failure", async () => {
-    const { matrixGate } = await import("@/lib/testMatrix");
+    const { matrixGate } = await import("@/lib/modules/demo/test-matrix.helper");
     const all = (pass: 1 | 2, result: "pass" | "fail") =>
       Array.from({ length: 20 }, (_, i) => ({ pass, row_no: i + 1, result, note: null, referral_code: null, tested_by: null, tested_at: "" }));
     expect(matrixGate([...all(1, "pass"), ...all(2, "pass")]).ready).toBe(true);

@@ -1,6 +1,6 @@
 import "server-only";
 import { one } from "@/lib/core/db";
-import type { Session } from "@/lib/session";
+import type { Session } from "@/lib/modules/auth/session.service";
 import type { Attempt, Contact, Facility, Referral } from "@/lib/core/types";
 import { ApiError } from "@/lib/core/error";
 import { CallRepository } from "@/lib/modules/call/call.repository";

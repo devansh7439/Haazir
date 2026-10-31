@@ -1,8 +1,8 @@
 import { NextResponse } from "next/server";
 import { handle, parseBody } from "@/lib/core/route";
-import { addFacilityContact } from "@/lib/directory";
-import { facilityFor } from "@/lib/scope";
-import { requireSession } from "@/lib/session";
+import { addFacilityContact } from "@/lib/modules/facility/directory.service";
+import { facilityFor } from "@/lib/modules/auth/scope.service";
+import { requireSession } from "@/lib/modules/auth/session.service";
 import { ContactCreateBody } from "@/lib/validation";
 
 export async function POST(req: Request, { params }: { params: Promise<{ id: string }> }) {

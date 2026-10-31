@@ -1,7 +1,7 @@
 import { notFound } from "next/navigation";
 import { LiveBoard } from "@/components/LiveBoard";
-import { pageSession } from "@/lib/session";
-import { getReferralView } from "@/lib/view";
+import { pageSession } from "@/lib/modules/auth/session.service";
+import { getReferralView } from "@/lib/modules/referral/view.service";
 import { ReferralRepository } from "@/lib/modules/referral/referral.repository";
 
 export const dynamic = "force-dynamic";

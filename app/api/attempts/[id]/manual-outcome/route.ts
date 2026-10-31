@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { handle, parseBody } from "@/lib/core/route";
-import { attemptFor } from "@/lib/scope";
-import { requireSession } from "@/lib/session";
+import { attemptFor } from "@/lib/modules/auth/scope.service";
+import { requireSession } from "@/lib/modules/auth/session.service";
 import { ManualOutcomeBody } from "@/lib/validation";
 import { CallService } from "@/lib/modules/call/call.service";
 

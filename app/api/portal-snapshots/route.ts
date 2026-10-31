@@ -1,8 +1,8 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { handle, parseBody } from "@/lib/core/route";
-import { addSnapshots, latestSnapshots } from "@/lib/portal";
-import { requireSession } from "@/lib/session";
+import { addSnapshots, latestSnapshots } from "@/lib/modules/portal/portal.service";
+import { requireSession } from "@/lib/modules/auth/session.service";
 
 // C4: readings from public bed portals (Aapat Setu, ICU Beds Saarthi, CHBMS …), entered by an admin or posted by a scraper.
 const Body = z.object({

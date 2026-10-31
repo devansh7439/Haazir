@@ -1,7 +1,7 @@
 import "server-only";
 import { now } from "@/lib/core/clock";
 import { json, one, q } from "@/lib/core/db";
-import { parseIntake, type ParsedIntake } from "@/lib/intakeParse";
+import { parseIntake, type ParsedIntake } from "@/lib/modules/intake/intake.helper";
 import type { CaseTemplate } from "@/lib/core/types";
 
 // WhatsApp referral drafts (C2). The transcript stays server-side; the console only ever sees `parsed`.

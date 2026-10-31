@@ -3,8 +3,8 @@ import { CALLBACK_MAX_MIN, INBOUND_MATCH_WINDOW_MIN, MAX_REDIALS_PER_FACILITY } 
 import { addMinutes, now } from "@/lib/core/clock";
 import { cleanParams, normalizeBedType, normalizeOutcome, normalizePhone, normalizeReferralCode, normalizeYesNo, parseMinutes } from "@/lib/core/normalize";
 import type { Attempt, Purpose } from "@/lib/core/types";
-import { checkPortalMismatch } from "@/lib/portal";
-import { spokenName } from "@/lib/summary";
+import { checkPortalMismatch } from "@/lib/modules/portal/portal.service";
+import { spokenName } from "@/lib/modules/referral/summary.helper";
 import { isAcceptance } from "@/lib/modules/call/call.helper";
 import { CallRepository } from "@/lib/modules/call/call.repository";
 import { CallService } from "@/lib/modules/call/call.service";

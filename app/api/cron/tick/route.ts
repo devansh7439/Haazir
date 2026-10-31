@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { timingSafeEqual } from "node:crypto";
 import { env } from "@/lib/core/config";
-import { runCronTick } from "@/lib/maintenance";
+import { runCronTick } from "@/lib/modules/maintenance/maintenance.service";
 import { createLogger } from "@/lib/core/logger";
 
 const log = createLogger("cron");

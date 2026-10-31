@@ -1,7 +1,7 @@
 import { TestMatrix } from "@/components/TestMatrix";
 import { q } from "@/lib/core/db";
-import { pageSession } from "@/lib/session";
-import type { MatrixEntry } from "@/lib/testMatrix";
+import { pageSession } from "@/lib/modules/auth/session.service";
+import type { MatrixEntry } from "@/lib/modules/demo/test-matrix.helper";
 
 export const dynamic = "force-dynamic";
 

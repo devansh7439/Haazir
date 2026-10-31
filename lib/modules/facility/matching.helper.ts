@@ -78,10 +78,6 @@ export function rankFacilities(
     .sort((a, b) => b.score - a.score || a.distance_km - b.distance_km);
 }
 
-export function etaMinutes(distanceKm: number, roadFactor = 1.4, speedKmph = 30): number {
-  return Math.round(((distanceKm * roadFactor) / speedKmph) * 60);
-}
-
 /**
  * Max ETA by acuity (C8): skip hospitals further than `maxMinutes` unless nothing nearer is eligible.
  * 0 disables the cap.

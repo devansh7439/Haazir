@@ -5,11 +5,11 @@ import { ReferralForm } from "@/components/ReferralForm";
 import { PageHeader, ReferralStatusPill, SimBadge } from "@/components/ui";
 import { env } from "@/lib/core/config";
 import { one, q } from "@/lib/core/db";
-import { getDraft, listDrafts } from "@/lib/intake";
+import { getDraft, listDrafts } from "@/lib/modules/intake/intake.service";
 import type { Capability, CaseTemplate } from "@/lib/core/types";
-import { mmss } from "@/lib/ui";
-import { pageSession } from "@/lib/session";
-import { listReferrals } from "@/lib/view";
+import { mmss } from "@/lib/ui/display";
+import { pageSession } from "@/lib/modules/auth/session.service";
+import { listReferrals } from "@/lib/modules/referral/view.service";
 
 export const dynamic = "force-dynamic";
 

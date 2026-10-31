@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { Db } from "@/lib/core/db";
 import { setClock } from "@/lib/core/clock";
 import { setDb } from "@/lib/core/db";
-import { advanceSimulation, scenario } from "@/lib/simulator";
+import { advanceSimulation, scenario } from "@/lib/modules/demo/simulator.service";
 import { DEFAULT_ORG_ID } from "@/lib/core/types";
 import { IDS, fakeClock, freshDb } from "./helpers";
 import { CallRepository } from "@/lib/modules/call/call.repository";

@@ -4,9 +4,9 @@ import type { Attempt, Facility, Referral, ReferralStatus } from "@/lib/core/typ
 import { facilityArea, isAcceptance, planRedial, stillOnLine, withoutDemoTag } from "@/lib/modules/call/call.helper";
 import type { RedialPlan } from "@/lib/modules/call/call.type";
 import { isTerminal } from "@/lib/modules/call/status.helper";
-import type { HandoffFacts } from "@/lib/messages";
+import type { HandoffFacts } from "@/lib/modules/handoff/message.helper";
 import type { EvaluationSnapshot, EvaluationStep, PatientDetails, ReferralCtx } from "@/lib/modules/referral/referral.type";
-import { buildShortSummary, describeWho } from "@/lib/summary";
+import { buildShortSummary, describeWho } from "@/lib/modules/referral/summary.helper";
 
 /** A hospital can be chosen while the search is open. */
 export const SELECTABLE: ReferralStatus[] = ["options_ready", "searching", "exhausted"];

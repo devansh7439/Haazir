@@ -1,8 +1,8 @@
 import { NextResponse } from "next/server";
 import { handle } from "@/lib/core/route";
-import { referralFor } from "@/lib/scope";
-import { requireSession } from "@/lib/session";
-import { advanceSimulation } from "@/lib/simulator";
+import { referralFor } from "@/lib/modules/auth/scope.service";
+import { requireSession } from "@/lib/modules/auth/session.service";
+import { advanceSimulation } from "@/lib/modules/demo/simulator.service";
 import { ReferralRepository } from "@/lib/modules/referral/referral.repository";
 import { ReferralService } from "@/lib/modules/referral/referral.service";
 import { WebhookService } from "@/lib/modules/call/webhook.service";

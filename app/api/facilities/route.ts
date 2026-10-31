@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { handle, parseBody } from "@/lib/core/route";
-import { createFacility, listFacilities } from "@/lib/directory";
-import { requireSession } from "@/lib/session";
+import { createFacility, listFacilities } from "@/lib/modules/facility/directory.service";
+import { requireSession } from "@/lib/modules/auth/session.service";
 import { FacilityCreateBody } from "@/lib/validation";
 
 export async function GET() {

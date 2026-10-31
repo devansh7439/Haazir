@@ -1,8 +1,8 @@
 import { NextResponse } from "next/server";
 import { handle } from "@/lib/core/route";
 import { now } from "@/lib/core/clock";
-import { addSnapshots } from "@/lib/portal";
-import { requireDemoAdmin } from "@/lib/session";
+import { addSnapshots } from "@/lib/modules/portal/portal.service";
+import { requireDemoAdmin } from "@/lib/modules/auth/session.service";
 import { DEFAULT_ORG_ID } from "@/lib/core/types";
 
 // Loads fictional portal readings for the demo story: Neem's portal row says ICU beds are free (its desk will say full),

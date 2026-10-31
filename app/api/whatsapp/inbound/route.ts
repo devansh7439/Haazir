@@ -1,6 +1,6 @@
 import { NextResponse, after } from "next/server";
 import { env } from "@/lib/core/config";
-import { handleInbound, parseMetaPayload, parseTwilioPayload, verifyMetaSignature, verifyTwilioSignature, type InboundMessage } from "@/lib/whatsappInbound";
+import { handleInbound, parseMetaPayload, parseTwilioPayload, verifyMetaSignature, verifyTwilioSignature, type InboundMessage } from "@/lib/modules/intake/inbound.service";
 import { createLogger } from "@/lib/core/logger";
 
 const log = createLogger("whatsapp");

@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { handle } from "@/lib/core/route";
-import { resetDemo } from "@/lib/demo";
-import { requireDemoAdmin } from "@/lib/session";
+import { resetDemo } from "@/lib/modules/demo/demo.service";
+import { requireDemoAdmin } from "@/lib/modules/auth/session.service";
 
 export async function POST() {
   return handle(async () => {

@@ -2,7 +2,7 @@
 
 import { Loader2 } from "lucide-react";
 import { useState } from "react";
-import { safeNext } from "@/lib/safeNext";
+import { safeNext } from "@/lib/modules/auth/safe-next.helper";
 import { Logo } from "./ui";
 
 export function LoginForm({ mode }: { mode: "passcode" | "users" }) {

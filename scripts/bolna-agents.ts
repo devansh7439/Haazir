@@ -9,7 +9,7 @@
 // Read the VERIFY note in lib/bolnaAgents.ts before the first --apply.
 import fs from "node:fs";
 import path from "node:path";
-import { AGENT_ENV, buildAgent, parsePromptDoc, type ToolDef } from "../lib/bolnaAgents";
+import { AGENT_ENV, buildAgent, parsePromptDoc, type ToolDef } from "../lib/integrations/bolna/bolna.agents";
 
 function arg(name: string, fallback: string): string {
   const i = process.argv.indexOf(`--${name}`);

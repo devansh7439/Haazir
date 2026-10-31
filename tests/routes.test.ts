@@ -20,10 +20,10 @@ vi.mock("next/headers", () => ({
 import type { Db } from "@/lib/core/db";
 import { setClock } from "@/lib/core/clock";
 import { setDb } from "@/lib/core/db";
-import { SESSION_COOKIE } from "@/lib/gate";
-import { hashPassword } from "@/lib/password";
-import { purgeIdentifiers } from "@/lib/maintenance";
-import { advanceSimulation, scenario } from "@/lib/simulator";
+import { SESSION_COOKIE } from "@/lib/modules/auth/gate.helper";
+import { hashPassword } from "@/lib/modules/auth/password.helper";
+import { purgeIdentifiers } from "@/lib/modules/maintenance/maintenance.service";
+import { advanceSimulation, scenario } from "@/lib/modules/demo/simulator.service";
 import { DEFAULT_ORG_ID } from "@/lib/core/types";
 import { IDS, fakeClock, freshDb } from "./helpers";
 

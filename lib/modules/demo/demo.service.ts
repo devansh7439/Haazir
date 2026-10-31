@@ -3,7 +3,7 @@ import { env } from "@/lib/core/config";
 import { now } from "@/lib/core/clock";
 import { getDb, one, q, readSql } from "@/lib/core/db";
 import { normalizePhone } from "@/lib/core/normalize";
-import { scenario } from "@/lib/simulator";
+import { scenario } from "@/lib/modules/demo/simulator.service";
 import type { Referral } from "@/lib/core/types";
 import { ApiError } from "@/lib/core/error";
 import { CallRepository } from "@/lib/modules/call/call.repository";

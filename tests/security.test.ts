@@ -25,9 +25,9 @@ vi.mock("next/headers", () => ({
 import type { Db } from "@/lib/core/db";
 import { migrate, setDb } from "@/lib/core/db";
 import { setClock } from "@/lib/core/clock";
-import { SESSION_COOKIE, signSession } from "@/lib/gate";
-import { hashPassword } from "@/lib/password";
-import { advanceSimulation, scenario } from "@/lib/simulator";
+import { SESSION_COOKIE, signSession } from "@/lib/modules/auth/gate.helper";
+import { hashPassword } from "@/lib/modules/auth/password.helper";
+import { advanceSimulation, scenario } from "@/lib/modules/demo/simulator.service";
 import { redactNumbers } from "@/lib/core/normalize";
 import { DEFAULT_ORG_ID } from "@/lib/core/types";
 import { IDS, fakeClock, freshDb } from "./helpers";

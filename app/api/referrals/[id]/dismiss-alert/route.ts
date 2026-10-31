@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { handle, parseBody } from "@/lib/core/route";
-import { referralFor } from "@/lib/scope";
-import { requireSession } from "@/lib/session";
+import { referralFor } from "@/lib/modules/auth/scope.service";
+import { requireSession } from "@/lib/modules/auth/session.service";
 import { DismissAlertBody } from "@/lib/validation";
 import { EventRepository } from "@/lib/modules/event/event.repository";
 

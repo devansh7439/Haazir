@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { buildShortSummary, buildSpokenSummary, checkNote, describeWho, joinSpoken, normaliseNote, spokenCode, spokenName } from "@/lib/summary";
+import { buildShortSummary, buildSpokenSummary, checkNote, describeWho, joinSpoken, normaliseNote, spokenCode, spokenName } from "@/lib/modules/referral/summary.helper";
 
 const KRAIT = {
   age_value: 34,

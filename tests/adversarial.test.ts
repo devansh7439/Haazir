@@ -14,12 +14,12 @@ vi.mock("next/headers", () => ({
 import type { Db } from "@/lib/core/db";
 import { setClock } from "@/lib/core/clock";
 import { setDb } from "@/lib/core/db";
-import { clientIp } from "@/lib/bolnaAuth";
-import { hashPassword } from "@/lib/password";
-import { parseQuickReply } from "@/lib/quickReply";
-import { safeNext } from "@/lib/safeNext";
-import { sessionFromCookies } from "@/lib/session";
-import { advanceSimulation, scenario } from "@/lib/simulator";
+import { clientIp } from "@/lib/integrations/bolna/bolna.auth";
+import { hashPassword } from "@/lib/modules/auth/password.helper";
+import { parseQuickReply } from "@/lib/modules/intake/quick-reply.helper";
+import { safeNext } from "@/lib/modules/auth/safe-next.helper";
+import { sessionFromCookies } from "@/lib/modules/auth/session.service";
+import { advanceSimulation, scenario } from "@/lib/modules/demo/simulator.service";
 import { IDS, fakeClock, freshDb } from "./helpers";
 import * as loginRoute from "@/app/api/login/route";
 import * as referralsRoute from "@/app/api/referrals/route";

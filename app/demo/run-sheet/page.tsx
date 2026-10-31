@@ -1,8 +1,8 @@
 import Link from "next/link";
 import { Rich } from "@/components/Rich";
 import { PageHeader, Stat } from "@/components/ui";
-import { fillPlaceholders, measuredNumbers, readPitchDoc, tableUnder } from "@/lib/pitch";
-import { pageSession } from "@/lib/session";
+import { fillPlaceholders, measuredNumbers, readPitchDoc, tableUnder } from "@/lib/modules/demo/pitch.helper";
+import { pageSession } from "@/lib/modules/auth/session.service";
 
 export const dynamic = "force-dynamic";
 

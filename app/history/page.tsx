@@ -1,9 +1,9 @@
 import { Plus } from "lucide-react";
 import Link from "next/link";
 import { PageHeader, ReferralStatusPill, SimBadge, Stat } from "@/components/ui";
-import { mmss } from "@/lib/ui";
-import { pageSession } from "@/lib/session";
-import { listReferrals } from "@/lib/view";
+import { mmss } from "@/lib/ui/display";
+import { pageSession } from "@/lib/modules/auth/session.service";
+import { listReferrals } from "@/lib/modules/referral/view.service";
 
 export const dynamic = "force-dynamic";
 

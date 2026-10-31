@@ -1,5 +1,5 @@
 import { NextResponse, after } from "next/server";
-import { webhookAuthorized } from "@/lib/bolnaAuth";
+import { webhookAuthorized } from "@/lib/integrations/bolna/bolna.auth";
 import { createLogger } from "@/lib/core/logger";
 import { WebhookService } from "@/lib/modules/call/webhook.service";
 

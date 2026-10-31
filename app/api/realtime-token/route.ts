@@ -2,7 +2,7 @@ import { SignJWT } from "jose";
 import { NextResponse } from "next/server";
 import { handle } from "@/lib/core/route";
 import { env } from "@/lib/core/config";
-import { requireSession } from "@/lib/session";
+import { requireSession } from "@/lib/modules/auth/session.service";
 
 // Short-lived Supabase JWT carrying the caller's org_id, so Realtime only delivers rows the org-scoped RLS
 // policies allow (supabase/migrations/0003). Without SUPABASE_JWT_SECRET the board falls back to polling.

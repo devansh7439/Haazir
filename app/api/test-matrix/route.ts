@@ -3,8 +3,8 @@ import { z } from "zod";
 import { handle, parseBody } from "@/lib/core/route";
 import { now } from "@/lib/core/clock";
 import { one, q } from "@/lib/core/db";
-import { requireSession } from "@/lib/session";
-import type { MatrixEntry } from "@/lib/testMatrix";
+import { requireSession } from "@/lib/modules/auth/session.service";
+import type { MatrixEntry } from "@/lib/modules/demo/test-matrix.helper";
 
 const Body = z.object({
   pass: z.union([z.literal(1), z.literal(2)]),

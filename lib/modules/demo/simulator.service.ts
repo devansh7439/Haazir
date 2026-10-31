@@ -1,6 +1,6 @@
 import "server-only";
 import scenarioJson from "@/scenarios/demo-krait-bite.json";
-import { isSimulatedExecution } from "@/lib/bolna";
+import { isSimulatedExecution } from "@/lib/integrations/bolna/bolna.client";
 import { secondsBetween } from "@/lib/core/clock";
 import { canTransition, isTerminal, mapBolnaStatus } from "@/lib/modules/call/status.helper";
 import type { Attempt } from "@/lib/core/types";

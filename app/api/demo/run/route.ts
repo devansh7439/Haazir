@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { handle, parseBody } from "@/lib/core/route";
-import { runDemoReferral } from "@/lib/demo";
-import { requireDemoAdmin } from "@/lib/session";
+import { runDemoReferral } from "@/lib/modules/demo/demo.service";
+import { requireDemoAdmin } from "@/lib/modules/auth/session.service";
 import { DemoRunBody } from "@/lib/validation";
 
 // Starts the demo-krait-bite referral, live or simulated.

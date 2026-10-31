@@ -1,8 +1,8 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { handle, parseBody } from "@/lib/core/route";
-import { referralFor } from "@/lib/scope";
-import { requireSession } from "@/lib/session";
+import { referralFor } from "@/lib/modules/auth/scope.service";
+import { requireSession } from "@/lib/modules/auth/session.service";
 import { ReferralService } from "@/lib/modules/referral/referral.service";
 
 export async function POST(req: Request, { params }: { params: Promise<{ id: string }> }) {

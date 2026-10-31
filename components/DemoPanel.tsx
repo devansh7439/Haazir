@@ -4,8 +4,8 @@ import { CheckCircle2, Circle, Database, IdCard, ListChecks, Loader2, ScrollText
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
-import type { demoStatus } from "@/lib/demo";
-import { LANGUAGE_LABEL, shortName } from "@/lib/ui";
+import type { demoStatus } from "@/lib/modules/demo/demo.service";
+import { LANGUAGE_LABEL, shortName } from "@/lib/ui/display";
 import { PageHeader, cx } from "./ui";
 
 type Status = Awaited<ReturnType<typeof demoStatus>>;

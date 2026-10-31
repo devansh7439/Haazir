@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { handle } from "@/lib/core/route";
-import { listDrafts } from "@/lib/intake";
-import { requireSession } from "@/lib/session";
+import { listDrafts } from "@/lib/modules/intake/intake.service";
+import { requireSession } from "@/lib/modules/auth/session.service";
 
 export async function GET() {
   return handle(async () => {

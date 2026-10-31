@@ -1,10 +1,10 @@
 import Link from "next/link";
 import { PrintButton } from "@/components/PrintButton";
 import { PageHeader } from "@/components/ui";
-import { demoStatus } from "@/lib/demo";
-import { JUDGE_CARDS } from "@/lib/judgeCards";
-import { pageSession } from "@/lib/session";
-import { shortName } from "@/lib/ui";
+import { demoStatus } from "@/lib/modules/demo/demo.service";
+import { JUDGE_CARDS } from "@/lib/modules/demo/judge-cards.helper";
+import { pageSession } from "@/lib/modules/auth/session.service";
+import { shortName } from "@/lib/ui/display";
 
 export const dynamic = "force-dynamic";
 

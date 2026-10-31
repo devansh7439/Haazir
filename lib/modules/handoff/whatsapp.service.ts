@@ -3,7 +3,7 @@ import { env } from "@/lib/core/config";
 import { now } from "@/lib/core/clock";
 import { q } from "@/lib/core/db";
 import { isE164, maskPhone } from "@/lib/core/normalize";
-import type { Rendered } from "@/lib/messages";
+import type { Rendered } from "@/lib/modules/handoff/message.helper";
 import { EventRepository } from "@/lib/modules/event/event.repository";
 
 // Provider adapter: none (stored as simulated, shown in the UI) | meta | twilio.

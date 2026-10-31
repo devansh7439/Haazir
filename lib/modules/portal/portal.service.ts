@@ -1,7 +1,7 @@
 import "server-only";
 import { now } from "@/lib/core/clock";
 import { one, q } from "@/lib/core/db";
-import { portalMismatch } from "@/lib/portalCheck";
+import { portalMismatch } from "@/lib/modules/portal/portal.helper";
 import type { Attempt } from "@/lib/core/types";
 import { EventRepository } from "@/lib/modules/event/event.repository";
 

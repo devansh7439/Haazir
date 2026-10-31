@@ -1,13 +1,13 @@
 import { timingSafeEqual } from "node:crypto";
 import { NextResponse } from "next/server";
 import { errorResponse, handle, parseBody } from "@/lib/core/route";
-import { clientIp } from "@/lib/bolnaAuth";
+import { clientIp } from "@/lib/integrations/bolna/bolna.auth";
 import { env } from "@/lib/core/config";
 import { now } from "@/lib/core/clock";
 import { one, q } from "@/lib/core/db";
-import { GATE_COOKIE, SESSION_COOKIE, SESSION_TTL_S, gateToken, signSession } from "@/lib/gate";
-import { verifyPassword } from "@/lib/password";
-import { WINDOW_MIN, clearFailures, isThrottled, recordFailure } from "@/lib/throttle";
+import { GATE_COOKIE, SESSION_COOKIE, SESSION_TTL_S, gateToken, signSession } from "@/lib/modules/auth/gate.helper";
+import { verifyPassword } from "@/lib/modules/auth/password.helper";
+import { WINDOW_MIN, clearFailures, isThrottled, recordFailure } from "@/lib/modules/auth/throttle.repository";
 import { LoginBody } from "@/lib/validation";
 
 const cookieOpts = (maxAge: number) => ({

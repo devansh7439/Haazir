@@ -1,9 +1,9 @@
 import { NextResponse } from "next/server";
 import { handle, parseBody } from "@/lib/core/route";
-import { markDraftUsed } from "@/lib/intake";
-import { requireSession } from "@/lib/session";
+import { markDraftUsed } from "@/lib/modules/intake/intake.service";
+import { requireSession } from "@/lib/modules/auth/session.service";
 import { ReferralBody } from "@/lib/validation";
-import { listReferrals } from "@/lib/view";
+import { listReferrals } from "@/lib/modules/referral/view.service";
 import { ReferralService } from "@/lib/modules/referral/referral.service";
 
 export async function GET() {

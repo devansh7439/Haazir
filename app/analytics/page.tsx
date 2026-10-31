@@ -1,9 +1,9 @@
 import Link from "next/link";
 import { HourChart } from "@/components/HourChart";
 import { PageHeader, Stat, cx } from "@/components/ui";
-import { hospitalStats, hourStats } from "@/lib/analytics";
-import { pageSession } from "@/lib/session";
-import { clock, mmss, shortName } from "@/lib/ui";
+import { hospitalStats, hourStats } from "@/lib/modules/analytics/analytics.service";
+import { pageSession } from "@/lib/modules/auth/session.service";
+import { clock, mmss, shortName } from "@/lib/ui/display";
 
 export const dynamic = "force-dynamic";
 

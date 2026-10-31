@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { handle, parseBody } from "@/lib/core/route";
-import { testCall } from "@/lib/demo";
-import { requireDemoAdmin } from "@/lib/session";
+import { testCall } from "@/lib/modules/demo/demo.service";
+import { requireDemoAdmin } from "@/lib/modules/auth/session.service";
 import { TestCallBody } from "@/lib/validation";
 
 export async function POST(req: Request) {

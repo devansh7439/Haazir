@@ -1,6 +1,6 @@
 import "server-only";
 import { NextResponse, after } from "next/server";
-import { functionAuthorized } from "@/lib/bolnaAuth";
+import { functionAuthorized } from "@/lib/integrations/bolna/bolna.auth";
 import { createLogger } from "@/lib/core/logger";
 import { WebhookLogRepository } from "@/lib/modules/call/webhook.repository";
 import type { FunctionResult } from "@/lib/modules/call/call.type";

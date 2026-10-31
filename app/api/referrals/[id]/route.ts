@@ -1,8 +1,8 @@
 import { NextResponse } from "next/server";
 import { errorResponse, handle } from "@/lib/core/route";
-import { referralFor } from "@/lib/scope";
-import { requireSession } from "@/lib/session";
-import { getReferralView } from "@/lib/view";
+import { referralFor } from "@/lib/modules/auth/scope.service";
+import { requireSession } from "@/lib/modules/auth/session.service";
+import { getReferralView } from "@/lib/modules/referral/view.service";
 
 export async function GET(_req: Request, { params }: { params: Promise<{ id: string }> }) {
   return handle(async () => {

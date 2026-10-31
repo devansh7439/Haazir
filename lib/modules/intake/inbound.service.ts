@@ -3,12 +3,12 @@ import { createHmac, timingSafeEqual } from "node:crypto";
 import { env } from "@/lib/core/config";
 import { addMinutes, now } from "@/lib/core/clock";
 import { one, q } from "@/lib/core/db";
-import { createDraft } from "@/lib/intake";
+import { createDraft } from "@/lib/modules/intake/intake.service";
 import { normalizePhone } from "@/lib/core/normalize";
-import { parseQuickReply } from "@/lib/quickReply";
-import { downloadMetaMedia, downloadTwilioMedia, transcribe } from "@/lib/stt";
-import { spokenName } from "@/lib/summary";
-import { replyWhatsApp } from "@/lib/whatsapp";
+import { parseQuickReply } from "@/lib/modules/intake/quick-reply.helper";
+import { downloadMetaMedia, downloadTwilioMedia, transcribe } from "@/lib/integrations/sarvam/sarvam.stt";
+import { spokenName } from "@/lib/modules/referral/summary.helper";
+import { replyWhatsApp } from "@/lib/modules/handoff/whatsapp.service";
 import { createLogger } from "@/lib/core/logger";
 import { FunctionService } from "@/lib/modules/call/function.service";
 

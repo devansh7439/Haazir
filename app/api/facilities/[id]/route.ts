@@ -1,8 +1,8 @@
 import { NextResponse } from "next/server";
 import { handle, parseBody } from "@/lib/core/route";
-import { patchFacility } from "@/lib/directory";
-import { facilityFor } from "@/lib/scope";
-import { requireSession } from "@/lib/session";
+import { patchFacility } from "@/lib/modules/facility/directory.service";
+import { facilityFor } from "@/lib/modules/auth/scope.service";
+import { requireSession } from "@/lib/modules/auth/session.service";
 import { FacilityPatchBody } from "@/lib/validation";
 
 export async function PATCH(req: Request, { params }: { params: Promise<{ id: string }> }) {

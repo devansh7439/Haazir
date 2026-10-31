@@ -3,7 +3,7 @@ import { cookies } from "next/headers";
 import { notFound, redirect } from "next/navigation";
 import { env } from "@/lib/core/config";
 import { one } from "@/lib/core/db";
-import { GATE_COOKIE, SESSION_COOKIE, gateToken, verifySession } from "@/lib/gate";
+import { GATE_COOKIE, SESSION_COOKIE, gateToken, verifySession } from "@/lib/modules/auth/gate.helper";
 import { DEFAULT_ORG_ID } from "@/lib/core/types";
 import { ApiError } from "@/lib/core/error";
 

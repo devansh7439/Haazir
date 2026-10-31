@@ -2,7 +2,7 @@
 // Deterministic keyword rules, no LLM: the doctor always reviews the form before anything is called.
 // The note is only kept when the identifier guard finds nothing at all, so drafts never carry names or numbers.
 
-import { checkNote } from "@/lib/summary";
+import { checkNote } from "@/lib/modules/referral/summary.helper";
 import type { Acuity, AgeUnit, Sex } from "@/lib/core/types";
 
 export interface ParsedIntake {
