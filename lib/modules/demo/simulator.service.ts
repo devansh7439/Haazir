@@ -33,6 +33,7 @@ const ScenarioSchema = z.object({
   doctor_selects: z.object({ facility_id: z.string() }),
 });
 
+/** The scripted demo story, checked against its schema when the module loads. */
 export const scenario = ScenarioSchema.parse(scenarioJson);
 
 /** Hospitals not in the script decline politely, so any referral can be simulated. */
@@ -53,6 +54,7 @@ const REDIAL_AVAILABILITY: Step[] = [
   { at_s: 29, status: "completed", termination_reason: "agent_ended_call" },
 ];
 
+/** The scripted steps for a call: the hold or release script, or the hospital's own availability script. */
 export function scriptFor(a: Attempt): Step[] {
   if (a.purpose === "hold_confirm") return scenario.hold_confirm.steps;
   if (a.purpose === "release" || a.purpose === "family_update") return scenario.release.steps;

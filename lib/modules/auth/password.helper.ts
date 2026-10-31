@@ -9,6 +9,7 @@ const R = 8;
 const P = 1;
 const LEN = 32;
 
+/** A salted scrypt hash of the password, in a self-describing string. Throws for passwords under 10 characters. */
 export async function hashPassword(password: string): Promise<string> {
   if (password.length < 10) throw new Error("Passwords must be at least 10 characters");
   const salt = randomBytes(16);
@@ -16,6 +17,7 @@ export async function hashPassword(password: string): Promise<string> {
   return `scrypt$${N}$${R}$${P}$${salt.toString("base64")}$${hash.toString("base64")}`;
 }
 
+/** Whether the password matches a stored hash, compared in constant time. False for any unreadable hash. */
 export async function verifyPassword(password: string, stored: string): Promise<boolean> {
   const parts = stored.split("$");
   if (parts.length !== 6 || parts[0] !== "scrypt") return false;

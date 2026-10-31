@@ -14,7 +14,9 @@ export const SELECTABLE: ReferralStatus[] = ["options_ready", "searching", "exha
 export const CONFIRMABLE: ReferralStatus[] = [...SELECTABLE, "confirming"];
 /** Redials and callbacks only happen while the search is open. */
 export const ACTIVE: ReferralStatus[] = ["searching", "options_ready", "exhausted"];
+/** Referral statuses from which the doctor can cancel. */
 export const CANCELLABLE: ReferralStatus[] = ["searching", "options_ready", "confirming", "confirmed", "exhausted"];
+/** Referral statuses from which the doctor can close the referral. */
 export const CLOSABLE: ReferralStatus[] = [...CANCELLABLE, "cancelled"];
 
 /** The case in one short spoken sentence ("Man aged 34, suspected snakebite, critical"), for hold and release calls. */

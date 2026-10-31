@@ -36,6 +36,7 @@ const ACUITY: Array<[Acuity, RegExp]> = [
   ["stable", /\b(stable|stabili[sz]ed)\b/i],
 ];
 
+/** Reads a doctor's free-text WhatsApp message into a form draft. Drops a note that may hold a name or number. */
 export function parseIntake(text: string, templates: Array<{ case_type: string; default_capabilities: string[] }>): ParsedIntake {
   const t = (text ?? "").replace(/\s+/g, " ").trim();
   const matched: string[] = [];

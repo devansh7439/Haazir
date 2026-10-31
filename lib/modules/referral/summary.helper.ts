@@ -13,6 +13,7 @@ export interface SummaryInput {
   needs_spoken_list: string[]; // capabilities.spoken_en, in order
 }
 
+/** How the patient is described aloud, for example "Man aged 34". */
 export function describeWho(age: number | null | undefined, unit: AgeUnit, sex: Sex): string {
   const male = sex === "male";
   const female = sex === "female";
@@ -39,6 +40,7 @@ const EXPANSIONS: Array<[RegExp, string]> = [
   [/\s*\+\s*/g, " and "],
 ];
 
+/** The note made speakable: abbreviations expanded, a capital first letter and a full stop. */
 export function normaliseNote(note: string | null | undefined): string {
   let text = (note ?? "").replace(/\s+/g, " ").trim();
   if (!text) return "";
@@ -49,12 +51,14 @@ export function normaliseNote(note: string | null | undefined): string {
   return text;
 }
 
+/** A list read aloud: "a, b and c". */
 export function joinSpoken(items: string[]): string {
   if (items.length === 0) return "";
   if (items.length === 1) return items[0];
   return `${items.slice(0, -1).join(", ")} and ${items[items.length - 1]}`;
 }
 
+/** The exact sentence the voice agent reads to every hospital. Built from fields, never by an LLM (CLAUDE.md rule 6). */
 export function buildSpokenSummary(input: SummaryInput): string {
   const who = describeWho(input.age_value, input.age_unit, input.sex);
   const parts = [`${who}, ${input.case_spoken}, ${input.acuity}.`];
@@ -87,6 +91,7 @@ const AADHAAR_LIKE = /\d{4}\s?\d{4}\s?\d{4}/;
 const EMAIL = /[^\s@]+@[^\s@]+\.[^\s@]+/;
 const HONORIFIC_NAME = /\b(?:Mr|Mrs|Ms|Shri|Smt|Kumari)\.?\s+[A-Z][a-z]+/;
 
+/** Whether a clinical note may be read aloud: blocked when it looks like a phone number, an ID, an email or a name. */
 export function checkNote(note: string | null | undefined): NoteCheck {
   const text = note ?? "";
   const errors: string[] = [];

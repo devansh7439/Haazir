@@ -11,6 +11,7 @@ export interface QuickReply {
 const YES = /^(yes|haan|haa|ji haan|houdu|accept(?:ed)?|we accept)\b/i;
 const NO = /^(no|n|nahi|nahin|illa|decline[d]?|full|cannot|can't|cant)\b/i;
 
+/** A hospital desk's one-word yes or no (and the reference code, if given); null for anything else. A plain "ok" is never a yes. */
 export function parseQuickReply(text: string): QuickReply | null {
   const t = (text ?? "").replace(/\s+/g, " ").trim();
   const yes = t.match(YES);

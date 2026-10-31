@@ -8,6 +8,7 @@ export interface JudgeCard {
   lines: string[];
 }
 
+/** The printed cards for the people playing the hospital desks in the stage demo. */
 export const JUDGE_CARDS: JudgeCard[] = [
   {
     card: 1, facility_id: "00000000-0000-4000-8000-000000000103", role: "casualty desk", language: "Kannada speaker needed",

@@ -21,6 +21,7 @@ export interface Session {
 
 const PASSCODE_SESSION: Session = { uid: null, org: DEFAULT_ORG_ID, role: "admin", rid: null, name: null, email: null };
 
+/** The signed-in session from the request's cookies, or null. In users mode the account must still be active. */
 export async function sessionFromCookies(get: (name: string) => string | undefined): Promise<Session | null> {
   if (env.authMode === "users") {
     const claims = await verifySession(get(SESSION_COOKIE), env.sessionSecret);
@@ -36,6 +37,7 @@ export async function sessionFromCookies(get: (name: string) => string | undefin
   return get(GATE_COOKIE) === (await gateToken(passcode)) ? PASSCODE_SESSION : null;
 }
 
+/** The session for the current request, or null when nobody is signed in. */
 export async function getSession(): Promise<Session | null> {
   const jar = await cookies();
   return sessionFromCookies((name) => jar.get(name)?.value);
@@ -57,6 +59,7 @@ export async function pageSession(opts: { admin?: boolean; demo?: boolean } = {}
   return s;
 }
 
+/** The session, or a 401 when nobody is signed in and a 403 when an admin is needed and the user is not one. */
 export async function requireSession(opts: { admin?: boolean } = {}): Promise<Session> {
   const s = await getSession();
   if (!s) throw ApiError.unauthorized("Sign in to the console");

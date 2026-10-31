@@ -36,6 +36,7 @@ export function chooseContact(contacts: Contact[], exclude: Set<string> = new Se
   return usable[0] ?? null;
 }
 
+/** A 0 to 1 score: drive time (50%), past acceptance (30%) and how often the desk answers (20%, halved for phone-menu lines). */
 export function scoreFacility(row: EligibleRow, contact: Contact | null): number {
   const time = 1 - Math.min(row.eta_minutes / 90, 1);
   const acceptance = (row.accepted + 1) / (row.answered + 2);
@@ -44,6 +45,7 @@ export function scoreFacility(row: EligibleRow, contact: Contact | null): number
   return 0.5 * time + 0.3 * acceptance + 0.2 * answer;
 }
 
+/** The short reasons shown for a hospital's rank, for example "has ICU bed + ventilator". */
 export function rankReasons(row: EligibleRow, contact: Contact | null, needLabels: string[]): string[] {
   const reasons = [`${row.eta_minutes} min away`];
   // "Ventilator" → "ventilator", but keep "ICU bed" and "CT scan" as written.
@@ -54,6 +56,7 @@ export function rankReasons(row: EligibleRow, contact: Contact | null, needLabel
   return reasons;
 }
 
+/** Eligible hospitals best first, each with its chosen desk number and reasons. */
 export function rankFacilities(
   rows: EligibleRow[],
   contactsByFacility: Map<string, Contact[]>,

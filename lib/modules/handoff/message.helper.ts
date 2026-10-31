@@ -4,6 +4,7 @@
 
 import { maskPhone } from "@/lib/core/normalize";
 
+/** A bed type as written in messages. */
 export const BED_TYPE_LABEL: Record<string, string> = {
   icu_with_ventilator: "ICU + ventilator",
   icu: "ICU",
@@ -66,6 +67,7 @@ function transportLabel(t: string): string {
   return t === "private_vehicle" ? "private vehicle" : t === "ambulance" ? "ambulance" : "road";
 }
 
+/** The note for the hospital that accepted. It holds the patient's identifiers, so it is stored server-side only. */
 export function preArrivalNote(f: HandoffFacts): Rendered {
   const render = (name: string | null, phone: string) =>
     lines([
@@ -100,6 +102,7 @@ export function preArrivalNote(f: HandoffFacts): Rendered {
   };
 }
 
+/** The confirmation for the referring doctor: where the patient is going and whom to ask for. */
 export function doctorConfirmation(f: HandoffFacts): Rendered {
   const render = (desk: string) =>
     lines([
@@ -123,6 +126,7 @@ export function doctorConfirmation(f: HandoffFacts): Rendered {
   };
 }
 
+/** A Google Maps link to the point. */
 export function mapLink(lat: number, lng: number): string {
   return `https://www.google.com/maps/search/?api=1&query=${lat},${lng}`;
 }
@@ -136,6 +140,7 @@ const FAMILY: Record<string, (v: Record<string, string>) => string> = {
     `हाज़िर रेफ़रल ${v.code}: डॉ. ${v.doctor_name} ने मरीज़ के इलाज की व्यवस्था ${v.hospital_name} में की है। पता: ${v.hospital_address}। नक्शा: ${v.map_link}। कैज़ुअल्टी डेस्क पर यह संदेश दिखाएँ और ${v.contact_person} से मिलें।`,
 };
 
+/** The directions message for the family, in their language (English when unsupported). */
 export function familyMessage(f: HandoffFacts, language: string): Rendered {
   const lang = FAMILY[language] ? language : "en";
   const tpl = FAMILY[lang];

@@ -8,6 +8,7 @@ export interface MatrixRow {
   zeroTolerance?: boolean;
 }
 
+/** The 20 voice scenarios, each with the result it must produce. */
 export const TEST_MATRIX: MatrixRow[] = [
   { no: 1, scenario: "Clear yes in English, gives time and name", expected: "accepted, ready_in_minutes and contact_person filled", zeroTolerance: true },
   { no: 2, scenario: "Clear yes in Kannada", expected: "accepted; transcript in Kannada" },

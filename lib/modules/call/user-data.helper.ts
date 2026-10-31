@@ -4,6 +4,7 @@
 import { HOLD_BUFFER_MIN, TIMEZONE } from "@/lib/core/config";
 import { spokenCode, spokenName } from "@/lib/modules/referral/summary.helper";
 
+/** The sentence that opens a consented test call, by language. */
 export const CALL_PREFIX_TEST: Record<string, string> = {
   en: "This is a test call agreed with your hospital. ",
   hi: "यह आपके अस्पताल की अनुमति से किया गया एक टेस्ट कॉल है। ",
@@ -25,6 +26,7 @@ const BED_PHRASE: Record<string, string> = {
   ward: "the ward bed",
 };
 
+/** How the agent says a bed type aloud; "the bed" when it is unknown. */
 export function bedPhrase(bedType: string | null | undefined): string {
   return (bedType && BED_PHRASE[bedType]) || "the bed";
 }
@@ -51,6 +53,7 @@ function base(ctx: CallContext) {
   };
 }
 
+/** The `user_data` for an availability call. It carries no patient name or phone (CLAUDE.md rule 1). */
 export function availabilityUserData(
   ctx: CallContext,
   c: { case_summary: string; needs_spoken: string; eta_minutes: number | null },
@@ -86,6 +89,7 @@ export function holdConfirmUserData(
   };
 }
 
+/** The `user_data` for a call that tells a hospital it no longer needs to hold the bed. */
 export function releaseUserData(ctx: CallContext, c: { case_summary_short: string }): Record<string, string> {
   return { ...base(ctx), case_summary_short: c.case_summary_short };
 }

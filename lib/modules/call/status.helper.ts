@@ -2,6 +2,7 @@
 
 import type { AttemptStatus } from "@/lib/core/types";
 
+/** Statuses a call never leaves. */
 export const TERMINAL: ReadonlySet<AttemptStatus> = new Set(["completed", "no_answer", "busy", "failed", "canceled"]);
 
 const RANK: Record<AttemptStatus, number> = {
@@ -24,6 +25,7 @@ export interface MappedStatus {
   alert: StatusAlert;
 }
 
+/** Bolna's status as ours, or null for ones that change nothing (queued, scheduled). */
 export function mapBolnaStatus(raw: string | null | undefined): MappedStatus | null {
   switch ((raw ?? "").trim().toLowerCase()) {
     case "scheduled":
@@ -61,6 +63,7 @@ export function mapBolnaStatus(raw: string | null | undefined): MappedStatus | n
   }
 }
 
+/** Whether a call has reached a status it never leaves. */
 export function isTerminal(s: AttemptStatus): boolean {
   return TERMINAL.has(s);
 }

@@ -4,6 +4,7 @@ import { ThrottleRepository } from "@/lib/modules/auth/throttle.repository";
 
 /** Failures per IP or account within WINDOW_MIN before sign-in is refused. */
 export const LIMIT = 5;
+/** The length of the failure window, in minutes. */
 export const WINDOW_MIN = 10;
 /** Failures are kept this long, so the table stays small. */
 const KEEP_MS = 24 * 3600_000;
