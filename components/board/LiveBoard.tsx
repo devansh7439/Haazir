@@ -71,7 +71,7 @@ export function LiveBoard({ initial }: { initial: ReferralView }) {
       </Link>
 
       {/* Header: identity, live metrics, status. Sticky so the timer stays visible on phones. */}
-      <section className="card sticky top-0 z-[1000] -mt-2 px-4 py-3.5 sm:px-5">
+      <section className="card z-[1000] -mt-2 sm:sticky sm:top-0 px-4 py-3.5 sm:px-5">
         <div className="flex flex-wrap items-center gap-x-6 gap-y-3">
           <div className="w-full min-w-0 xl:w-auto xl:flex-1">
             <div className="flex flex-wrap items-center gap-2">

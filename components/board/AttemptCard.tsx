@@ -27,6 +27,8 @@ export function AttemptCard(props: {
   const terminal = callEnded(a.status);
   const canRedial = terminal && !accepted && ["searching", "options_ready", "exhausted"].includes(props.referralStatus);
   const muted = d.group === "not_available";
+  // The drive time is already in the card header.
+  const reasons = a.rank_reasons.filter((r) => !r.endsWith("min away"));
 
   return (
     <li className={cx("card relative overflow-hidden", props.isSelected && "ring-2 ring-green-600")}>
@@ -94,9 +96,9 @@ export function AttemptCard(props: {
         )}
         {a.contact_is_ivr && <p className="mt-2 text-xs text-amber-800">Phone menu line only. A direct desk number works better.</p>}
 
-        {!muted && a.rank_reasons.length > 0 && (
+        {!muted && reasons.length > 0 && (
           <div className="mt-3 flex flex-wrap gap-1">
-            {a.rank_reasons.map((reason) => <span key={reason} className="tag">{reason}</span>)}
+            {reasons.map((reason) => <span key={reason} className="tag">{reason}</span>)}
           </div>
         )}
 
