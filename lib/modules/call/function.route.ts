@@ -13,7 +13,10 @@ const log = createLogger("bolna-function");
 
 const SAFE = { result: "error", instruction: "Thank them for their help and end the call." };
 
-/** Runs one mid-call function for Bolna: checks the bearer secret, then always answers 200 with an instruction, even when the handler throws. */
+/**
+ * Runs one mid-call function for Bolna: checks the bearer secret, then always answers 200 with an instruction,
+ * even when the handler throws.
+ */
 export async function functionRoute(
   req: Request,
   name: string,

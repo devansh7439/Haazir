@@ -33,7 +33,8 @@ async function handleHospitalReply(m: InboundMessage): Promise<boolean> {
   }
   if (open.length > 1) {
     // Never guess which patient a bare "yes" is about.
-    await WhatsAppService.reply(m.from, `Haazir: there are ${open.length} open requests. Please reply with the reference: ${open.map((o) => o.code).join(", ")}.`);
+    const codes = open.map((o) => o.code).join(", ");
+    await WhatsAppService.reply(m.from, `Haazir: there are ${open.length} open requests. Please reply with the reference: ${codes}.`);
     return true;
   }
   const target = open[0];

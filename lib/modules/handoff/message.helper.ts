@@ -133,11 +133,20 @@ export function mapLink(lat: number, lng: number): string {
 
 const FAMILY: Record<string, (v: Record<string, string>) => string> = {
   en: (v) =>
-    `Haazir referral ${v.code}: Dr. ${v.doctor_name} has arranged treatment for the patient at ${v.hospital_name}. Address: ${v.hospital_address}. Map: ${v.map_link}. Show this message at the casualty desk and ask for ${v.contact_person}.`,
+    `Haazir referral ${v.code}: Dr. ${v.doctor_name} has arranged treatment for the patient at ${v.hospital_name}. ` +
+    `Address: ${v.hospital_address}. ` +
+    `Map: ${v.map_link}. ` +
+    `Show this message at the casualty desk and ask for ${v.contact_person}.`,
   kn: (v) =>
-    `ಹಾಜಿರ್ ರೆಫರಲ್ ${v.code}: ಡಾ. ${v.doctor_name} ಅವರು ರೋಗಿಗೆ ${v.hospital_name} ನಲ್ಲಿ ಚಿಕಿತ್ಸೆಯ ವ್ಯವಸ್ಥೆ ಮಾಡಿದ್ದಾರೆ. ವಿಳಾಸ: ${v.hospital_address}. ನಕ್ಷೆ: ${v.map_link}. ಕ್ಯಾಶುವಾಲ್ಟಿ ಡೆಸ್ಕ್‌ನಲ್ಲಿ ಈ ಸಂದೇಶವನ್ನು ತೋರಿಸಿ ಮತ್ತು ${v.contact_person} ಅವರನ್ನು ಕೇಳಿ.`,
+    `ಹಾಜಿರ್ ರೆಫರಲ್ ${v.code}: ಡಾ. ${v.doctor_name} ಅವರು ರೋಗಿಗೆ ${v.hospital_name} ನಲ್ಲಿ ಚಿಕಿತ್ಸೆಯ ವ್ಯವಸ್ಥೆ ಮಾಡಿದ್ದಾರೆ. ` +
+    `ವಿಳಾಸ: ${v.hospital_address}. ` +
+    `ನಕ್ಷೆ: ${v.map_link}. ` +
+    `ಕ್ಯಾಶುವಾಲ್ಟಿ ಡೆಸ್ಕ್‌ನಲ್ಲಿ ಈ ಸಂದೇಶವನ್ನು ತೋರಿಸಿ ಮತ್ತು ${v.contact_person} ಅವರನ್ನು ಕೇಳಿ.`,
   hi: (v) =>
-    `हाज़िर रेफ़रल ${v.code}: डॉ. ${v.doctor_name} ने मरीज़ के इलाज की व्यवस्था ${v.hospital_name} में की है। पता: ${v.hospital_address}। नक्शा: ${v.map_link}। कैज़ुअल्टी डेस्क पर यह संदेश दिखाएँ और ${v.contact_person} से मिलें।`,
+    `हाज़िर रेफ़रल ${v.code}: डॉ. ${v.doctor_name} ने मरीज़ के इलाज की व्यवस्था ${v.hospital_name} में की है। ` +
+    `पता: ${v.hospital_address}। ` +
+    `नक्शा: ${v.map_link}। ` +
+    `कैज़ुअल्टी डेस्क पर यह संदेश दिखाएँ और ${v.contact_person} से मिलें।`,
 };
 
 /** The directions message for the family, in their language (English when unsupported). */
@@ -160,7 +169,8 @@ export function familyMessage(f: HandoffFacts, language: string): Rendered {
     template: {
       key: "family",
       language: lang,
-      params: [vars.code, vars.doctor_name, vars.hospital_name, vars.hospital_address, vars.map_link, vars.contact_person].map(templateParam),
+      params: [vars.code, vars.doctor_name, vars.hospital_name, vars.hospital_address, vars.map_link, vars.contact_person]
+        .map(templateParam),
     },
   };
 }

@@ -67,7 +67,8 @@ async function request(method: string, path: string, body?: unknown): Promise<un
     data = { raw: text };
   }
   if (!res.ok) {
-    const message = String(field(data, "message") ?? field(data, "error") ?? field(data, "detail") ?? `Bolna ${method} ${path} failed with ${res.status}`);
+    const reason = field(data, "message") ?? field(data, "error") ?? field(data, "detail");
+    const message = String(reason ?? `Bolna ${method} ${path} failed with ${res.status}`);
     const retry = Number(field(data, "retry_after_seconds") ?? res.headers.get("retry-after"));
     throw new BolnaError(message, res.status, Number.isFinite(retry) && retry > 0 ? retry : null);
   }

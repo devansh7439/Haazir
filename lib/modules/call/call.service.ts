@@ -51,7 +51,8 @@ export const CallService = {
       origin_id: r.origin_facility_id,
       org_id: r.org_id,
     };
-    const pool = ranked ?? applyEtaCap(await FacilityService.rankEligible(params, ctx.needs.map((n) => n.label)), env.maxEtaMinutes(r.acuity)).kept;
+    const rankedNow = async () => FacilityService.rankEligible(params, ctx.needs.map((n) => n.label));
+    const pool = ranked ?? applyEtaCap(await rankedNow(), env.maxEtaMinutes(r.acuity)).kept;
     const pick = pool.filter((f) => !called.has(f.facility_id) && f.contact).slice(0, WAVE_SIZE);
     if (pick.length === 0) return [];
 
@@ -165,7 +166,8 @@ export const CallService = {
         bolna_status: res.status ?? "queued",
         dispatched_at: now(),
       });
-      await EventRepository.add(r.id, "call_queued", { facility_id: attempt.facility_id, purpose: attempt.purpose, status: "queued" }, attempt.id);
+      const queued = { facility_id: attempt.facility_id, purpose: attempt.purpose, status: "queued" };
+      await EventRepository.add(r.id, "call_queued", queued, attempt.id);
       return true;
     } catch (err) {
       await CallRepository.casStatus(attempt, "failed", { termination_reason: "dispatch_error", ended_at: now() });
@@ -322,7 +324,8 @@ export const CallService = {
     if (!a || a.purpose !== "availability") throw ApiError.notFound("Attempt not found");
     const r = await ReferralRepository.get(a.referral_id);
     if (!r || !ACTIVE.includes(r.status)) throw ApiError.conflict("NOT_ACTIVE", "Referral is not searching");
-    const siblings = (await CallRepository.listForReferral(r.id)).filter((x) => x.purpose === "availability" && x.facility_id === a.facility_id);
+    const all = await CallRepository.listForReferral(r.id);
+    const siblings = all.filter((x) => x.purpose === "availability" && x.facility_id === a.facility_id);
     if (siblings.filter((x) => x.parent_attempt_id).length >= MAX_REDIALS_PER_FACILITY) {
       throw ApiError.tooMany("REDIAL_LIMIT", "Already redialed this hospital twice for this referral");
     }

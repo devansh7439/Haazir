@@ -104,7 +104,9 @@ export function buildAgent(doc: PromptDoc, tools: ToolDef[], o: BuildOptions): R
   // The welcome message is per call language in the pack; Bolna takes one, so the start language's version is used and
   // the prompt tells the agent to follow the desk's language. Variables like {doctor_name} come from user_data.
   const welcome = doc.welcome[o.startLanguage] ?? doc.welcome.en ?? "";
-  const languageNote = "\n\n# Languages\nStart in the language of the welcome message. Switch to English, Hindi or Kannada as soon as the person does. In Hindi and Kannada use polite plural forms.";
+  const languageNote =
+    "\n\n# Languages\nStart in the language of the welcome message. Switch to English, Hindi or Kannada as soon as the person does. " +
+    "In Hindi and Kannada use polite plural forms.";
   return {
     agent_config: {
       agent_name: `Haazir · ${doc.title.replace(/^Agent:\s*Haazir\s*·\s*/i, "")}${o.suffix}`,

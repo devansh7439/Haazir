@@ -12,7 +12,17 @@ export const MessageRepository = {
     await q(
       `insert into messages (referral_id, channel, audience, to_number, body, provider, provider_message_id, status, error, created_at)
        values ($1, 'whatsapp', $2, $3, $4, $5, $6, $7, $8, $9)`,
-      [m.referral_id, m.audience, m.to ?? "unknown", m.body, m.result.provider, m.result.provider_message_id, m.result.status, m.result.error, now()],
+      [
+        m.referral_id,
+        m.audience,
+        m.to ?? "unknown",
+        m.body,
+        m.result.provider,
+        m.result.provider_message_id,
+        m.result.status,
+        m.result.error,
+        now(),
+      ],
     );
   },
 };

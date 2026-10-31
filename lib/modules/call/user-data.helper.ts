@@ -71,7 +71,13 @@ export function availabilityUserData(
  */
 export function holdConfirmUserData(
   ctx: CallContext,
-  c: { case_summary_short: string; bed_type: string | null; accepted_by: string | null; eta_minutes: number | null; whatsapp_on_file: boolean },
+  c: {
+    case_summary_short: string;
+    bed_type: string | null;
+    accepted_by: string | null;
+    eta_minutes: number | null;
+    whatsapp_on_file: boolean;
+  },
 ): Record<string, string> {
   const eta = c.eta_minutes ?? 0;
   const contact = c.accepted_by?.trim() || null;

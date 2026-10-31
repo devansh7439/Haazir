@@ -53,11 +53,15 @@ export const FacilityRepository = {
   getMany: (ids: string[]): Promise<Facility[]> => q<Facility>(`select * from facilities where id = any($1::uuid[])`, [ids]),
 
   /** Hospitals that can take the case: capable, in range, in the organisation, with an active number. Nearest first. */
-  eligible: (p: MatchParams): Promise<EligibleRow[]> => q<EligibleRow>(ELIGIBLE_SQL, [p.lat, p.lng, p.radius_km, p.needs, p.origin_id, p.org_id]),
+  eligible: (p: MatchParams): Promise<EligibleRow[]> =>
+    q<EligibleRow>(ELIGIBLE_SQL, [p.lat, p.lng, p.radius_km, p.needs, p.origin_id, p.org_id]),
 
   /** Each hospital's numbers, best first. */
   contactsByFacility: async (ids: string[]): Promise<Map<string, Contact[]>> => {
-    const rows = await q<Contact>(`select * from facility_contacts where facility_id = any($1::uuid[]) order by priority, created_at`, [ids]);
+    const rows = await q<Contact>(
+      `select * from facility_contacts where facility_id = any($1::uuid[]) order by priority, created_at`,
+      [ids],
+    );
     const map = new Map<string, Contact[]>();
     for (const c of rows) map.set(c.facility_id, [...(map.get(c.facility_id) ?? []), c]);
     return map;

@@ -73,7 +73,10 @@ const sendTwilio = async (to: string, body: string): Promise<SendResult> => {
     signal: AbortSignal.timeout(SEND_TIMEOUT_MS),
   });
   const data: unknown = await res.json().catch(() => ({}));
-  if (!res.ok) return { status: "failed", provider: "twilio", provider_message_id: null, error: textOf(field(data, "message")) ?? `HTTP ${res.status}` };
+  if (!res.ok) {
+    const error = textOf(field(data, "message")) ?? `HTTP ${res.status}`;
+    return { status: "failed", provider: "twilio", provider_message_id: null, error };
+  }
   return { status: "sent", provider: "twilio", provider_message_id: textOf(field(data, "sid")), error: null };
 };
 
@@ -83,7 +86,8 @@ export const WhatsAppClient = {
     try {
       return env.whatsappProvider === "meta" ? await sendMeta(to, m) : await sendTwilio(to, m.body);
     } catch (err) {
-      return { status: "failed", provider: env.whatsappProvider, provider_message_id: null, error: err instanceof Error ? err.message : String(err) };
+      const error = err instanceof Error ? err.message : String(err);
+      return { status: "failed", provider: env.whatsappProvider, provider_message_id: null, error };
     }
   },
 };

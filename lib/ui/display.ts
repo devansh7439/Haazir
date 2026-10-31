@@ -2,7 +2,15 @@ import type { AttemptStatus, Outcome, Purpose } from "@/lib/core/types";
 
 // Client-safe display helpers (docs/06-ui-spec.md §2.1). Colour never carries meaning alone: every state has an icon and text.
 
-export const LANGUAGE_LABEL: Record<string, string> = { en: "English", kn: "Kannada", hi: "Hindi", ta: "Tamil", te: "Telugu", ml: "Malayalam", mr: "Marathi" };
+export const LANGUAGE_LABEL: Record<string, string> = {
+  en: "English",
+  kn: "Kannada",
+  hi: "Hindi",
+  ta: "Tamil",
+  te: "Telugu",
+  ml: "Malayalam",
+  mr: "Marathi",
+};
 
 export const BED_LABEL: Record<string, string> = {
   icu_with_ventilator: "ICU + ventilator",
@@ -60,7 +68,8 @@ export interface Display {
 
 export function clock(d: string | Date | null | undefined): string {
   if (!d) return "";
-  return new Intl.DateTimeFormat("en-IN", { timeZone: "Asia/Kolkata", hour: "2-digit", minute: "2-digit", hour12: false }).format(new Date(d));
+  const format = { timeZone: "Asia/Kolkata", hour: "2-digit", minute: "2-digit", hour12: false } as const;
+  return new Intl.DateTimeFormat("en-IN", format).format(new Date(d));
 }
 
 export function mmss(totalSeconds: number): string {
@@ -82,13 +91,15 @@ export function attemptDisplay(a: AttemptLike, nowMs: number): Display {
     case "conditional":
       return { tone: "green-cond", icon: "check", text: "Accepted with a condition", group: "accepted" };
     case "declined":
-      return { tone: "red", icon: "x", text: `Declined${a.decline_reason ? ` · ${readableReason(a.decline_reason)}` : ""}`, group: "not_available" };
+      const why = a.decline_reason ? ` · ${readableReason(a.decline_reason)}` : "";
+      return { tone: "red", icon: "x", text: `Declined${why}`, group: "not_available" };
     case "needs_doctor":
       return { tone: "purple", icon: "phone", text: "Wants to talk to you", group: "waiting" };
     case "callback_later":
       return { tone: "slate", icon: "callback", text: `Calling back at ${clock(a.callback_due_at)}`, group: "waiting" };
     case "redirected":
-      return { tone: "slate", icon: "redirect", text: `Redirected${a.alternate_number ? ` to ${a.alternate_number}` : ""}`, group: "waiting" };
+      const to = a.alternate_number ? ` to ${a.alternate_number}` : "";
+      return { tone: "slate", icon: "redirect", text: `Redirected${to}`, group: "waiting" };
     case "ivr_blocked":
       return { tone: "dark", icon: "ban", text: "Phone menu: add a direct number", group: "not_available" };
     case "unclear":
@@ -184,7 +195,8 @@ export function eventText(e: EventLike, facilityName: (id: unknown) => string): 
     case "facility_selected":
       return `You selected ${f()}`;
     case "hold_confirmed":
-      return `${f()} confirmed the bed${p.contact_person ? ` · ask for ${p.contact_person}` : ""}${p.manual ? " (confirmed by phone)" : ""}`;
+      const ask = p.contact_person ? ` · ask for ${p.contact_person}` : "";
+      return `${f()} confirmed the bed${ask}${p.manual ? " (confirmed by phone)" : ""}`;
     case "hold_declined":
       return `${f()} can no longer take the patient`;
     case "handoff_sent":
@@ -204,7 +216,9 @@ export function eventText(e: EventLike, facilityName: (id: unknown) => string): 
     case "bed_request_sent":
       return `WhatsApp bed request to ${f()}: ${p.status}`;
     case "family_call_dispatched":
-      return p.reason === "missed_call" ? "Family gave a missed call: calling them back with the update" : "Calling the family with the update";
+      return p.reason === "missed_call"
+        ? "Family gave a missed call: calling them back with the update"
+        : "Calling the family with the update";
     case "status_recovered":
       return `${f()}: call status recovered from Bolna (missed webhook)`;
     case "alert":

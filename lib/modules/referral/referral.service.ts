@@ -202,7 +202,9 @@ export const ReferralService = {
     if (!a || a.referral_id !== r.id || a.purpose !== "availability" || !isAcceptance(a)) {
       throw ApiError.conflict("ATTEMPT_NOT_ACCEPTED", "That hospital has not accepted");
     }
-    if (a.needs_review && !force) throw ApiError.conflict("NEEDS_REVIEW", "The answer is unclear: listen to the recording before selecting");
+    if (a.needs_review && !force) {
+      throw ApiError.conflict("NEEDS_REVIEW", "The answer is unclear: listen to the recording before selecting");
+    }
     const selection = { status: "confirming" as const, selected_attempt_id: a.id, selected_facility_id: a.facility_id };
     const updated = await ReferralRepository.update(r.id, selection, SELECTABLE);
     if (!updated) throw ApiError.conflict("NOT_SELECTABLE", "The referral changed; try again");
@@ -296,7 +298,9 @@ export const ReferralService = {
       confirmed_at: now(),
       hold_expires_at: holdUntil(now(), a.eta_minutes),
     };
-    if (!(await ReferralRepository.update(r.id, fields, CONFIRMABLE))) throw ApiError.conflict("NOT_CONFIRMABLE", "The referral changed; try again");
+    if (!(await ReferralRepository.update(r.id, fields, CONFIRMABLE))) {
+      throw ApiError.conflict("NOT_CONFIRMABLE", "The referral changed; try again");
+    }
     await EventRepository.add(r.id, "hold_confirmed", { facility_id: a.facility_id, contact_person: contactPerson, manual: true }, a.id);
     return async () => {
       await ReferralService.sendHandoff(r.id);
@@ -317,10 +321,17 @@ export const ReferralService = {
       CallRepository.latestConfirmedHold(r.id),
     ]);
     if (!selected || !facility) return;
-    const facts = handoffFacts({ ctx, selected, facility, patient, contactPerson: hold?.contact_person || selected.contact_person, now: now() });
+    const contactPerson = hold?.contact_person || selected.contact_person;
+    const facts = handoffFacts({ ctx, selected, facility, patient, contactPerson, now: now() });
     const simulated = r.is_simulated;
     const prearrival = preArrivalNote(facts);
-    await WhatsAppService.send({ referral_id: r.id, audience: "receiving_facility", to: facility.whatsapp_number, rendered: prearrival, simulated });
+    await WhatsAppService.send({
+      referral_id: r.id,
+      audience: "receiving_facility",
+      to: facility.whatsapp_number,
+      rendered: prearrival,
+      simulated,
+    });
     await ReferralRepository.markSharedWithFacility(r.id);
     await WhatsAppService.send({
       referral_id: r.id,

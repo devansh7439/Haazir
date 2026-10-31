@@ -40,7 +40,11 @@ export const scenario = ScenarioSchema.parse(scenarioJson);
 const DEFAULT_AVAILABILITY: Step[] = [
   { at_s: 3, status: "ringing" },
   { at_s: 8, status: "in-progress" },
-  { at_s: 24, function: "record-response", params: { outcome: "declined", bed_type: "none", decline_reason: "full: no bed free right now" } },
+  {
+    at_s: 24,
+    function: "record-response",
+    params: { outcome: "declined", bed_type: "none", decline_reason: "full: no bed free right now" },
+  },
   { at_s: 27, status: "call-disconnected" },
   { at_s: 30, status: "completed", termination_reason: "agent_ended_call" },
 ];
@@ -52,7 +56,13 @@ const REDIAL_AVAILABILITY: Step[] = [
   {
     at_s: 22,
     function: "record-response",
-    params: { outcome: "accepted", bed_type: "icu", specialist_available: "on_call", ready_in_minutes: "15", contact_person: "Duty doctor" },
+    params: {
+      outcome: "accepted",
+      bed_type: "icu",
+      specialist_available: "on_call",
+      ready_in_minutes: "15",
+      contact_person: "Duty doctor",
+    },
   },
   { at_s: 26, status: "call-disconnected" },
   { at_s: 29, status: "completed", termination_reason: "agent_ended_call" },
@@ -67,7 +77,10 @@ export function scriptFor(a: Attempt): Step[] {
 }
 
 function transcriptFor(steps: Step[]): string {
-  const lines = ["(Simulated call: no audio was recorded.)", "Agent: Hello, this is an automated assistant calling about an emergency referral. This call is recorded."];
+  const lines = [
+    "(Simulated call: no audio was recorded.)",
+    "Agent: Hello, this is an automated assistant calling about an emergency referral. This call is recorded.",
+  ];
   for (const s of steps) {
     const p = s.params ?? {};
     if (s.function === "record-response") {

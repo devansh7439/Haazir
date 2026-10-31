@@ -86,7 +86,13 @@ export const FunctionService = {
       needs_review: contradictory,
     });
     if (updated) {
-      const recorded = { facility_id: attempt.facility_id, outcome, bed_type: updated.bed_type, ready_in_minutes: updated.ready_in_minutes, source };
+      const recorded = {
+        facility_id: attempt.facility_id,
+        outcome,
+        bed_type: updated.bed_type,
+        ready_in_minutes: updated.ready_in_minutes,
+        source,
+      };
       await EventRepository.add(attempt.referral_id, "outcome_recorded", recorded, attempt.id);
       if (contradictory) {
         const review = { facility_id: attempt.facility_id, function_outcome: outcome, extraction_outcome: "no bed available" };
@@ -147,12 +153,22 @@ export const FunctionService = {
 
   /** request_callback: the desk asks to be called back in a few minutes. After MAX_REDIALS_PER_FACILITY the doctor is asked instead. */
   requestCallback: async (raw: Params, source: Source = "function"): Promise<FunctionResult> => {
-    const p = cleanParams({ attempt_id: raw.attempt_id, minutes: raw.minutes, contact_person: raw.contact_person, to_number: raw.to_number });
+    const p = cleanParams({
+      attempt_id: raw.attempt_id,
+      minutes: raw.minutes,
+      contact_person: raw.contact_person,
+      to_number: raw.to_number,
+    });
     const attempt = await resolveAttempt(p.attempt_id, p.to_number, ["availability"]);
     if (!attempt) return notFound;
     if ((await CallRepository.countRedials(attempt.referral_id, attempt.facility_id)) >= MAX_REDIALS_PER_FACILITY) {
       // Respect the desk: after two callbacks the doctor calls them directly.
-      const handOver = { attempt_id: attempt.id, reason: "asked to be called back again", contact_person: p.contact_person, to_number: p.to_number };
+      const handOver = {
+        attempt_id: attempt.id,
+        reason: "asked to be called back again",
+        contact_person: p.contact_person,
+        to_number: p.to_number,
+      };
       return FunctionService.requestDoctor(handOver, source);
     }
     const minutes = Math.min(Math.max(parseMinutes(p.minutes) ?? 5, 1), CALLBACK_MAX_MIN);
@@ -191,7 +207,12 @@ export const FunctionService = {
 
   /** report_inbound_callback: a hospital called our number back. Matched by referral code, else by the number that called. */
   inboundCallback: async (raw: Params): Promise<FunctionResult> => {
-    const p = cleanParams({ hospital_name: raw.hospital_name, referral_code: raw.referral_code, message: raw.message, from_number: raw.from_number });
+    const p = cleanParams({
+      hospital_name: raw.hospital_name,
+      referral_code: raw.referral_code,
+      message: raw.message,
+      from_number: raw.from_number,
+    });
     const code = normalizeReferralCode(p.referral_code);
     const from = normalizePhone(p.from_number);
     let referralId: string | null = code ? ((await ReferralRepository.getByCode(code))?.id ?? null) : null;

@@ -129,7 +129,8 @@ export const WebhookService = {
       }, attempt.id);
       if (mapped.status === "failed") {
         const message = redactNumbers(clean(b.error_message) ?? "Call failed");
-        await EventRepository.add(attempt.referral_id, "alert", { kind: "call_failed", facility_id: attempt.facility_id, message }, attempt.id);
+        const alert = { kind: "call_failed", facility_id: attempt.facility_id, message };
+        await EventRepository.add(attempt.referral_id, "alert", alert, attempt.id);
       }
       followUp = await reconcileOnTerminal(updated, b);
     }
@@ -165,12 +166,14 @@ export const WebhookService = {
         await res.followUp();
         if (res.applied) {
           recovered++;
-          await EventRepository.add(a.referral_id, "status_recovered", { facility_id: a.facility_id, status: execution.status ?? null }, a.id);
+          const lostStatus = { facility_id: a.facility_id, status: execution.status ?? null };
+          await EventRepository.add(a.referral_id, "status_recovered", lostStatus, a.id);
         }
       } catch (err) {
         // Bolna can't tell us either. After long enough, stop showing the call as live.
         if (secondsBetween(a.dispatched_at ?? a.created_at, t) > LOST_TRACK_AFTER_S) {
-          const failed = await CallRepository.update(a.id, { status: "failed", termination_reason: "lost_track", ended_at: t }, { status: a.status });
+          const lost = { status: "failed" as const, termination_reason: "lost_track", ended_at: t };
+          const failed = await CallRepository.update(a.id, lost, { status: a.status });
           if (failed) {
             await EventRepository.add(a.referral_id, "alert", {
               kind: "lost_track",

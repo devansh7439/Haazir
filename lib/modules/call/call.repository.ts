@@ -174,7 +174,10 @@ export const CallRepository = {
     ),
 
   hasFamilyCallSince: async (referralId: string, since: Date): Promise<boolean> =>
-    !!(await one(`select 1 from call_attempts where referral_id = $1 and purpose = 'family_update' and created_at > $2`, [referralId, since])),
+    !!(await one(
+      `select 1 from call_attempts where referral_id = $1 and purpose = 'family_update' and created_at > $2`,
+      [referralId, since],
+    )),
 
   /** Real calls still open and not polled since `polledBefore`: candidates for missed-webhook recovery. At most 50. */
   staleCandidates: (referralId: string | null, polledBefore: Date): Promise<Attempt[]> =>

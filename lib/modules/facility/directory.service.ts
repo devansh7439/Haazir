@@ -77,7 +77,10 @@ export const DirectoryService = {
     }),
 
   /** Changes a number. 409 when the hospital already has the new number. */
-  updateContact: async (id: string, b: { role?: string; phone?: string; priority?: number; is_ivr?: boolean; active?: boolean; verified?: boolean }) => {
+  updateContact: async (
+    id: string,
+    b: { role?: string; phone?: string; priority?: number; is_ivr?: boolean; active?: boolean; verified?: boolean },
+  ) => {
     const fields: Record<string, unknown> = {};
     if (b.role !== undefined) fields.role = b.role;
     if (b.phone !== undefined) fields.phone_e164 = requirePhone(b.phone, "Phone");

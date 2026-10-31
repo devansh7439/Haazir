@@ -67,7 +67,8 @@ export const env = {
   get sarvamSttModel() { return str("SARVAM_STT_MODEL") || "saarika:v2.5"; },
   get aapatSetuUrl() { return str("AAPAT_SETU_URL"); },
   maxEtaMinutes(acuity: string): number {
-    return Number(str(acuity === "critical" ? "MAX_ETA_CRITICAL_MIN" : acuity === "serious" ? "MAX_ETA_SERIOUS_MIN" : "MAX_ETA_STABLE_MIN")) || 0;
+    const name = acuity === "critical" ? "MAX_ETA_CRITICAL_MIN" : acuity === "serious" ? "MAX_ETA_SERIOUS_MIN" : "MAX_ETA_STABLE_MIN";
+    return Number(str(name)) || 0;
   },
   get whatsappAvailabilityPing() { return ["on", "true", "1"].includes(str("WHATSAPP_AVAILABILITY_PING").toLowerCase()); },
   get missedCallSecret() { return str("MISSED_CALL_SECRET"); },

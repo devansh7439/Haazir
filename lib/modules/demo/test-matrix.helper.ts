@@ -10,7 +10,12 @@ export interface MatrixRow {
 
 /** The 20 voice scenarios, each with the result it must produce. */
 export const TEST_MATRIX: MatrixRow[] = [
-  { no: 1, scenario: "Clear yes in English, gives time and name", expected: "accepted, ready_in_minutes and contact_person filled", zeroTolerance: true },
+  {
+    no: 1,
+    scenario: "Clear yes in English, gives time and name",
+    expected: "accepted, ready_in_minutes and contact_person filled",
+    zeroTolerance: true,
+  },
   { no: 2, scenario: "Clear yes in Kannada", expected: "accepted; transcript in Kannada" },
   { no: 3, scenario: "Starts in English, switches to Hindi", expected: "Agent switches; outcome correct" },
   { no: 4, scenario: "No, \"ICU full\"", expected: "declined, reason full or no_bed" },
@@ -24,7 +29,12 @@ export const TEST_MATRIX: MatrixRow[] = [
   { no: 12, scenario: "Play a recorded IVR message", expected: "ivr_blocked" },
   { no: 13, scenario: "Don't answer", expected: "no_answer" },
   { no: 14, scenario: "Reject the call (busy)", expected: "busy; one redial after 45 s" },
-  { no: 15, scenario: "Ward noise playing loudly, mumbled \"haan… dekhte hain\"", expected: "unclear or a correct answer. Never accepted", zeroTolerance: true },
+  {
+    no: 15,
+    scenario: "Ward noise playing loudly, mumbled \"haan… dekhte hain\"",
+    expected: "unclear or a correct answer. Never accepted",
+    zeroTolerance: true,
+  },
   { no: 16, scenario: "Says yes, then \"actually no ventilator\" at read-back", expected: "declined", zeroTolerance: true },
   { no: 17, scenario: "Hold confirm: yes with a name", expected: "hold_confirmed; referral confirmed; WhatsApp sent" },
   { no: 18, scenario: "Hold confirm: \"sorry, bed just went\"", expected: "hold_declined; referral back to options_ready" },

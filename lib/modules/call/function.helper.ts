@@ -52,7 +52,8 @@ export const responsePlan = (input: {
       // A late yes is answered on the same call, so the desk doesn't hold a bed or get a second "release" call.
       if (late === "placed_elsewhere") {
         return plan(
-          "Thank them warmly and tell them the patient has already been placed at another hospital, so they don't need to keep a bed. Then end the call.",
+          "Thank them warmly and tell them the patient has already been placed at another hospital, " +
+          "so they don't need to keep a bed. Then end the call.",
           { releaseInCall: recorded },
         );
       }

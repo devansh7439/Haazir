@@ -74,7 +74,8 @@ export const EvaluationService = {
     const r = await ReferralRepository.get(id);
     if (!r || isInert(r)) return [];
     const attempts = await CallRepository.listForReferral(id);
-    const facilityIds = [...new Set(attempts.filter((a) => a.purpose === "availability").map((a) => a.facility_id).filter((x): x is string => !!x))];
+    const called = attempts.filter((a) => a.purpose === "availability").map((a) => a.facility_id);
+    const facilityIds = [...new Set(called.filter((x): x is string => !!x))];
     const contacts = await FacilityRepository.contactsByFacility(facilityIds);
     const steps = planEvaluation({ referral: r, attempts, contacts }, now());
 
