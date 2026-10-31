@@ -4,7 +4,7 @@ import { BarChart3, Building2, FlaskConical, History, LogOut, PlusCircle, Radio 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import type { ReactNode } from "react";
-import { Logo, cx } from "./ui";
+import { Logo, cx } from "@/components/ui";
 
 const NAV = [
   { href: "/", label: "New referral", icon: PlusCircle, match: (p: string) => p === "/" || p.startsWith("/referrals") },

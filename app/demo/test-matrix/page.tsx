@@ -1,4 +1,4 @@
-import { TestMatrix } from "@/components/TestMatrix";
+import { TestMatrix } from "@/components/demo/TestMatrix";
 import { pageSession } from "@/lib/modules/auth/session.service";
 import { TestMatrixRepository } from "@/lib/modules/demo/test-matrix.repository";
 

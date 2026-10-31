@@ -3,7 +3,7 @@
 import { Loader2 } from "lucide-react";
 import { useState } from "react";
 import { safeNext } from "@/lib/modules/auth/safe-next.helper";
-import { Logo } from "./ui";
+import { Logo } from "@/components/ui";
 
 export function LoginForm({ mode }: { mode: "passcode" | "users" }) {
   const [passcode, setPasscode] = useState("");

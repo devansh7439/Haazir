@@ -4,7 +4,7 @@ import { CheckCircle2, Circle, ShieldAlert, XCircle } from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
 import { TEST_MATRIX, matrixGate, type MatrixEntry, type MatrixResult } from "@/lib/modules/demo/test-matrix.helper";
-import { PageHeader, Stat, cx } from "./ui";
+import { PageHeader, Stat, cx } from "@/components/ui";
 
 const NEXT: Record<MatrixResult, MatrixResult> = { untested: "pass", pass: "fail", fail: "untested" };
 

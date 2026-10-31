@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Rich } from "@/components/Rich";
+import { Rich } from "@/components/demo/Rich";
 import { PageHeader, Stat } from "@/components/ui";
 import { fillPlaceholders, tableUnder } from "@/lib/modules/demo/pitch.helper";
 import { PitchService } from "@/lib/modules/demo/pitch.service";

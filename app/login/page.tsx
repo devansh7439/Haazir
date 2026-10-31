@@ -1,4 +1,4 @@
-import { LoginForm } from "@/components/LoginForm";
+import { LoginForm } from "@/components/auth/LoginForm";
 import { env } from "@/lib/core/config";
 
 export const dynamic = "force-dynamic";

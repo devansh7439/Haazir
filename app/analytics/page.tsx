@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { HourChart } from "@/components/HourChart";
+import { HourChart } from "@/components/analytics/HourChart";
 import { PageHeader, Stat, cx } from "@/components/ui";
 import { AnalyticsService } from "@/lib/modules/analytics/analytics.service";
 import { pageSession } from "@/lib/modules/auth/session.service";

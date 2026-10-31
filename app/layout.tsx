@@ -1,5 +1,5 @@
 import type { Metadata, Viewport } from "next";
-import { AppShell } from "@/components/AppShell";
+import { AppShell } from "@/components/shell/AppShell";
 import { env } from "@/lib/core/config";
 import { ReferralRepository } from "@/lib/modules/referral/referral.repository";
 import { getSession } from "@/lib/modules/auth/session.service";

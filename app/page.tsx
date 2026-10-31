@@ -1,6 +1,6 @@
 import { ArrowRight } from "lucide-react";
 import Link from "next/link";
-import { DraftsList } from "@/components/DraftsList";
+import { DraftsList } from "@/components/referral-form/DraftsList";
 import { ReferralForm } from "@/components/referral-form/ReferralForm";
 import { PageHeader, ReferralStatusPill, SimBadge } from "@/components/ui";
 import { env } from "@/lib/core/config";

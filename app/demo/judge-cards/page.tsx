@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { PrintButton } from "@/components/PrintButton";
+import { PrintButton } from "@/components/demo/PrintButton";
 import { PageHeader } from "@/components/ui";
 import { DemoService } from "@/lib/modules/demo/demo.service";
 import { JUDGE_CARDS } from "@/lib/modules/demo/judge-cards.helper";
