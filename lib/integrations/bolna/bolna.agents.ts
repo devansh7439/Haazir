@@ -96,7 +96,18 @@ export interface BuildOptions {
   telephony: string;
   startLanguage: string;
   suffix: string; // e.g. " (dev)" or " (demo)"
+  /** Demo only: tell the availability agent it may use a Transfer Call tool added by hand in Bolna (docs/05 §7). */
+  demoTransfer?: boolean;
 }
+
+/**
+ * Added to the availability prompt for the stage demo. The Transfer Call tool itself is added in the Bolna dashboard
+ * (its destination is one fixed number set on the tool); without that tool this paragraph must not be used.
+ */
+const TRANSFER_NOTE =
+  "\n\n# Live transfer (demo only)\n" +
+  "You have a Transfer Call tool. Use it only if the hospital insists on speaking to the doctor right now and will not " +
+  "wait for a callback. In every other case follow the callback rules above.";
 
 export function buildAgent(doc: PromptDoc, tools: ToolDef[], o: BuildOptions): Record<string, unknown> {
   const app = o.appUrl.replace(/\/$/, "");
@@ -156,7 +167,7 @@ export function buildAgent(doc: PromptDoc, tools: ToolDef[], o: BuildOptions): R
         },
       ],
     },
-    agent_prompts: { task_1: { system_prompt: doc.systemPrompt + languageNote } },
+    agent_prompts: { task_1: { system_prompt: doc.systemPrompt + languageNote + (o.demoTransfer && doc.key === "availability" ? TRANSFER_NOTE : "") } },
   };
 }
 

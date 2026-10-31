@@ -6,6 +6,7 @@ export const PREFLIGHT_CHECKLIST = [
   "All phones are off silent and allow unknown callers",
   "Every WhatsApp recipient has messaged our WhatsApp number first",
   "Simulation fallback rehearsed on this machine",
+  "Optional: Transfer Call tool added to the demo availability agent, pointing at the presenter's phone, and tested (docs/05 §7)",
 ];
 
 /** "Never" for null, a relative time up to an hour, then an IST date and time. */

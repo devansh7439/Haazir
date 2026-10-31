@@ -3,6 +3,7 @@
 //   npm run bolna:agents                       → dry run: writes bolna/generated/<agent>.json for review
 //   npm run bolna:agents -- --apply            → POST /v2/agent for each, prints the env lines to copy
 //   options: --only availability,release  --suffix " (dev)"  --language kn  --llm-model gpt-4.1-mini
+//   --demo-transfer   (demo availability agent only, after adding the Transfer Call tool in Bolna: docs/05 §7)
 //            --voice <voice id>  --tts-model bulbul:v2  --stt-model saarika:v2.5  --telephony plivo
 //
 // Needs APP_BASE_URL, BOLNA_WEBHOOK_SECRET, BOLNA_FUNCTION_SECRET (and BOLNA_API_KEY for --apply).
@@ -47,6 +48,7 @@ async function main() {
       telephony: arg("telephony", "plivo"),
       startLanguage: arg("language", "en"),
       suffix: arg("suffix", ""),
+      demoTransfer: process.argv.includes("--demo-transfer"),
     });
     const file = path.join(outDir, `${key}.json`);
     fs.writeFileSync(file, JSON.stringify(payload, null, 2) + "\n");

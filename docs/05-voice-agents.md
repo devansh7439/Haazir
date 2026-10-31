@@ -121,12 +121,16 @@ Also send `agent_data: { "language": "<facilities.call_language>" }` and `bypass
 
 ## 7. Optional: live transfer to the doctor for the stage demo
 
-Bolna's Transfer Call tool forwards to a destination **configured on the tool** (phone or SIP). A per-call destination isn't documented **[B11]**, so in production we use the callback pattern above. For the demo only, you can add a Transfer Call tool to the **demo** availability agent:
+Bolna's Transfer Call tool forwards to a destination **configured on the tool**: a phone number in international format, or a SIP URI (SIP URIs work only on Plivo or a SIP trunk). Bolna doesn't document a per-call destination **[B11]**, so production keeps the callback pattern above. For the stage demo only, add the tool to the **demo** availability agent by hand (Bolna's docs give no API shape for it, so the app doesn't create it):
 
-- Destination: the demo doctor's phone (the presenter's phone on stage).
-- Description: "Use only if the hospital insists on speaking to the doctor right now and will not wait for a callback."
-- Pre-tool message: "Connecting you to Dr. Rao now."
-- **Test it on your telephony provider first.** If it fails, stay with the callback flow; it demos well too, because the presenter taps the banner and the judge's phone rings again.
+1. In Bolna, open the demo availability agent, Tools tab, **Transfer Call**, **Add**.
+2. **Transfer destination:** the presenter's phone, for example `+91…`.
+3. **Description (Prompt):** "Use only if the hospital insists on speaking to the doctor right now and will not wait for a callback."
+4. **Pre-tool message** (one per language on the agent): "Connecting you to Dr. Rao now."
+5. Save, then regenerate the demo agent's prompt with `bun run bolna:agents -- --only availability --suffix " (demo)" --demo-transfer` (or paste the "Live transfer (demo only)" paragraph into the agent's prompt). Without the tool in place, don't use the flag.
+6. **Test it on your telephony provider first**, from a spare number. A transfer rings for about 30 seconds and needs a free channel. If it fails, stay with the callback flow; it demos well too, because the presenter taps the banner and the judge's phone rings again.
+
+When the agent transfers, the call ends without `record_hospital_response`. The doctor talks to the desk and records the result with **Record outcome** on the hospital's card, exactly as after a callback. Never enable the transfer on a production agent.
 
 ---
 
