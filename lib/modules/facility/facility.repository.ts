@@ -83,6 +83,11 @@ export const FacilityRepository = {
   },
 
   /** Sets or clears the number the pre-arrival note goes to. */
+  /** Remembers the Google place a hospital was matched to. */
+  setGooglePlaceId: async (id: string, placeId: string): Promise<void> => {
+    await q(`update facilities set google_place_id = $2 where id = $1`, [id, placeId]);
+  },
+
   setWhatsappNumber: async (id: string, phone: string | null): Promise<void> => {
     await q(`update facilities set whatsapp_number = $2 where id = $1`, [id, phone]);
   },
@@ -103,10 +108,10 @@ export const FacilityRepository = {
   listForOrg: (orgId: string): Promise<Facility[]> =>
     q<Facility>(`select * from facilities where org_id = $1 order by is_demo desc, name`, [orgId]),
 
-  /** Each hospital's declared or confirmed capabilities, by code. */
   /** How many hospitals are in the directory, across organisations. For the setup script's summary. */
   count: async (): Promise<number> => (await one<{ n: number }>(`select count(*)::int as n from facilities`))?.n ?? 0,
 
+  /** Each hospital's declared or confirmed capabilities, by code. */
   capabilityCodesForOrg: (orgId: string): Promise<Array<{ facility_id: string; capability_code: string }>> =>
     q(
       `select facility_id, capability_code from facility_capabilities

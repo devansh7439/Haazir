@@ -38,6 +38,8 @@ export interface Facility {
   is_demo: boolean;
   active: boolean;
   notes: string | null;
+  /** The Google place this hospital is matched to, for its star rating; null until matched. */
+  google_place_id: string | null;
 }
 
 export interface Contact {

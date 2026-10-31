@@ -63,6 +63,7 @@ export const env = {
   metaTemplate(key: "prearrival" | "doctor" | "family" | "bed_request"): string {
     return str(`META_WA_TEMPLATE_${key.toUpperCase()}`);
   },
+  get googlePlacesKey() { return str("GOOGLE_PLACES_API_KEY"); },
   get sarvamApiKey() { return str("SARVAM_API_KEY"); },
   get sarvamSttModel() { return str("SARVAM_STT_MODEL") || "saarika:v2.5"; },
   get aapatSetuUrl() { return str("AAPAT_SETU_URL"); },
