@@ -158,7 +158,9 @@ export function eventText(e: EventLike, facilityName: (id: unknown) => string): 
     case "call_answered":
       return p.purpose === "availability" ? `${f()} answered` : null;
     case "call_ended":
-      return p.status === "no_answer" ? `${f()}: no answer` : p.status === "busy" ? `${f()}: busy` : p.status === "failed" ? `${f()}: call failed` : null;
+      if (p.status === "no_answer") return `${f()}: no answer`;
+      if (p.status === "busy") return `${f()}: busy`;
+      return p.status === "failed" ? `${f()}: call failed` : null;
     case "outcome_recorded": {
       const o = String(p.outcome);
       const words: Record<string, string> = {

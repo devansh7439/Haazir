@@ -358,7 +358,13 @@ export const ReferralService = {
     const prearrival = preArrivalNote(facts);
     await WhatsAppService.send({ referral_id: r.id, audience: "receiving_facility", to: facility.whatsapp_number, rendered: prearrival, simulated });
     await ReferralRepository.markSharedWithFacility(r.id);
-    await WhatsAppService.send({ referral_id: r.id, audience: "referrer", to: ctx.referrer.phone_e164, rendered: doctorConfirmation(facts), simulated });
+    await WhatsAppService.send({
+      referral_id: r.id,
+      audience: "referrer",
+      to: ctx.referrer.phone_e164,
+      rendered: doctorConfirmation(facts),
+      simulated,
+    });
     if (patient?.attendant_phone_e164) {
       const rendered = familyMessage(facts, patient.attendant_language);
       await WhatsAppService.send({ referral_id: r.id, audience: "family", to: patient.attendant_phone_e164, rendered, simulated });

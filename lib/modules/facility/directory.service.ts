@@ -69,7 +69,12 @@ export const DirectoryService = {
   },
 
   addContact: async (facilityId: string, b: { role: string; phone: string; priority: number; is_ivr: boolean }): Promise<Contact> =>
-    FacilityRepository.upsertContact(facilityId, { role: b.role, phone_e164: requirePhone(b.phone, "Phone"), priority: b.priority, is_ivr: b.is_ivr }),
+    FacilityRepository.upsertContact(facilityId, {
+      role: b.role,
+      phone_e164: requirePhone(b.phone, "Phone"),
+      priority: b.priority,
+      is_ivr: b.is_ivr,
+    }),
 
   /** Changes a number. 409 when the hospital already has the new number. */
   updateContact: async (id: string, b: { role?: string; phone?: string; priority?: number; is_ivr?: boolean; active?: boolean; verified?: boolean }) => {

@@ -71,7 +71,11 @@ export const portalFlagsOf = (events: EventRow[]): Record<string, PortalFlag> =>
   const flags: Record<string, PortalFlag> = {};
   for (const e of events) {
     if (e.type !== "portal_mismatch" || !e.attempt_id) continue;
-    flags[e.attempt_id] = { detail: text(e.payload, "detail") ?? "", source: text(e.payload, "source") ?? "", observed_at: text(e.payload, "observed_at") ?? "" };
+    flags[e.attempt_id] = {
+      detail: text(e.payload, "detail") ?? "",
+      source: text(e.payload, "source") ?? "",
+      observed_at: text(e.payload, "observed_at") ?? "",
+    };
   }
   return flags;
 };

@@ -54,7 +54,10 @@ const sendMeta = async (to: string, m: OutboundMessage): Promise<SendResult> => 
     signal: AbortSignal.timeout(SEND_TIMEOUT_MS),
   });
   const data: unknown = await res.json().catch(() => ({}));
-  if (!res.ok) return { status: "failed", provider: "meta", provider_message_id: null, error: textOf(field(field(data, "error"), "message")) ?? `HTTP ${res.status}` };
+  if (!res.ok) {
+    const error = textOf(field(field(data, "error"), "message")) ?? `HTTP ${res.status}`;
+    return { status: "failed", provider: "meta", provider_message_id: null, error };
+  }
   const messages = field(data, "messages");
   const first = Array.isArray(messages) ? messages[0] : undefined;
   return { status: "sent", provider: "meta", provider_message_id: textOf(field(first, "id")), error: null };

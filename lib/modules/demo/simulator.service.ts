@@ -49,7 +49,11 @@ const DEFAULT_AVAILABILITY: Step[] = [
 const REDIAL_AVAILABILITY: Step[] = [
   { at_s: 3, status: "ringing" },
   { at_s: 7, status: "in-progress" },
-  { at_s: 22, function: "record-response", params: { outcome: "accepted", bed_type: "icu", specialist_available: "on_call", ready_in_minutes: "15", contact_person: "Duty doctor" } },
+  {
+    at_s: 22,
+    function: "record-response",
+    params: { outcome: "accepted", bed_type: "icu", specialist_available: "on_call", ready_in_minutes: "15", contact_person: "Duty doctor" },
+  },
   { at_s: 26, status: "call-disconnected" },
   { at_s: 29, status: "completed", termination_reason: "agent_ended_call" },
 ];
