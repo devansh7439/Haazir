@@ -14,7 +14,7 @@ import { WebhookLogRepository } from "@/lib/modules/call/webhook.repository";
 import { EventRepository } from "@/lib/modules/event/event.repository";
 import { FacilityRepository } from "@/lib/modules/facility/facility.repository";
 import { ReferralRepository } from "@/lib/modules/referral/referral.repository";
-import { ReferralService } from "@/lib/modules/referral/referral.service";
+import { HoldService } from "@/lib/modules/referral/hold.service";
 import { EvaluationService } from "@/lib/modules/referral/evaluation.service";
 
 type Params = Record<string, unknown>;
@@ -195,7 +195,7 @@ export const FunctionService = {
     const confirmed = normalizeYesNo(p.confirmed);
     if (!confirmed) return { result: "unclear", instruction: "Thank them and end the call.", followUp: noFollowUp };
     const result = { confirmed, contact_person: p.contact_person, whatsapp_number: p.whatsapp_number, notes: p.notes };
-    const followUp = await ReferralService.applyHoldResult(hold, result, source);
+    const followUp = await HoldService.applyHoldResult(hold, result, source);
     return {
       result: "recorded",
       instruction: confirmed === "yes"

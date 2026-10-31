@@ -15,7 +15,7 @@ import { attemptIdOf, executionIdOf, extraction, prop, readAvailability, statusF
 import { WebhookLogRepository } from "@/lib/modules/call/webhook.repository";
 import { EventRepository } from "@/lib/modules/event/event.repository";
 import { ReferralRepository } from "@/lib/modules/referral/referral.repository";
-import { ReferralService } from "@/lib/modules/referral/referral.service";
+import { HoldService } from "@/lib/modules/referral/hold.service";
 import { EvaluationService } from "@/lib/modules/referral/evaluation.service";
 
 const log = createLogger("call");
@@ -66,11 +66,11 @@ const reconcileOnTerminal = async (a: Attempt, body: Body): Promise<FollowUp> =>
       if (answer && ex.confident) {
         const contactPerson = extraction(a.extracted_data, "Hold", "contact_person").value;
         const result = { confirmed: answer, contact_person: contactPerson, whatsapp_number: null, notes: null };
-        followUp = await ReferralService.applyHoldResult(a, result, "extraction");
+        followUp = await HoldService.applyHoldResult(a, result, "extraction");
       }
     }
     const fresh = await CallRepository.get(a.id);
-    if (fresh && !fresh.outcome) await ReferralService.holdUnconfirmed(fresh);
+    if (fresh && !fresh.outcome) await HoldService.holdUnconfirmed(fresh);
   } else if (a.status === "completed") {
     const outcome = a.purpose === "release" ? "release_ack" : "family_informed";
     await CallRepository.update(a.id, { outcome, outcome_source: "extraction", outcome_at: now() }, { outcome: null });

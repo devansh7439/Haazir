@@ -93,13 +93,13 @@ Run `bun run lint && bun run typecheck && bun run test` after every phase (not `
 
 ## 5. Decisions
 
-- 2026-11-01: left as plain `string` on purpose: Bolna's raw status (`bolna.client.ts`, the webhook log), because it is provider text; it is mapped to `AttemptStatus` at the edge by `mapBolnaStatus`.
-- 2026-11-01: long lines kept: Kannada and Hindi message templates, prompt text, regexes, scripted data rows and import lists. Wrapping them risks changing text people hear or read.
-- 2026-11-01: `ReferralService` is still about 400 lines (create, select, hold, confirm, cancel, close, widen). Split further only when a change needs it.
+- 2026-11-01: `scripts/` still import `connect`, `setDb` and `migrate` from `lib/core/db` (they open the connection); every query they run is in a repository.
+- 2026-11-01: Bolna's status is typed (`BolnaStatus`, `toBolnaStatus`); `mapBolnaStatus` still takes raw text because it reads webhook payloads.
+- 2026-11-01: no line in `lib/` is over 140 characters except import lists. `family-message.test.ts` pins the exact family WhatsApp text, so a reworded template is a deliberate change.
+- 2026-11-01: `ReferralService` (create, preview, cancel, close, widen) is split from `HoldService` (select, hold, manual confirm, handoff) and `EvaluationService`.
+
 
 - 2026-10-31: working with a second session (haazir-58) on the same checkout. Split agreed by message: haazir-be owns lib/**, app/api/**, tests/**, CLAUDE.md, README.md and import lines; haazir-58 owns what it is handed (prompts, docs/05, now the UI). Neither commits the other's files; haazir-be makes all commits, one per piece of work.
-- 2026-10-31: `scripts/` keep using `lib/core/db` directly (connect, migrate): they are infrastructure, not app code.
-- 2026-10-31: `docs/07-build-plan.md` keeps its original file names: it is the historical ticket list.
 
 - 2026-10-31: `ReferralService` and `CallService` import each other (evaluation dispatches calls; a manual outcome re-evaluates). Allowed: they only reach each other inside function bodies, never at module load.
 - 2026-10-31: bug found by the new planner tests: an extracted yes with bed `none` was recorded as accepted, because `clean()` treats "none" as missing. Fixed in its own commit (1afb484), so the refactor commits stay behaviour-preserving.
@@ -109,7 +109,7 @@ Run `bun run lint && bun run typecheck && bun run test` after every phase (not `
 
 ## 6. Changelog
 
-- 2026-11-01: audit leftovers done (phase 6). Routes are thin (login, WhatsApp inbound, missed call), `EvaluationService` is split out, loose components are in feature folders. Items kept on purpose are listed under Decisions.
+- 2026-11-01: audit leftovers done (phase 6), including the items first kept on purpose. Routes are thin (login, WhatsApp inbound, missed call), `EvaluationService` is split out, loose components are in feature folders. Items kept on purpose are listed under Decisions.
 
 - 2026-10-31: phase 4 done: board, referral-form, facilities and demo split into feature folders; client-safe helpers in `lib/ui/board.ts`, `request-id.ts`, `demo.ts`; 147 tests. All phases done.
 - 2026-10-31: phase 3 and 5 done; 139 tests. Phase 4 waits for haazir-58's UI handover.

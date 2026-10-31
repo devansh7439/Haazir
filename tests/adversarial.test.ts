@@ -27,6 +27,7 @@ import { CallRepository } from "@/lib/modules/call/call.repository";
 import { FunctionService } from "@/lib/modules/call/function.service";
 import { ReferralRepository } from "@/lib/modules/referral/referral.repository";
 import { ReferralService } from "@/lib/modules/referral/referral.service";
+import { HoldService } from "@/lib/modules/referral/hold.service";
 import { EvaluationService } from "@/lib/modules/referral/evaluation.service";
 import { WebhookService } from "@/lib/modules/call/webhook.service";
 import type { ReferralInput } from "@/lib/modules/referral/referral.type";
@@ -197,7 +198,7 @@ describe("safety: never a false yes", () => {
     const a = (await CallRepository.listForReferral(referral.id))[0];
     await (await WebhookService.handle({ id: a.bolna_execution_id, status: "completed" })).followUp();
     await FunctionService.recordResponse({ attempt_id: a.id, outcome: "accepted", bed_type: "icu" });
-    await ReferralService.select(referral.id, a.id);
+    await HoldService.select(referral.id, a.id);
     const hold = (await CallRepository.listForReferral(referral.id)).find((x) => x.purpose === "hold_confirm")!;
     const res = await FunctionService.recordResponse({ attempt_id: hold.id, outcome: "declined" });
     expect(res.result).toBe("not_found");
@@ -211,7 +212,7 @@ describe("privacy and accuracy", () => {
     const { referral } = await ReferralService.create(KRAIT, { simulate: true });
     for (let t = 0; t < 45; t++) { await advanceSimulation(referral.id); await EvaluationService.evaluate(referral.id); clock.advance(1); }
     const tam = (await CallRepository.listForReferral(referral.id)).find((x) => x.facility_id === IDS.tamarind && x.purpose === "availability")!;
-    await ReferralService.select(referral.id, tam.id);
+    await HoldService.select(referral.id, tam.id);
     for (let t = 0; t < 80; t++) { await advanceSimulation(referral.id); await EvaluationService.evaluate(referral.id); clock.advance(1); }
     const fam = (await CallRepository.listForReferral(referral.id)).find((x) => x.purpose === "family_update")!;
     await db.query(`update call_attempts set status = 'wrapping_up', transcript = null where id = $1`, [fam.id]);
@@ -238,7 +239,7 @@ describe("privacy and accuracy", () => {
     const { referral } = await ReferralService.create(KRAIT);
     const [first, second] = await CallRepository.listForReferral(referral.id);
     await FunctionService.recordResponse({ attempt_id: first.id, outcome: "accepted" });
-    await (await ReferralService.confirmManually(referral.id, first.id, null))();
+    await (await HoldService.confirmManually(referral.id, first.id, null))();
     await (await WebhookService.handle({ id: second.bolna_execution_id, status: "in-progress" })).followUp();
     const before = bolnaCalls.filter((c) => c.agent_id === "r").length;
     const res = await FunctionService.recordResponse({ attempt_id: second.id, outcome: "accepted" });

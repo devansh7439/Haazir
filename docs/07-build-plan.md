@@ -75,7 +75,7 @@ Estimates are focused hours. "AC" is the acceptance criterion.
 ### M1 · Walking skeleton
 | ID | Ticket | Owner | Est. | AC |
 |---|---|---|---|---|
-| H-05 | `lib/bolna.ts`: `makeCall`, `getExecution`, `stopCall`, types | R2 | 1 | Typed calls; 400 and 429 handled |
+| H-05 | `lib/integrations/bolna/bolna.client.ts`: `makeCall`, `getExecution`, `stopCall`, types | R2 | 1 | Typed calls; 400 and 429 handled |
 | H-06 | Webhook route: auth, raw log, status map, **monotonic** updates | R2 | 3 | Replaying a payload twice changes nothing |
 | H-07 | `record-response` route: normalisation, lookup, instruction | R2 | 3 | Outcome is in the DB within 1 s of the tool call; empty or `%(x)s` values handled |
 | H-08 | Minimal board: one realtime card | R3 | 3 | Updates without refresh |

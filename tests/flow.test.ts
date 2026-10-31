@@ -10,6 +10,7 @@ import { FacilityService } from "@/lib/modules/facility/facility.service";
 import { FunctionService } from "@/lib/modules/call/function.service";
 import { ReferralRepository } from "@/lib/modules/referral/referral.repository";
 import { ReferralService } from "@/lib/modules/referral/referral.service";
+import { HoldService } from "@/lib/modules/referral/hold.service";
 import { EvaluationService } from "@/lib/modules/referral/evaluation.service";
 import { WebhookService } from "@/lib/modules/call/webhook.service";
 import type { ReferralInput } from "@/lib/modules/referral/referral.type";
@@ -84,7 +85,7 @@ describe("simulated demo-krait-bite referral", () => {
       if (!selected && r!.status === "options_ready" && t >= 45) {
         const tamarind = (await CallRepository.listForReferral(referral.id)).find((a) => a.facility_id === IDS.tamarind && a.purpose === "availability")!;
         expect(tamarind.outcome).toBe("conditional");
-        expect((await ReferralService.select(referral.id, tamarind.id)).status).toBe("confirming");
+        expect((await HoldService.select(referral.id, tamarind.id)).status).toBe("confirming");
         selected = true;
       }
       clock.advance(1);
@@ -200,7 +201,7 @@ describe("live call path (Bolna stubbed)", () => {
     const after = (await CallRepository.listForReferral(referral.id)).find((x) => x.id === a.id)!;
     expect(after.needs_review).toBe(true);
     expect(after.extraction_outcome).toBe("declined");
-    await expect(ReferralService.select(referral.id, a.id)).rejects.toMatchObject({ code: "NEEDS_REVIEW" });
+    await expect(HoldService.select(referral.id, a.id)).rejects.toMatchObject({ code: "NEEDS_REVIEW" });
   });
 
   it("uses a confident extraction when the function was never called, else unclear", async () => {

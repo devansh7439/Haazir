@@ -9,6 +9,7 @@ import { CallService } from "@/lib/modules/call/call.service";
 import { FunctionService } from "@/lib/modules/call/function.service";
 import { ReferralRepository } from "@/lib/modules/referral/referral.repository";
 import { ReferralService } from "@/lib/modules/referral/referral.service";
+import { HoldService } from "@/lib/modules/referral/hold.service";
 import { EvaluationService } from "@/lib/modules/referral/evaluation.service";
 import { WebhookService } from "@/lib/modules/call/webhook.service";
 import type { ReferralInput } from "@/lib/modules/referral/referral.type";
@@ -70,7 +71,7 @@ describe("debug regressions", () => {
     const a = (await CallRepository.listForReferral(referral.id))[0];
     await (await WebhookService.handle({ id: a.bolna_execution_id, status: "in-progress" })).followUp();
     await FunctionService.recordResponse({ attempt_id: a.id, outcome: "accepted" });
-    await ReferralService.select(referral.id, a.id); // the desk is still on the line
+    await HoldService.select(referral.id, a.id); // the desk is still on the line
     expect(calls.filter((c) => c.agent_id === "h")).toHaveLength(0);
     await EvaluationService.evaluate(referral.id);
     expect(calls.filter((c) => c.agent_id === "h")).toHaveLength(0);
@@ -85,7 +86,7 @@ describe("debug regressions", () => {
     const { referral } = await ReferralService.create(KRAIT);
     const [first, second] = await CallRepository.listForReferral(referral.id);
     await FunctionService.recordResponse({ attempt_id: first.id, outcome: "accepted" });
-    await (await ReferralService.confirmManually(referral.id, first.id, "Dr K"))();
+    await (await HoldService.confirmManually(referral.id, first.id, "Dr K"))();
     await ReferralService.close(referral.id, "arrived", null);
     await (await FunctionService.recordResponse({ attempt_id: second.id, outcome: "accepted" })).followUp();
     const releases = (await CallRepository.listForReferral(referral.id)).filter((x) => x.purpose === "release");

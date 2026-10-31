@@ -63,7 +63,7 @@ ngrok http 3000      # public URL for Bolna callbacks; put it in APP_BASE_URL an
 | `lib/core/` | Config, clock, db, `ApiError`, logger, route helpers (`parseBody`, `handle`), normalisers, row types |
 | `lib/integrations/` | Bolna (client, auth, agent builder), WhatsApp (send, inbound signatures and parsing), Sarvam, Supabase browser client |
 | `lib/modules/<area>/` | One file per layer: `*.repository.ts` (all SQL), `*.service.ts` (the steps), `*.helper.ts` (pure rules), `*.type.ts`, `*.validation.ts` |
-| `lib/modules/referral/` | Create, select, confirm, cancel, widen; `referral.helper.ts` `planEvaluation` plans the steps of `docs/02-architecture.md` §6.3, `EvaluationService.evaluate` applies them; browser view; spoken summary |
+| `lib/modules/referral/` | `ReferralService` (create, cancel, close, widen), `HoldService` (select, hold, confirm, handoff); `referral.helper.ts` `planEvaluation` plans the steps of `docs/02-architecture.md` §6.3, `EvaluationService.evaluate` applies them; browser view; spoken summary |
 | `lib/modules/call/` | Placing calls (waves, redials, releases, holds, family calls), Bolna status webhook and mid-call functions, status map, `user_data` |
 | `lib/modules/facility/` | Directory, eligibility SQL (`facility.repository.ts`) and ranking (`matching.helper.ts`, `docs/02-architecture.md` §7) |
 | `lib/modules/{handoff,intake,portal,analytics,maintenance,demo,auth,event,setting}/` | WhatsApp handoff, WhatsApp intake, portal flags, analytics, cron and purge, Demo page and simulator, sign-in and org scope, audit events, settings |

@@ -43,6 +43,7 @@ import * as portalRoute from "@/app/api/portal-snapshots/route";
 import { CallRepository } from "@/lib/modules/call/call.repository";
 import { ReferralRepository } from "@/lib/modules/referral/referral.repository";
 import { ReferralService } from "@/lib/modules/referral/referral.service";
+import { HoldService } from "@/lib/modules/referral/hold.service";
 import { EvaluationService } from "@/lib/modules/referral/evaluation.service";
 import { WebhookService } from "@/lib/modules/call/webhook.service";
 import type { ReferralInput } from "@/lib/modules/referral/referral.type";
@@ -221,7 +222,7 @@ describe("missed-call trigger (C3) and family call (C1)", () => {
     const { referral } = await ReferralService.create(KRAIT, { simulate: true });
     for (let t = 0; t < 45; t++) { await advanceSimulation(referral.id); await EvaluationService.evaluate(referral.id); clock.advance(1); }
     const tamarind = (await CallRepository.listForReferral(referral.id)).find((a) => a.facility_id === IDS.tamarind && a.purpose === "availability")!;
-    await ReferralService.select(referral.id, tamarind.id);
+    await HoldService.select(referral.id, tamarind.id);
     for (let t = 0; t < 40; t++) { await advanceSimulation(referral.id); await EvaluationService.evaluate(referral.id); clock.advance(1); }
     expect((await ReferralRepository.get(referral.id))!.status).toBe("confirmed");
     // The handoff placed one family call; its row holds only a masked number.

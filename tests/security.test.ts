@@ -38,6 +38,7 @@ import * as facilitiesRoute from "@/app/api/facilities/route";
 import { CallRepository } from "@/lib/modules/call/call.repository";
 import { ReferralRepository } from "@/lib/modules/referral/referral.repository";
 import { ReferralService } from "@/lib/modules/referral/referral.service";
+import { HoldService } from "@/lib/modules/referral/hold.service";
 import { EvaluationService } from "@/lib/modules/referral/evaluation.service";
 import type { ReferralInput } from "@/lib/modules/referral/referral.type";
 
@@ -233,7 +234,7 @@ describe("route access control", () => {
     const b = await ReferralService.create({ ...KRAIT, client_request_id: "00000000-0000-4000-8000-0000000000c1" } as ReferralInput, { simulate: true, orgId: DEFAULT_ORG_ID });
     await db.query(`update call_attempts set outcome = 'accepted', bed_type = 'icu_with_ventilator' where id = $1`, [a.attempts[0].id]);
     await db.query(`update referrals set status = 'options_ready' where id = $1`, [b.referral.id]);
-    await expect(ReferralService.select(b.referral.id, a.attempts[0].id)).rejects.toMatchObject({ status: 409 });
+    await expect(HoldService.select(b.referral.id, a.attempts[0].id)).rejects.toMatchObject({ status: 409 });
   });
 });
 
@@ -294,7 +295,7 @@ describe("no identifiers reach the browser", () => {
       const r = await ReferralRepository.get(id);
       if (!selected && r!.status === "options_ready" && t >= 45) {
         const tamarind = (await CallRepository.listForReferral(id)).find((a) => a.facility_id === IDS.tamarind && a.purpose === "availability")!;
-        await ReferralService.select(id, tamarind.id);
+        await HoldService.select(id, tamarind.id);
         selected = true;
       }
       clock.advance(1);
