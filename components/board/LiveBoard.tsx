@@ -1,6 +1,6 @@
 "use client";
 
-import { ArrowLeft, Check, CheckCircle2, PhoneCall, RotateCw, Timer, TriangleAlert } from "lucide-react";
+import { ArrowLeft, CheckCircle2, RotateCw, Timer, TriangleAlert } from "lucide-react";
 import dynamic from "next/dynamic";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -55,9 +55,6 @@ export function LiveBoard({ initial }: { initial: ReferralView }) {
   }, [cards]);
 
   const { elapsed, ttfa } = searchTimes(r, view.events, nowMs);
-  const displays = cards.map(({ a }) => attemptDisplay(a, nowMs));
-  const acceptedCount = displays.filter((d) => d.group === "accepted").length;
-  const onLine = displays.filter((d) => d.group === "in_progress").length;
   const grouped = groupCards(cards, nowMs);
   const { hold, releases, expired: holdExpired } = holdState(view);
   const nextId = nextReferralId(view.events);
@@ -93,8 +90,6 @@ export function LiveBoard({ initial }: { initial: ReferralView }) {
           <dl className="flex items-center divide-x divide-line">
             <Metric icon={Timer} label="Elapsed" value={mmss(elapsed)} />
             <Metric icon={CheckCircle2} label="First yes" value={ttfa !== null ? mmss(ttfa) : "—"} highlight={ttfa !== null} />
-            <Metric icon={PhoneCall} label="On the line" value={String(onLine)} className="hidden sm:block" />
-            <Metric icon={Check} label="Accepted" value={`${acceptedCount}/${cards.length}`} className="hidden sm:block" />
           </dl>
           <div className="ml-auto flex items-center gap-2">
             <ReferralStatusPill status={r.status} />
@@ -109,14 +104,17 @@ export function LiveBoard({ initial }: { initial: ReferralView }) {
         <section className="card overflow-hidden lg:sticky lg:top-28">
           <div className="flex items-center justify-between border-b border-line px-4 py-2.5">
             <h2 className="text-sm font-semibold">Live map</h2>
-            <div className="flex items-center gap-2.5 text-xs text-zinc-500 sm:gap-3">
-              <Legend color={TONE.green.pin} label="Yes" />
-              <Legend color={TONE.amber.pin} label="On call" />
-              <Legend color={TONE.red.pin} label="No" />
-            </div>
+            <span className="text-xs text-zinc-500">Numbers match the cards</span>
           </div>
-          <div className="h-48 sm:h-64 lg:h-[520px]">
+          <div className="h-64 sm:h-80 lg:h-[calc(100vh-15rem)] lg:min-h-[420px]">
             <BoardMap origin={view.origin} pins={pins} />
+          </div>
+          <div className="flex flex-wrap items-center gap-x-3.5 gap-y-1 border-t border-line px-4 py-2 text-xs text-zinc-500">
+            <Legend color={TONE.green.pin} label="Yes" />
+            <Legend color={TONE.amber.pin} label="On call" />
+            <Legend color={TONE.purple.pin} label="Needs you" />
+            <Legend color={TONE.red.pin} label="No" />
+            <Legend color={TONE.dark.pin} label="No answer" />
           </div>
         </section>
 

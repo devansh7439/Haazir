@@ -1,6 +1,6 @@
-import { BedDouble, Clock, FileText, MapPin, PenLine, Phone, RotateCw, TriangleAlert, User } from "lucide-react";
+import { BedDouble, ChevronDown, Clock, FileText, PenLine, Phone, RotateCw, TriangleAlert, User } from "lucide-react";
 import { useState } from "react";
-import { BED_LABEL, LANGUAGE_LABEL, TONE, attemptDisplay, clock, shortName } from "@/lib/ui/display";
+import { BED_LABEL, TONE, attemptDisplay, clock, shortName } from "@/lib/ui/display";
 import type { AttemptView, ReferralView } from "@/lib/modules/referral/view.type";
 import { callEnded } from "@/lib/ui/board";
 import { StatusPill, cx } from "@/components/ui";
@@ -20,6 +20,7 @@ export function AttemptCard(props: {
   const { a, nowMs } = props;
   const d = attemptDisplay(a, nowMs);
   const tone = TONE[d.tone];
+  const [showMore, setShowMore] = useState(props.a.needs_review);
   const [showManual, setShowManual] = useState(false);
   const [showTranscript, setShowTranscript] = useState(false);
   const accepted = a.outcome === "accepted" || a.outcome === "conditional";
@@ -27,8 +28,6 @@ export function AttemptCard(props: {
   const terminal = callEnded(a.status);
   const canRedial = terminal && !accepted && ["searching", "options_ready", "exhausted"].includes(props.referralStatus);
   const muted = d.group === "not_available";
-  // The drive time is already in the card header.
-  const reasons = a.rank_reasons.filter((r) => !r.endsWith("min away"));
 
   return (
     <li className={cx("card relative overflow-hidden", props.isSelected && "ring-2 ring-green-600")}>
@@ -49,11 +48,7 @@ export function AttemptCard(props: {
               {props.isSelected && <span className="rounded-md bg-green-700 px-1.5 py-0.5 text-[11px] font-semibold text-white">Selected</span>}
             </div>
             <div className="mt-0.5 flex flex-wrap items-center gap-x-2 text-xs text-zinc-500">
-              <span className="inline-flex items-center gap-1"><Clock aria-hidden className="size-3" />{a.eta_minutes ?? "?"} min</span>
-              <span aria-hidden>·</span>
-              <span className="inline-flex items-center gap-1"><MapPin aria-hidden className="size-3" />{a.distance_km ?? "?"} km</span>
-              <span aria-hidden>·</span>
-              <span>{LANGUAGE_LABEL[a.call_language] ?? a.call_language}</span>
+              <span className="inline-flex items-center gap-1"><Clock aria-hidden className="size-3" />{a.eta_minutes ?? "?"} min away</span>
               {props.calls > 1 && <><span aria-hidden>·</span><span>{props.calls} calls</span></>}
             </div>
           </div>
@@ -96,12 +91,6 @@ export function AttemptCard(props: {
         )}
         {a.contact_is_ivr && <p className="mt-2 text-xs text-amber-800">Phone menu line only. A direct desk number works better.</p>}
 
-        {!muted && reasons.length > 0 && (
-          <div className="mt-3 flex flex-wrap gap-1">
-            {reasons.map((reason) => <span key={reason} className="tag">{reason}</span>)}
-          </div>
-        )}
-
         <div className="mt-3 flex flex-wrap items-center gap-1.5">
           {canSelect && !a.needs_review && (
             <button className="btn btn-primary" onClick={props.onSelect}>Select hospital</button>
@@ -110,23 +99,27 @@ export function AttemptCard(props: {
             <button className="btn btn-secondary" onClick={props.onSelect}>Select anyway</button>
           )}
           <a className="btn btn-secondary" href={`tel:${a.to_number}`}><Phone aria-hidden className="size-4" /> Call desk</a>
-          {a.transcript && (
-            <button className="btn btn-ghost" aria-expanded={showTranscript} onClick={() => setShowTranscript((s) => !s)}>
-              <FileText aria-hidden className="size-4" /> Transcript
-            </button>
-          )}
-          <button className="btn btn-ghost" aria-expanded={showManual} onClick={() => setShowManual((s) => !s)}>
-            <PenLine aria-hidden className="size-4" /> {a.needs_review || a.outcome === "unclear" ? "Set outcome" : "Record outcome"}
-          </button>
           {canRedial && (
-            <button className="btn btn-ghost" onClick={() => props.post(`/api/attempts/${a.id}/redial`, { contact_id: a.contact_id ?? undefined, to_number: a.contact_id ? undefined : a.to_number })}>
+            <button className="btn btn-secondary" onClick={() => props.post(`/api/attempts/${a.id}/redial`, { contact_id: a.contact_id ?? undefined, to_number: a.contact_id ? undefined : a.to_number })}>
               <RotateCw aria-hidden className="size-4" /> Redial
             </button>
           )}
-          {a.outcome_source && a.outcome_source !== "function" && (
-            <span className="ml-auto text-xs text-zinc-400">via {a.outcome_source}</span>
-          )}
+          <button className="btn btn-ghost ml-auto" aria-expanded={showMore} onClick={() => setShowMore((v) => !v)}>
+            More <ChevronDown aria-hidden className={cx("size-4 transition", showMore && "rotate-180")} />
+          </button>
         </div>
+        {showMore && (
+          <div className="mt-2 flex flex-wrap gap-1.5">
+            {a.transcript && (
+              <button className="btn btn-ghost" aria-expanded={showTranscript} onClick={() => setShowTranscript((s) => !s)}>
+                <FileText aria-hidden className="size-4" /> Transcript
+              </button>
+            )}
+            <button className="btn btn-ghost" aria-expanded={showManual} onClick={() => setShowManual((s) => !s)}>
+              <PenLine aria-hidden className="size-4" /> {a.needs_review || a.outcome === "unclear" ? "Set outcome" : "Record outcome"}
+            </button>
+          </div>
+        )}
         {a.recording_url && (
           <audio controls preload="none" src={a.recording_url} className="mt-3 h-10 w-full">
             <a href={a.recording_url}>Recording</a>
