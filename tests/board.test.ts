@@ -59,3 +59,21 @@ describe("board shaping", () => {
     expect(holdState(view({}, [attempt({ id: "h1", purpose: "hold_confirm" }), hold], [event("hold_expired", T0)]))).toMatchObject({ hold, expired: true });
   });
 });
+
+describe("map pins", () => {
+  it("labels hospitals still in play with their drive time and leaves out the ones that are out", () => {
+    const yes = attempt({ id: "y", facility_id: "f2", outcome: "accepted", eta_minutes: 35 });
+    const no = attempt({ id: "n", facility_id: "f3", outcome: "declined", eta_minutes: 37 });
+    const ringing = attempt({ id: "r", facility_id: "f4", eta_minutes: 46 });
+    const pins = pinsOf(cardsOf([yes, no, ringing]), null, "options_ready");
+    expect(pins.map((p) => [p.id, p.role, p.eta])).toEqual([["y", "accepted", "35 min"], ["n", "out", null], ["r", "pending", "46 min"]]);
+  });
+
+  it("marks the chosen hospital as selected while the hold is confirming and once it is held", () => {
+    const chosen = attempt({ id: "y", facility_id: "f2", outcome: "accepted" });
+    for (const status of ["confirming", "confirmed"] as const) {
+      expect(pinsOf(cardsOf([chosen]), "f2", status)[0].role).toBe("selected");
+    }
+    expect(pinsOf(cardsOf([chosen]), "f2", "options_ready")[0].role).toBe("accepted");
+  });
+});

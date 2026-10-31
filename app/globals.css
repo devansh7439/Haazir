@@ -135,6 +135,55 @@ body {
   font-size: 12px;
   box-shadow: 0 2px 6px rgb(16 24 40 / 0.25);
 }
+.haazir-pin-wrap {
+  position: relative;
+  display: flex;
+  justify-content: center;
+}
+/* The drive time under a pin, so the numbers on the map match the cards without hovering. */
+.haazir-pin-chip {
+  position: absolute;
+  top: calc(100% + 3px);
+  left: 50%;
+  transform: translateX(-50%);
+  white-space: nowrap;
+  border-radius: 6px;
+  border: 1px solid var(--color-line);
+  background: white;
+  padding: 1px 6px;
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 16px;
+  color: var(--color-zinc-800);
+  box-shadow: 0 1px 3px rgb(16 24 40 / 0.18);
+}
+.haazir-pin-chip-origin {
+  background: var(--color-zinc-900);
+  border-color: var(--color-zinc-900);
+  color: white;
+}
+.haazir-pin-selected {
+  box-shadow: 0 0 0 4px rgb(21 128 61 / 0.3), 0 2px 8px rgb(16 24 40 / 0.35);
+}
+.haazir-pin-out {
+  opacity: 0.55;
+}
+.haazir-map-btn {
+  margin: 10px;
+  min-height: 32px;
+  cursor: pointer;
+  border-radius: 8px;
+  border: 1px solid var(--color-line);
+  background: white;
+  padding: 0 10px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--color-zinc-800);
+  box-shadow: 0 1px 3px rgb(16 24 40 / 0.18);
+}
+.haazir-map-btn:hover {
+  background: var(--color-zinc-50);
+}
 .haazir-pin-live {
   animation: haazir-pulse 1.6s ease-out infinite;
 }

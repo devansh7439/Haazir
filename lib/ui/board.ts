@@ -10,6 +10,9 @@ export interface Card {
   calls: number;
 }
 
+/** How a hospital's pin and route line are drawn: the chosen one, one that said yes, one still in play, or one that is out. */
+export type PinRole = "selected" | "accepted" | "pending" | "out";
+
 /** A hospital pin on the live map. */
 export interface MapPin {
   id: string;
@@ -20,6 +23,9 @@ export interface MapPin {
   live?: boolean;
   title: string;
   detail: string;
+  /** The drive time shown under the pin, for hospitals still in play; null for ones that are out. */
+  eta: string | null;
+  role: PinRole;
 }
 
 export const GROUP_TITLE: Record<Group, string> = {
@@ -82,6 +88,8 @@ export const pinsOf = (cards: Card[], selectedFacilityId: string | null, status:
     .map(({ a }) => {
       const d = attemptDisplay(a, 0);
       const held = selectedFacilityId === a.facility_id && status === "confirmed";
+      const chosen = selectedFacilityId === a.facility_id && (status === "confirming" || status === "confirmed");
+      const role: PinRole = chosen ? "selected" : d.group === "accepted" ? "accepted" : d.group === "not_available" ? "out" : "pending";
       return {
         id: a.id,
         lat: a.facility_lat!,
@@ -91,6 +99,8 @@ export const pinsOf = (cards: Card[], selectedFacilityId: string | null, status:
         live: d.tone === "amber",
         title: shortName(a.facility_name),
         detail: `${a.eta_minutes ?? "?"} min · ${held ? "Bed held" : withoutTimer(d.text)}`,
+        eta: role === "out" || a.eta_minutes === null ? null : `${a.eta_minutes} min`,
+        role,
       };
     });
 
