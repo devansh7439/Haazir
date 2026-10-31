@@ -38,6 +38,7 @@ import * as facilitiesRoute from "@/app/api/facilities/route";
 import { CallRepository } from "@/lib/modules/call/call.repository";
 import { ReferralRepository } from "@/lib/modules/referral/referral.repository";
 import { ReferralService } from "@/lib/modules/referral/referral.service";
+import { EvaluationService } from "@/lib/modules/referral/evaluation.service";
 import type { ReferralInput } from "@/lib/modules/referral/referral.type";
 
 const KRAIT = scenario.referral as unknown as ReferralInput;
@@ -289,7 +290,7 @@ describe("no identifiers reach the browser", () => {
     let selected = false;
     for (let t = 0; t <= 240; t++) {
       await advanceSimulation(id);
-      await ReferralService.evaluate(id);
+      await EvaluationService.evaluate(id);
       const r = await ReferralRepository.get(id);
       if (!selected && r!.status === "options_ready" && t >= 45) {
         const tamarind = (await CallRepository.listForReferral(id)).find((a) => a.facility_id === IDS.tamarind && a.purpose === "availability")!;

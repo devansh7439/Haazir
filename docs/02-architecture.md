@@ -63,7 +63,7 @@ flowchart LR
 | Referral API | `app/api/referrals/**` | Validate input, build the spoken summary, create the referral, start wave 1, select, cancel, close, tick |
 | Matching | `lib/modules/facility/matching.helper.ts` (SQL in `facility.repository.ts`) | Eligibility (SQL in `03-data-model.md` §5.1), ranking, contact choice, "why this hospital" reasons |
 | Summary builder | `lib/modules/referral/summary.helper.ts` | Deterministic spoken summary; identifier guard on the note |
-| Orchestrator | `lib/modules/referral/referral.service.ts`, `referral.helper.ts`, `lib/modules/call/call.service.ts` | `CallService.dispatchWave`; `ReferralService.evaluate` applies the steps `planEvaluation` plans (callbacks, waves, hold expiry, releases). Idempotent |
+| Orchestrator | `lib/modules/referral/evaluation.service.ts`, `referral.helper.ts`, `lib/modules/call/call.service.ts` | `CallService.dispatchWave`; `EvaluationService.evaluate` applies the steps `planEvaluation` plans (callbacks, waves, hold expiry, releases). Idempotent |
 | Bolna client | `lib/integrations/bolna/bolna.client.ts` | `makeCall()`, `getExecution()`, `stopCall()`; swapped for the simulator in simulation mode |
 | Status mapper | `lib/modules/call/status.helper.ts` | Bolna status → our status, monotonic ordering, termination reason → outcome hints |
 | Webhook route | `app/api/bolna/webhook/route.ts` | Auth, raw log, status update, reconcile on `completed`, evaluate |

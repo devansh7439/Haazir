@@ -6,7 +6,7 @@ import { WebhookService } from "@/lib/modules/call/webhook.service";
 import { advanceSimulation } from "@/lib/modules/demo/simulator.service";
 import { MaintenanceRepository } from "@/lib/modules/maintenance/maintenance.repository";
 import type { PurgeResult } from "@/lib/modules/maintenance/maintenance.type";
-import { ReferralService } from "@/lib/modules/referral/referral.service";
+import { EvaluationService } from "@/lib/modules/referral/evaluation.service";
 import { SettingRepository } from "@/lib/modules/setting/setting.repository";
 
 const log = createLogger("maintenance");
@@ -40,7 +40,7 @@ export const MaintenanceService = {
     for (const r of referrals) {
       try {
         if (r.is_simulated) actions += await advanceSimulation(r.id);
-        actions += (await ReferralService.evaluate(r.id)).length;
+        actions += (await EvaluationService.evaluate(r.id)).length;
       } catch (err) {
         log.error({ err, referralId: r.id }, "Cron evaluate failed");
       }

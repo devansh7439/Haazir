@@ -19,7 +19,7 @@ import { FacilityService } from "@/lib/modules/facility/facility.service";
 import { applyEtaCap, type RankedFacility } from "@/lib/modules/facility/matching.helper";
 import { ACTIVE, shortSummaryOf } from "@/lib/modules/referral/referral.helper";
 import { ReferralRepository } from "@/lib/modules/referral/referral.repository";
-import { ReferralService } from "@/lib/modules/referral/referral.service";
+import { EvaluationService } from "@/lib/modules/referral/evaluation.service";
 import type { ManualOutcome, ReferralCtx } from "@/lib/modules/referral/referral.type";
 
 /** A copy of `parent` for a new call to the same hospital: same wave, rank and distance. */
@@ -310,9 +310,9 @@ export const CallService = {
       source: "manual",
     }, a.id);
     const r = await ReferralRepository.get(a.referral_id);
-    if (r && updated && isAcceptance(updated)) await ReferralService.markFirstAcceptance(r, updated);
+    if (r && updated && isAcceptance(updated)) await EvaluationService.markFirstAcceptance(r, updated);
     if (updated) await PortalService.checkMismatch(updated);
-    await ReferralService.evaluate(a.referral_id);
+    await EvaluationService.evaluate(a.referral_id);
     return updated;
   },
 

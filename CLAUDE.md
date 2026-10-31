@@ -33,7 +33,7 @@ ngrok http 3000      # public URL for Bolna callbacks; put it in APP_BASE_URL an
 
 ## Decisions made while building (differences from the pack)
 - **Server data access is raw SQL** in `*.repository.ts` files only, through `lib/core/db.ts` (`DATABASE_URL`: Supabase pooler, any Postgres, or `pglite:` for tests and zero-setup dev). The browser uses Supabase only for Realtime (anon key). Reason: the tested eligibility query and the atomic wave claim run unchanged, and integration tests run on a real Postgres.
-- `supabase/migrations/0002_guards.sql` adds unique indexes so concurrent `ReferralService.evaluate` runs can't double-dispatch redials, releases or once-only events, plus a server-only `app_settings` table.
+- `supabase/migrations/0002_guards.sql` adds unique indexes so concurrent `EvaluationService.evaluate` runs can't double-dispatch redials, releases or once-only events, plus a server-only `app_settings` table.
 - All timestamps come from `lib/core/clock.ts` (never SQL `now()`), so tests drive time.
 - **Organisations.** Every console route calls `requireSession()` and loads rows through `ScopeService` (`lib/modules/auth/scope.service.ts`: `referral`, `attempt`, `facility`, `contact`); list queries filter by `s.org`. New tables that the console reads need an `org_id` (children inherit it by trigger; see migration 0003). Bolna, cron, WhatsApp and trigger routes authenticate with their own secrets or signatures.
 - Migrations are tracked in `haazir_migrations`; `bun run db:setup` (and the embedded DB on connect) applies only new files.
@@ -63,7 +63,7 @@ ngrok http 3000      # public URL for Bolna callbacks; put it in APP_BASE_URL an
 | `lib/core/` | Config, clock, db, `ApiError`, logger, route helpers (`parseBody`, `handle`), normalisers, row types |
 | `lib/integrations/` | Bolna (client, auth, agent builder), WhatsApp (send, inbound signatures and parsing), Sarvam, Supabase browser client |
 | `lib/modules/<area>/` | One file per layer: `*.repository.ts` (all SQL), `*.service.ts` (the steps), `*.helper.ts` (pure rules), `*.type.ts`, `*.validation.ts` |
-| `lib/modules/referral/` | Create, select, confirm, cancel, widen; `referral.helper.ts` `planEvaluation` plans the steps of `docs/02-architecture.md` §6.3, `ReferralService.evaluate` applies them; browser view; spoken summary |
+| `lib/modules/referral/` | Create, select, confirm, cancel, widen; `referral.helper.ts` `planEvaluation` plans the steps of `docs/02-architecture.md` §6.3, `EvaluationService.evaluate` applies them; browser view; spoken summary |
 | `lib/modules/call/` | Placing calls (waves, redials, releases, holds, family calls), Bolna status webhook and mid-call functions, status map, `user_data` |
 | `lib/modules/facility/` | Directory, eligibility SQL (`facility.repository.ts`) and ranking (`matching.helper.ts`, `docs/02-architecture.md` §7) |
 | `lib/modules/{handoff,intake,portal,analytics,maintenance,demo,auth,event,setting}/` | WhatsApp handoff, WhatsApp intake, portal flags, analytics, cron and purge, Demo page and simulator, sign-in and org scope, audit events, settings |

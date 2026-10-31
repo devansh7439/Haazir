@@ -43,6 +43,7 @@ import * as portalRoute from "@/app/api/portal-snapshots/route";
 import { CallRepository } from "@/lib/modules/call/call.repository";
 import { ReferralRepository } from "@/lib/modules/referral/referral.repository";
 import { ReferralService } from "@/lib/modules/referral/referral.service";
+import { EvaluationService } from "@/lib/modules/referral/evaluation.service";
 import { WebhookService } from "@/lib/modules/call/webhook.service";
 import type { ReferralInput } from "@/lib/modules/referral/referral.type";
 
@@ -218,10 +219,10 @@ describe("missed-call trigger (C3) and family call (C1)", () => {
     vi.stubEnv("MISSED_CALL_SECRET", "mc");
     const clock = fakeClock();
     const { referral } = await ReferralService.create(KRAIT, { simulate: true });
-    for (let t = 0; t < 45; t++) { await advanceSimulation(referral.id); await ReferralService.evaluate(referral.id); clock.advance(1); }
+    for (let t = 0; t < 45; t++) { await advanceSimulation(referral.id); await EvaluationService.evaluate(referral.id); clock.advance(1); }
     const tamarind = (await CallRepository.listForReferral(referral.id)).find((a) => a.facility_id === IDS.tamarind && a.purpose === "availability")!;
     await ReferralService.select(referral.id, tamarind.id);
-    for (let t = 0; t < 40; t++) { await advanceSimulation(referral.id); await ReferralService.evaluate(referral.id); clock.advance(1); }
+    for (let t = 0; t < 40; t++) { await advanceSimulation(referral.id); await EvaluationService.evaluate(referral.id); clock.advance(1); }
     expect((await ReferralRepository.get(referral.id))!.status).toBe("confirmed");
     // The handoff placed one family call; its row holds only a masked number.
     let family = (await CallRepository.listForReferral(referral.id)).filter((a) => a.purpose === "family_update");
@@ -324,7 +325,7 @@ describe("missed-webhook recovery, portal flags, retention", () => {
     }));
     expect(res.status).toBe(201);
     const { referral } = await ReferralService.create(KRAIT, { simulate: true });
-    for (let t = 0; t < 40; t++) { await advanceSimulation(referral.id); await ReferralService.evaluate(referral.id); clock.advance(1); }
+    for (let t = 0; t < 40; t++) { await advanceSimulation(referral.id); await EvaluationService.evaluate(referral.id); clock.advance(1); }
     const flags = await db.query<{ payload: { detail: string } }>(`select payload from events where referral_id = $1 and type = 'portal_mismatch'`, [referral.id]);
     // Neem declines with "no ventilator: ICU full, no ventilator free"; the ventilator reading is the one that contradicts it first.
     expect(flags.map((f) => f.payload.detail)).toEqual(["portal showed 2 ventilators free"]);

@@ -27,6 +27,7 @@ import { CallRepository } from "@/lib/modules/call/call.repository";
 import { FunctionService } from "@/lib/modules/call/function.service";
 import { ReferralRepository } from "@/lib/modules/referral/referral.repository";
 import { ReferralService } from "@/lib/modules/referral/referral.service";
+import { EvaluationService } from "@/lib/modules/referral/evaluation.service";
 import { WebhookService } from "@/lib/modules/call/webhook.service";
 import type { ReferralInput } from "@/lib/modules/referral/referral.type";
 
@@ -160,7 +161,7 @@ describe("abuse and cost", () => {
       await FunctionService.requestCallback({ attempt_id: current.id, minutes: "1" });
       await (await WebhookService.handle({ id: current.bolna_execution_id, status: "completed" })).followUp();
       clock.advance(61);
-      await ReferralService.evaluate(referral.id);
+      await EvaluationService.evaluate(referral.id);
       const child = (await CallRepository.listForReferral(referral.id)).find((x) => x.parent_attempt_id === current.id);
       if (!child) break;
       current = child;
@@ -208,10 +209,10 @@ describe("privacy and accuracy", () => {
   it("the family call's transcript (their name, the patient's details) is never stored where the browser can read it", async () => {
     const clock = fakeClock();
     const { referral } = await ReferralService.create(KRAIT, { simulate: true });
-    for (let t = 0; t < 45; t++) { await advanceSimulation(referral.id); await ReferralService.evaluate(referral.id); clock.advance(1); }
+    for (let t = 0; t < 45; t++) { await advanceSimulation(referral.id); await EvaluationService.evaluate(referral.id); clock.advance(1); }
     const tam = (await CallRepository.listForReferral(referral.id)).find((x) => x.facility_id === IDS.tamarind && x.purpose === "availability")!;
     await ReferralService.select(referral.id, tam.id);
-    for (let t = 0; t < 80; t++) { await advanceSimulation(referral.id); await ReferralService.evaluate(referral.id); clock.advance(1); }
+    for (let t = 0; t < 80; t++) { await advanceSimulation(referral.id); await EvaluationService.evaluate(referral.id); clock.advance(1); }
     const fam = (await CallRepository.listForReferral(referral.id)).find((x) => x.purpose === "family_update")!;
     await db.query(`update call_attempts set status = 'wrapping_up', transcript = null where id = $1`, [fam.id]);
     await (await WebhookService.handle({ id: fam.bolna_execution_id, status: "completed", transcript: "Agent: Hello Lakshmi, about Ramesh…", telephony_data: { recording_url: "https://rec/1" } })).followUp();

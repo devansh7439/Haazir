@@ -17,9 +17,10 @@ import { FacilityRepository } from "@/lib/modules/facility/facility.repository";
 import { FacilityService } from "@/lib/modules/facility/facility.service";
 import type { MatchParams } from "@/lib/modules/facility/facility.type";
 import { applyEtaCap } from "@/lib/modules/facility/matching.helper";
-import { CANCELLABLE, CLOSABLE, CONFIRMABLE, SELECTABLE, handoffFacts, holdUntil, isInert, planEvaluation } from "@/lib/modules/referral/referral.helper";
+import { CANCELLABLE, CLOSABLE, CONFIRMABLE, SELECTABLE, handoffFacts, holdUntil } from "@/lib/modules/referral/referral.helper";
+import { EvaluationService } from "@/lib/modules/referral/evaluation.service";
 import { ReferralRepository } from "@/lib/modules/referral/referral.repository";
-import type { EvaluationStep, PreparedReferral, ReferralCtx, ReferralInput } from "@/lib/modules/referral/referral.type";
+import type { PreparedReferral, ReferralInput } from "@/lib/modules/referral/referral.type";
 
 type Created = { referral: Referral; attempts: Attempt[]; duplicate?: true };
 
@@ -79,13 +80,6 @@ const findRepeat = async (orgId: string, requestId: string | undefined): Promise
   if (!requestId) return null;
   const existing = await ReferralRepository.findByRequestId(orgId, requestId);
   return existing ? { referral: existing, attempts: await CallRepository.listForReferral(existing.id), duplicate: true } : null;
-};
-
-const exhaust = async (id: string, actions: string[]): Promise<void> => {
-  if (await ReferralRepository.update(id, { status: "exhausted" }, ["searching"])) {
-    await EventRepository.addOnce(id, "referral_exhausted", { reason: "all waves finished with no acceptance" });
-    actions.push("exhausted");
-  }
 };
 
 /** A referral from creation to close (docs/02-architecture.md §6). */
@@ -197,36 +191,6 @@ export const ReferralService = {
   },
 
   /**
-   * Brings a referral up to date: plans the steps from a snapshot (referral.helper planEvaluation) and applies them.
-   * Idempotent; runs after every webhook and function call, and on every tick. Returns what it did, e.g. ["release:<id>"].
-   */
-  evaluate: async (id: string): Promise<string[]> => {
-    const r = await ReferralRepository.get(id);
-    if (!r || isInert(r)) return [];
-    const attempts = await CallRepository.listForReferral(id);
-    const facilityIds = [...new Set(attempts.filter((a) => a.purpose === "availability").map((a) => a.facility_id).filter((x): x is string => !!x))];
-    const contacts = await FacilityRepository.contactsByFacility(facilityIds);
-    const steps = planEvaluation({ referral: r, attempts, contacts }, now());
-
-    const actions: string[] = [];
-    let ctx: ReferralCtx | null = null;
-    const getCtx = async () => (ctx ??= await ReferralRepository.context(r));
-    for (const step of steps) await applyStep(step, r, getCtx, (next) => (ctx = next), actions);
-    return actions;
-  },
-
-  /** Sets the time to first acceptance exactly once and moves searching to options_ready. False when it was already set. */
-  markFirstAcceptance: async (r: Referral, attempt: Attempt): Promise<boolean> => {
-    const at = attempt.outcome_at ? new Date(attempt.outcome_at) : now();
-    if (!(await ReferralRepository.setFirstAcceptance(r.id, at))) return false;
-    await EventRepository.addOnce(r.id, "options_ready", {
-      facility_id: attempt.facility_id,
-      ttfa_seconds: Math.floor((at.getTime() - new Date(r.created_at).getTime()) / 1000),
-    }, attempt.id);
-    return true;
-  },
-
-  /**
    * The doctor chooses a hospital that said yes. A hold call confirms the bed: at once, or as soon as the accepting
    * call ends. An answer under review needs `force` (the doctor listened to the recording).
    */
@@ -274,7 +238,7 @@ export const ReferralService = {
     const r = await ReferralRepository.get(hold.referral_id);
     if (!r) return noFollowUp;
     const evaluate: FollowUp = async () => {
-      await ReferralService.evaluate(r.id);
+      await EvaluationService.evaluate(r.id);
     };
 
     if (result.confirmed === "yes") {
@@ -286,7 +250,7 @@ export const ReferralService = {
       if (!confirmed) return evaluate;
       return async () => {
         await ReferralService.sendHandoff(r.id);
-        await ReferralService.evaluate(r.id);
+        await EvaluationService.evaluate(r.id);
       };
     }
 
@@ -336,7 +300,7 @@ export const ReferralService = {
     await EventRepository.add(r.id, "hold_confirmed", { facility_id: a.facility_id, contact_person: contactPerson, manual: true }, a.id);
     return async () => {
       await ReferralService.sendHandoff(r.id);
-      await ReferralService.evaluate(r.id);
+      await EvaluationService.evaluate(r.id);
     };
   },
 
@@ -389,7 +353,7 @@ export const ReferralService = {
     }
     await EventRepository.add(r.id, "referral_cancelled", { reason: reason || "cancelled" });
     return async () => {
-      await ReferralService.evaluate(r.id);
+      await EvaluationService.evaluate(r.id);
     };
   },
 
@@ -440,52 +404,4 @@ export const ReferralService = {
     await EventRepository.add(r.id, "referral_closed", { reason: "widened", next_referral_id: created.referral.id });
     return created.referral;
   },
-};
-
-/** Applies one planned step; every step is guarded, so a step another evaluation already did changes nothing. */
-const applyStep = async (
-  step: EvaluationStep,
-  r: Referral,
-  getCtx: () => Promise<ReferralCtx>,
-  setCtx: (ctx: ReferralCtx) => void,
-  actions: string[],
-): Promise<void> => {
-  switch (step.kind) {
-    case "release":
-      if (await CallService.release(await getCtx(), step.attempt)) actions.push(`release:${step.attempt.facility_id}`);
-      return;
-    case "dispatch_hold":
-      if (await CallService.dispatchHold(await getCtx(), step.hold)) actions.push("hold_call_dispatched");
-      return;
-    case "first_acceptance":
-      if (await ReferralService.markFirstAcceptance(r, step.attempt)) actions.push("first_acceptance");
-      return;
-    case "options_ready":
-      if (await ReferralRepository.update(r.id, { status: "options_ready" }, ["searching", "exhausted"])) actions.push("options_ready");
-      return;
-    case "back_to_searching":
-      if (await ReferralRepository.update(r.id, { status: "searching" }, ["options_ready"])) actions.push("back_to_searching");
-      return;
-    case "redial":
-      if (await CallService.redial(await getCtx(), step.attempt, step.target, step.reason)) {
-        actions.push(`redial_${step.reason}:${step.attempt.facility_id}`);
-      }
-      return;
-    case "next_wave": {
-      const claimed = await ReferralRepository.claimWave(r.id, step.expectedWave);
-      if (!claimed) return;
-      const ctx = await ReferralRepository.context(claimed);
-      setCtx(ctx);
-      const sent = await CallService.dispatchWave(ctx, claimed.current_wave);
-      actions.push(`wave_${claimed.current_wave}_dispatched:${sent.length}`);
-      if (sent.length === 0 && step.exhaustIfEmpty) await exhaust(r.id, actions);
-      return;
-    }
-    case "exhaust":
-      await exhaust(r.id, actions);
-      return;
-    case "hold_expired":
-      if (await EventRepository.addOnce(r.id, "hold_expired", { facility_id: r.selected_facility_id })) actions.push("hold_expired");
-      return;
-  }
 };

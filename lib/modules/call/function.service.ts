@@ -15,6 +15,7 @@ import { EventRepository } from "@/lib/modules/event/event.repository";
 import { FacilityRepository } from "@/lib/modules/facility/facility.repository";
 import { ReferralRepository } from "@/lib/modules/referral/referral.repository";
 import { ReferralService } from "@/lib/modules/referral/referral.service";
+import { EvaluationService } from "@/lib/modules/referral/evaluation.service";
 
 type Params = Record<string, unknown>;
 
@@ -41,7 +42,7 @@ const doctorName = async (referralId: string): Promise<string> => {
 };
 
 const evaluateLater = (referralId: string): FollowUp => async () => {
-  await ReferralService.evaluate(referralId);
+  await EvaluationService.evaluate(referralId);
 };
 
 /**
@@ -92,7 +93,7 @@ export const FunctionService = {
         await EventRepository.add(attempt.referral_id, "needs_review", review, attempt.id);
       } else if (isAcceptance(updated)) {
         const r = await ReferralRepository.get(attempt.referral_id);
-        if (r) await ReferralService.markFirstAcceptance(r, updated);
+        if (r) await EvaluationService.markFirstAcceptance(r, updated);
       }
     }
 
@@ -109,7 +110,7 @@ export const FunctionService = {
         const target = { to_number: plan.redialTo, contact_id: contactId };
         if (r) await CallService.redial(await ReferralRepository.context(r), updated, target, "redirected");
       }
-      await ReferralService.evaluate(attempt.referral_id);
+      await EvaluationService.evaluate(attempt.referral_id);
     };
     return { result: "recorded", instruction: plan.instruction, followUp };
   },

@@ -10,6 +10,7 @@ import { FacilityService } from "@/lib/modules/facility/facility.service";
 import { FunctionService } from "@/lib/modules/call/function.service";
 import { ReferralRepository } from "@/lib/modules/referral/referral.repository";
 import { ReferralService } from "@/lib/modules/referral/referral.service";
+import { EvaluationService } from "@/lib/modules/referral/evaluation.service";
 import { WebhookService } from "@/lib/modules/call/webhook.service";
 import type { ReferralInput } from "@/lib/modules/referral/referral.type";
 
@@ -78,7 +79,7 @@ describe("simulated demo-krait-bite referral", () => {
     let selected = false;
     for (let t = 0; t <= 240; t++) {
       await advanceSimulation(referral.id);
-      await ReferralService.evaluate(referral.id);
+      await EvaluationService.evaluate(referral.id);
       const r = await ReferralRepository.get(referral.id);
       if (!selected && r!.status === "options_ready" && t >= 45) {
         const tamarind = (await CallRepository.listForReferral(referral.id)).find((a) => a.facility_id === IDS.tamarind && a.purpose === "availability")!;
@@ -224,7 +225,7 @@ describe("live call path (Bolna stubbed)", () => {
       await FunctionService.recordResponse({ attempt_id: a.id, outcome: "declined", decline_reason: "full" });
       await completeCall(a.bolna_execution_id!);
     }
-    await ReferralService.evaluate(referral.id);
+    await EvaluationService.evaluate(referral.id);
     const r = (await ReferralRepository.get(referral.id))!;
     expect(r.status).toBe("exhausted");
     expect(r.current_wave).toBe(2);
@@ -239,11 +240,11 @@ describe("live call path (Bolna stubbed)", () => {
     expect(res.instruction).toContain("3 minutes");
     await completeCall(a.bolna_execution_id!);
     clock.advance(60);
-    await ReferralService.evaluate(referral.id);
+    await EvaluationService.evaluate(referral.id);
     expect((await CallRepository.listForReferral(referral.id)).filter((x) => x.parent_attempt_id === a.id)).toHaveLength(0);
     clock.advance(121);
-    await ReferralService.evaluate(referral.id);
-    await ReferralService.evaluate(referral.id); // idempotent
+    await EvaluationService.evaluate(referral.id);
+    await EvaluationService.evaluate(referral.id); // idempotent
     expect((await CallRepository.listForReferral(referral.id)).filter((x) => x.parent_attempt_id === a.id)).toHaveLength(1);
   });
 
@@ -254,10 +255,10 @@ describe("live call path (Bolna stubbed)", () => {
     const a = (await CallRepository.listForReferral(referral.id))[1];
     await (await WebhookService.handle({ id: a.bolna_execution_id, status: "busy" })).followUp();
     clock.advance(30);
-    await ReferralService.evaluate(referral.id);
+    await EvaluationService.evaluate(referral.id);
     expect((await CallRepository.listForReferral(referral.id)).filter((x) => x.parent_attempt_id === a.id)).toHaveLength(0);
     clock.advance(20);
-    await ReferralService.evaluate(referral.id);
+    await EvaluationService.evaluate(referral.id);
     const kids = (await CallRepository.listForReferral(referral.id)).filter((x) => x.parent_attempt_id === a.id);
     expect(kids).toHaveLength(1);
     expect(kids[0].to_number).toBe(a.to_number);

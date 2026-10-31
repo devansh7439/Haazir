@@ -9,6 +9,7 @@ import { CallService } from "@/lib/modules/call/call.service";
 import { FunctionService } from "@/lib/modules/call/function.service";
 import { ReferralRepository } from "@/lib/modules/referral/referral.repository";
 import { ReferralService } from "@/lib/modules/referral/referral.service";
+import { EvaluationService } from "@/lib/modules/referral/evaluation.service";
 import { WebhookService } from "@/lib/modules/call/webhook.service";
 import type { ReferralInput } from "@/lib/modules/referral/referral.type";
 
@@ -44,7 +45,7 @@ function stubBolna() {
 async function runSim(referralId: string, clock: { advance(s: number): void }, seconds: number) {
   for (let t = 0; t < seconds; t++) {
     await advanceSimulation(referralId);
-    await ReferralService.evaluate(referralId);
+    await EvaluationService.evaluate(referralId);
     clock.advance(1);
   }
 }
@@ -71,10 +72,10 @@ describe("debug regressions", () => {
     await FunctionService.recordResponse({ attempt_id: a.id, outcome: "accepted" });
     await ReferralService.select(referral.id, a.id); // the desk is still on the line
     expect(calls.filter((c) => c.agent_id === "h")).toHaveLength(0);
-    await ReferralService.evaluate(referral.id);
+    await EvaluationService.evaluate(referral.id);
     expect(calls.filter((c) => c.agent_id === "h")).toHaveLength(0);
     await (await WebhookService.handle({ id: a.bolna_execution_id, status: "call-disconnected" })).followUp();
-    await ReferralService.evaluate(referral.id); // a concurrent evaluation must not dial twice
+    await EvaluationService.evaluate(referral.id); // a concurrent evaluation must not dial twice
     expect(calls.filter((c) => c.agent_id === "h")).toHaveLength(1);
   });
 
@@ -108,7 +109,7 @@ describe("debug regressions", () => {
     const rec = await CallService.recordManualOutcome(a.id, { outcome: "callback_later" });
     expect(rec?.callback_due_at).not.toBeNull();
     clock.advance(5 * 60 + 1);
-    await ReferralService.evaluate(referral.id);
+    await EvaluationService.evaluate(referral.id);
     expect((await CallRepository.listForReferral(referral.id)).filter((x) => x.parent_attempt_id === a.id)).toHaveLength(1);
   });
 

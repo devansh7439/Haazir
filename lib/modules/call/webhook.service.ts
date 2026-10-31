@@ -16,6 +16,7 @@ import { WebhookLogRepository } from "@/lib/modules/call/webhook.repository";
 import { EventRepository } from "@/lib/modules/event/event.repository";
 import { ReferralRepository } from "@/lib/modules/referral/referral.repository";
 import { ReferralService } from "@/lib/modules/referral/referral.service";
+import { EvaluationService } from "@/lib/modules/referral/evaluation.service";
 
 const log = createLogger("call");
 
@@ -48,7 +49,7 @@ const reconcileAvailability = async (a: Attempt, body: Body): Promise<void> => {
   }, a.id);
   if (isAcceptance(updated)) {
     const r = await ReferralRepository.get(a.referral_id);
-    if (r) await ReferralService.markFirstAcceptance(r, updated);
+    if (r) await EvaluationService.markFirstAcceptance(r, updated);
   }
   await PortalService.checkMismatch(updated);
 };
@@ -139,7 +140,7 @@ export const WebhookService = {
       applied: true,
       followUp: async () => {
         await followUp();
-        await ReferralService.evaluate(referralId);
+        await EvaluationService.evaluate(referralId);
       },
     };
   },
@@ -176,7 +177,7 @@ export const WebhookService = {
               facility_id: a.facility_id,
               message: "Lost track of a call: no status from Bolna for 15 minutes. Check it in the Bolna dashboard.",
             }, a.id);
-            await ReferralService.evaluate(a.referral_id);
+            await EvaluationService.evaluate(a.referral_id);
           }
         }
         log.error({ err, attemptId: a.id }, "Status poll failed");
