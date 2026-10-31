@@ -2,7 +2,8 @@
 //   npm run db:setup            → migrations + seed
 //   npm run db:setup -- --no-seed
 // Works for Supabase (direct or session-pooler connection string), local Postgres, or pglite:<dir>.
-import { connect, migrate } from "../lib/core/db";
+import { connect, migrate, setDb } from "../lib/core/db";
+import { FacilityRepository } from "../lib/modules/facility/facility.repository";
 
 async function main() {
   const url = process.env.DATABASE_URL;
@@ -10,8 +11,8 @@ async function main() {
   const db = await connect(url); // a pglite: URL migrates on connect
   const ran = await migrate(db, { seed: !process.argv.includes("--no-seed") });
   console.log(ran.length ? `Applied ${ran.join(", ")}` : "Schema already up to date.");
-  const [{ n }] = await db.query<{ n: number }>("select count(*)::int as n from facilities");
-  console.log(`Done. ${n} facilities.`);
+  setDb(db);
+  console.log(`Done. ${await FacilityRepository.count()} facilities.`);
   await db.close();
 }
 

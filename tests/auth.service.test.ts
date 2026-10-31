@@ -53,3 +53,24 @@ describe("AuthService.signIn, users mode", () => {
     expect(await AuthService.signIn({ email: "a@x.org", password: "x" }, "3.3.3.3")).toMatchObject({ status: 500, code: "MISCONFIGURED" });
   });
 });
+
+describe("AuthService.createUser", () => {
+  it("creates the organisation and user once, then updates the same user on a repeat", async () => {
+    vi.stubEnv("AUTH_MODE", "users");
+    vi.stubEnv("SESSION_SECRET", "s".repeat(40));
+    const first = await AuthService.createUser({ email: "new@x.org", name: "New", password: "first-password-1", role: "doctor", orgName: "Hoskote network" });
+    const again = await AuthService.createUser({ email: "new@x.org", name: "New", password: "second-password-2", role: "admin", orgName: "Hoskote network" });
+    expect(again).toMatchObject({ id: first.id, orgId: first.orgId });
+    expect(await AuthService.signIn({ email: "new@x.org", password: "first-password-1" }, "4.4.4.4")).toMatchObject({ ok: false, status: 401 });
+    expect(await AuthService.signIn({ email: "new@x.org", password: "second-password-2" }, "4.4.4.4")).toMatchObject({ ok: true });
+  });
+
+  it("puts a user in the demo organisation by default and ties them to a new referrer record", async () => {
+    const made = await AuthService.createUser({
+      email: "doc@x.org", name: "Doc", password: "some-password-12", role: "doctor",
+      referrer: { phone_e164: "+919800000999", facility_id: null },
+    });
+    expect(made.orgId).toBe("00000000-0000-4000-8000-000000000001");
+    expect(made.referrerId).toEqual(expect.any(String));
+  });
+});

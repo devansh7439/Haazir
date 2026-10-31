@@ -2,10 +2,11 @@ import "server-only";
 import { timingSafeEqual } from "node:crypto";
 import { now } from "@/lib/core/clock";
 import { env } from "@/lib/core/config";
-import { AuthRepository } from "@/lib/modules/auth/auth.repository";
+import { AuthRepository, type Role } from "@/lib/modules/auth/auth.repository";
+import { DEFAULT_ORG_ID } from "@/lib/core/types";
 import type { LoginBodyT } from "@/lib/modules/auth/auth.validation";
 import { GATE_COOKIE, SESSION_COOKIE, SESSION_TTL_S, gateToken, signSession } from "@/lib/modules/auth/gate.helper";
-import { verifyPassword } from "@/lib/modules/auth/password.helper";
+import { hashPassword, verifyPassword } from "@/lib/modules/auth/password.helper";
 import { ThrottleService, WINDOW_MIN } from "@/lib/modules/auth/throttle.service";
 
 /** A cookie to set on success; null when the sign-in needs none (local development without a passcode). */
@@ -58,6 +59,17 @@ const signInWithPasscode = async (given: string, ipKey: string): Promise<SignInR
   return { ok: true, cookie: { name: GATE_COOKIE, value: b.toString(), maxAge: PASSCODE_COOKIE_TTL_S } };
 };
 
+/** What the create-user script collects. Without an organisation the user joins the demo one. */
+export interface NewUser {
+  email: string;
+  name: string;
+  password: string;
+  role: Role;
+  orgId?: string;
+  orgName?: string;
+  referrer?: { phone_e164: string; facility_id: string | null };
+}
+
 /** Console sign-in: the shared passcode or an email and password, depending on AUTH_MODE. */
 export const AuthService = {
   /** Decides a sign-in attempt. Failures count against the caller's IP (and the account, in users mode). */
@@ -67,5 +79,20 @@ export const AuthService = {
       return "email" in body ? signInWithPassword(body, ipKey) : fail(422, "EMAIL_REQUIRED", "Sign in with your email and password");
     }
     return "passcode" in body ? signInWithPasscode(body.passcode, ipKey) : fail(422, "PASSCODE_REQUIRED", "Enter the console passcode");
+  },
+
+  /** Creates (or updates) a console user, their organisation if it is new, and their referrer record. Returns the ids. */
+  createUser: async (u: NewUser): Promise<{ id: string; orgId: string; referrerId: string | null }> => {
+    const orgId = u.orgName ? await AuthRepository.organisationByName(u.orgName) : (u.orgId ?? DEFAULT_ORG_ID);
+    const referrerId = u.referrer ? await AuthRepository.insertReferrer({ name: u.name, org_id: orgId, ...u.referrer }) : null;
+    const id = await AuthRepository.upsertUser({
+      org_id: orgId,
+      email: u.email,
+      name: u.name,
+      password_hash: await hashPassword(u.password),
+      role: u.role,
+      referrer_id: referrerId,
+    });
+    return { id, orgId, referrerId };
   },
 };
