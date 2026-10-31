@@ -241,6 +241,8 @@ Normalise the code (`R4821`, `R 4 8 2 1` → `R-4821`). Match the referral by co
 
 ## 4. Messages
 
+Hospitals page extras: `POST /api/facilities` (admin) takes `capabilities` (codes) and `contacts` (up to 5 desk numbers) with the hospital and writes nothing if any is invalid. `GET /api/facilities/ratings` (any signed-in user) returns `{ enabled, ratings: { <facility id>: { rating, count, url } } }` from Google Places; `enabled` is false and `ratings` empty without `GOOGLE_PLACES_API_KEY`. Only the Google place id is stored (`facilities.google_place_id`); ratings are held in memory for an hour, as Google's terms don't allow storing them.
+
 Sent by `WhatsAppService.send` (`lib/modules/handoff/whatsapp.service.ts`) with provider `meta`, `twilio` or `none`. With `none`, or if a send fails, the row is stored as `simulated` or `failed` and the UI shows the preview. Every send also writes an event with a **redacted** preview.
 
 **Provider note:** business-initiated WhatsApp messages need either an approved template (Meta) or an open session where the recipient messaged you first (Twilio sandbox: recipients send the join code). For the demo, have every demo phone message your WhatsApp number beforehand.

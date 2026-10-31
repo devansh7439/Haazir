@@ -70,7 +70,7 @@ ngrok http 3000      # public URL for Bolna callbacks; put it in APP_BASE_URL an
 | `lib/ui/display.ts` | Client-safe display helpers (tones, labels, timeline text) |
 
 ## Unverified against live services
-Bolna's v2 agent payload (`lib/integrations/bolna/bolna.agents.ts`), the execution-polling response shape, Sarvam speech-to-text (`lib/integrations/sarvam/sarvam.stt.ts`), and Meta/Twilio WhatsApp sends were written without access to those docs or accounts. Each file says so; test them before relying on them.
+Bolna's v2 agent payload (`lib/integrations/bolna/bolna.agents.ts`), Google Places ratings (`lib/integrations/google/google.places.ts`, only with `GOOGLE_PLACES_API_KEY`), the execution-polling response shape, Sarvam speech-to-text (`lib/integrations/sarvam/sarvam.stt.ts`), and Meta/Twilio WhatsApp sends were written without access to those docs or accounts. Each file says so; test them before relying on them.
 
 ## Tests to write first
 - `summary.ts`: the krait-bite example produces exactly the string in `docs/02-architecture.md` §8; a note with 10 digits is rejected.

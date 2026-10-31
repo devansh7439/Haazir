@@ -33,6 +33,7 @@ The family is messaged or called only when the referring doctor ticked that the 
 | C1 family voice call · C2 WhatsApp text/voice-note intake · C3 missed-call callback · C4 portal-vs-desk flags · C5 analytics · C6 WhatsApp quick reply · C7 Aapat Setu link · C8 max ETA | ✅ |
 | Simulation through the same handlers, SIMULATED badge, Demo console | ✅ |
 | Demo tools: presenter **run sheet** (script, fallback ladder, 20 hard questions from `docs/08`, measured numbers filled in), printable **judge cards** with assigned phones, **voice test-matrix** tracker (20 scenarios × 2 passes, demo-ready gate) | ✅ |
+| **Hospitals page**: admins list a hospital with its services and desk numbers; everyone can filter by what a hospital offers, open its details (services, numbers, location map) and see its Google star rating (set `GOOGLE_PLACES_API_KEY`; off without it) | ✅ (ratings need a live Google test) |
 | Attendant consent checkbox: the family is contacted only when the doctor recorded that the attendant agreed | ✅ |
 | Hardening: sign-in throttling, fail-closed production gate, safe post-login redirect, JSON-only console bodies, one referral per "Find a bed" press, live-referral cap per org, doctors refer as themselves | ✅ |
 
@@ -55,7 +56,7 @@ Open http://localhost:3000, pick **Snakebite – neurotoxic signs**, set **Criti
 bun run lint && bun run typecheck && bun run test
 ```
 
-171 tests, including the ones `CLAUDE.md` asks for: the exact krait-bite spoken summary, the 10-digit note guard, monotonic statuses under replayed/out-of-order webhooks, the `%(x)s`/`None` normaliser, matching order on the seed (Tamarind 18 → Lotus 74 min), no identifiers in availability `user_data`, and an end-to-end simulated referral that reaches `confirmed` with exactly two release calls (Banyan, Mango Grove). Integration tests run on an in-memory Postgres (PGlite) with the real migrations. Route tests call the actual route handlers: Bolna auth and the always-200 contract, the IP allowlist, cron auth, passcode and user sign-in, organisation isolation, missed calls, signed WhatsApp webhooks, missed-webhook recovery, portal flags and the retention purge. Unit tests cover every branch of the evaluation planner (`tests/planner.test.ts`), so the rules that decide redials, waves and releases are tested without a database.
+193 tests, including the ones `CLAUDE.md` asks for: the exact krait-bite spoken summary, the 10-digit note guard, monotonic statuses under replayed/out-of-order webhooks, the `%(x)s`/`None` normaliser, matching order on the seed (Tamarind 18 → Lotus 74 min), no identifiers in availability `user_data`, and an end-to-end simulated referral that reaches `confirmed` with exactly two release calls (Banyan, Mango Grove). Integration tests run on an in-memory Postgres (PGlite) with the real migrations. Route tests call the actual route handlers: Bolna auth and the always-200 contract, the IP allowlist, cron auth, passcode and user sign-in, organisation isolation, missed calls, signed WhatsApp webhooks, missed-webhook recovery, portal flags and the retention purge. Unit tests cover every branch of the evaluation planner (`tests/planner.test.ts`), so the rules that decide redials, waves and releases are tested without a database.
 
 ## Deploy (Supabase + Vercel + Bolna)
 
