@@ -13,7 +13,7 @@ Create these in WhatsApp Manager → Message templates (category **Utility**), w
 | `META_WA_TEMPLATE_FAMILY` | `haazir_family` | `en`, `kn`, `hi` (one template, three translations) |
 | `META_WA_TEMPLATE_BED_REQUEST` | `haazir_bed_request` | `en` (only if `WHATSAPP_AVAILABILITY_PING=on`) |
 
-Leave a variable empty to send plain text for that message. Parameters are filled in the order below (`lib/messages.ts`);
+Leave a variable empty to send plain text for that message. Parameters are filled in the order below (`lib/modules/handoff/message.helper.ts`);
 an empty value is sent as `—` because Meta rejects empty parameters.
 
 ## `haazir_prearrival` (9 parameters)

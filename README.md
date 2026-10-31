@@ -48,7 +48,7 @@ Open http://localhost:3000, pick **Snakebite – neurotoxic signs**, set **Criti
 bun run lint && bun run typecheck && bun run test
 ```
 
-95 tests, including the ones `CLAUDE.md` asks for: the exact krait-bite spoken summary, the 10-digit note guard, monotonic statuses under replayed/out-of-order webhooks, the `%(x)s`/`None` normaliser, matching order on the seed (Tamarind 18 → Lotus 74 min), no identifiers in availability `user_data`, and an end-to-end simulated referral that reaches `confirmed` with exactly two release calls (Banyan, Mango Grove). Integration tests run on an in-memory Postgres (PGlite) with the real migrations. Route tests call the actual route handlers: Bolna auth and the always-200 contract, the IP allowlist, cron auth, passcode and user sign-in, organisation isolation, missed calls, signed WhatsApp webhooks, missed-webhook recovery, portal flags and the retention purge.
+139 tests, including the ones `CLAUDE.md` asks for: the exact krait-bite spoken summary, the 10-digit note guard, monotonic statuses under replayed/out-of-order webhooks, the `%(x)s`/`None` normaliser, matching order on the seed (Tamarind 18 → Lotus 74 min), no identifiers in availability `user_data`, and an end-to-end simulated referral that reaches `confirmed` with exactly two release calls (Banyan, Mango Grove). Integration tests run on an in-memory Postgres (PGlite) with the real migrations. Route tests call the actual route handlers: Bolna auth and the always-200 contract, the IP allowlist, cron auth, passcode and user sign-in, organisation isolation, missed calls, signed WhatsApp webhooks, missed-webhook recovery, portal flags and the retention purge. Unit tests cover every branch of the evaluation planner (`tests/planner.test.ts`), so the rules that decide redials, waves and releases are tested without a database.
 
 ## Deploy (Supabase + Vercel + Bolna)
 
@@ -70,7 +70,7 @@ bun run lint && bun run typecheck && bun run test
 
 ### Day-1 checks against real Bolna
 - A test call's function route receives a real UUID in `attempt_id`, not empty or `%(attempt_id)s`. If it doesn't, the route falls back to matching on `to_number`.
-- Check the shape of the `completed` webhook body against `lib/handlers.ts` (`id`, `status`, `transcript`, `telephony_data.recording_url`, `extracted_data`, `context_details`).
+- Check the shape of the `completed` webhook body against `lib/modules/call/webhook.helper.ts` (`id`, `status`, `transcript`, `telephony_data.recording_url`, `extracted_data`, `context_details`).
 - Account concurrency is at least 10.
 
 ## Layout
@@ -78,8 +78,12 @@ bun run lint && bun run typecheck && bun run test
 ```
 app/                 pages (/, /referrals/[id], /facilities, /demo, /history) and API routes
 components/          ReferralForm, LiveBoard, BoardMap, FacilitiesAdmin, DemoPanel
-lib/                 orchestrator, handlers, simulator, matching, summary, statusMap, normalize, bolna, whatsapp, db, view,
-                     session/scope (auth + org isolation), maintenance (cron, purge), portal, intake, analytics, bolnaAgents
+lib/core/            config, clock, db, ApiError, logger, route helpers, normalisers, row types
+lib/integrations/    bolna (client, auth, agent builder), whatsapp (send, inbound), sarvam, supabase browser client
+lib/modules/         referral, call, facility, handoff, intake, portal, analytics, maintenance, demo, auth, event, setting:
+                     each split into repository (SQL), service (steps), helper (pure rules), type and validation files
+lib/ui/              client-safe display helpers
+context.md           code-quality rules and the refactor plan
 scripts/             db-setup, create-user, bolna-agents
 supabase/            migrations and seed
 bolna/               agent prompts, tool JSON, extraction setup
