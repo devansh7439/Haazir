@@ -1,18 +1,20 @@
 import { NextResponse, type NextRequest } from "next/server";
-import { GATE_COOKIE, SESSION_COOKIE, gateToken, verifySession } from "@/lib/modules/auth/gate.helper";
+import { GATE_COOKIE, SESSION_COOKIE, bearerToken, gateToken, verifySession } from "@/lib/modules/auth/gate.helper";
 
 // Routes that authenticate with their own secrets or signatures, plus the sign-in page.
-const PUBLIC = ["/api/bolna", "/api/cron", "/api/whatsapp", "/api/triggers", "/login", "/api/login", "/api/logout"];
+const PUBLIC = ["/api/bolna", "/api/cron", "/api/whatsapp", "/api/triggers", "/login", "/api/login", "/api/logout", "/api/mobile/config"];
 
 // Console gate. AUTH_MODE=users: a signed per-user session. Otherwise the shared DEMO_PASSCODE
 // (unset = no gate, for local development). Route handlers check the session again and scope data by organisation.
 async function signedIn(req: NextRequest): Promise<boolean> {
+  // The mobile app sends its token as a Bearer header instead of a cookie.
+  const bearer = bearerToken(req.headers);
   if ((process.env.AUTH_MODE ?? "").trim() === "users") {
-    return !!(await verifySession(req.cookies.get(SESSION_COOKIE)?.value, (process.env.SESSION_SECRET ?? "").trim()));
+    return !!(await verifySession(req.cookies.get(SESSION_COOKIE)?.value ?? bearer, (process.env.SESSION_SECRET ?? "").trim()));
   }
   const passcode = process.env.DEMO_PASSCODE?.trim();
   if (!passcode) return process.env.NODE_ENV !== "production"; // fail closed when a deploy forgot the passcode
-  return req.cookies.get(GATE_COOKIE)?.value === (await gateToken(passcode));
+  return (req.cookies.get(GATE_COOKIE)?.value ?? bearer) === (await gateToken(passcode));
 }
 
 export async function middleware(req: NextRequest) {

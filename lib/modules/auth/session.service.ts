@@ -1,9 +1,9 @@
 import "server-only";
-import { cookies } from "next/headers";
+import { cookies, headers } from "next/headers";
 import { notFound, redirect } from "next/navigation";
 import { env } from "@/lib/core/config";
 import { AuthRepository } from "@/lib/modules/auth/auth.repository";
-import { GATE_COOKIE, SESSION_COOKIE, gateToken, verifySession } from "@/lib/modules/auth/gate.helper";
+import { GATE_COOKIE, SESSION_COOKIE, bearerToken, gateToken, verifySession } from "@/lib/modules/auth/gate.helper";
 import { DEFAULT_ORG_ID } from "@/lib/core/types";
 import { ApiError } from "@/lib/core/error";
 
@@ -37,10 +37,11 @@ export async function sessionFromCookies(get: (name: string) => string | undefin
   return get(GATE_COOKIE) === (await gateToken(passcode)) ? PASSCODE_SESSION : null;
 }
 
-/** The session for the current request, or null when nobody is signed in. */
+/** The session for the current request (cookie, or `Authorization: Bearer` for the mobile app), or null when nobody is signed in. */
 export async function getSession(): Promise<Session | null> {
-  const jar = await cookies();
-  return sessionFromCookies((name) => jar.get(name)?.value);
+  const [jar, h] = await Promise.all([cookies(), headers()]);
+  const bearer = bearerToken(h);
+  return sessionFromCookies((name) => jar.get(name)?.value ?? bearer);
 }
 
 /** For server pages: the session, or a redirect to sign-in. */

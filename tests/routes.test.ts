@@ -4,6 +4,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 // Route handlers are called directly. after() runs its work inline (and we wait for it); cookies() reads a test jar.
 const deferred: Array<Promise<unknown>> = [];
 const jar = new Map<string, string>();
+const reqHeaders = new Map<string, string>();
 vi.mock("next/server", async (orig) => {
   const mod = await orig<typeof import("next/server")>();
   return {
@@ -15,6 +16,7 @@ vi.mock("next/server", async (orig) => {
 });
 vi.mock("next/headers", () => ({
   cookies: async () => ({ get: (name: string) => (jar.has(name) ? { name, value: jar.get(name)! } : undefined) }),
+  headers: async () => new Headers([...reqHeaders]),
 }));
 
 import type { Db } from "@/lib/core/db";

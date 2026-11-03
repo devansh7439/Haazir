@@ -12,6 +12,11 @@ export const SESSION_COOKIE = "haazir_session";
 /** How long a session lasts: 12 hours. */
 export const SESSION_TTL_S = 12 * 3600;
 
+/** The token in an `Authorization: Bearer` header, or undefined. The mobile app signs in this way: it has no cookie jar. */
+export function bearerToken(headers: { get(name: string): string | null }): string | undefined {
+  return /^Bearer\s+(\S+)$/i.exec(headers.get("authorization") ?? "")?.[1];
+}
+
 /** The cookie value for a passcode: a SHA-256 hash, so the passcode itself is never stored in the browser. */
 export async function gateToken(passcode: string): Promise<string> {
   const data = new TextEncoder().encode(`haazir:${passcode}`);

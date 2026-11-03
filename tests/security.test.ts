@@ -9,6 +9,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const deferred: Array<Promise<unknown>> = [];
 const jar = new Map<string, string>();
+const reqHeaders = new Map<string, string>();
 vi.mock("next/server", async (orig) => {
   const mod = await orig<typeof import("next/server")>();
   return {
@@ -20,6 +21,7 @@ vi.mock("next/server", async (orig) => {
 });
 vi.mock("next/headers", () => ({
   cookies: async () => ({ get: (name: string) => (jar.has(name) ? { name, value: jar.get(name)! } : undefined) }),
+  headers: async () => new Headers([...reqHeaders]),
 }));
 
 import type { Db } from "@/lib/core/db";
@@ -49,6 +51,8 @@ const METHODS = ["GET", "POST", "PUT", "PATCH", "DELETE"] as const;
 
 // Routes that authenticate with their own secret or signature (or are the sign-in itself).
 const SELF_AUTHED = ["bolna/", "cron/", "whatsapp/", "triggers/", "login", "logout"];
+// Open to anyone on purpose; the "public routes" test pins what they may say.
+const PUBLIC_ROUTES = ["mobile/config"];
 // [route, method] pairs only an admin may call. Kept in step with the source by the "admin list is complete" test.
 const ADMIN_ONLY = [
   "POST facilities", "PATCH facilities/[id]", "PUT facilities/[id]/capabilities", "POST facilities/[id]/contacts",
@@ -146,7 +150,7 @@ afterEach(async () => {
   await db.close();
 });
 
-const consoleRoutes = () => routes.filter((r) => !SELF_AUTHED.some((p) => r.path.startsWith(p)));
+const consoleRoutes = () => routes.filter((r) => !SELF_AUTHED.some((p) => r.path.startsWith(p)) && !PUBLIC_ROUTES.includes(r.path));
 const key = (r: Route) => `${r.method} ${r.path}`;
 
 describe("route access control", () => {
@@ -161,6 +165,15 @@ describe("route access control", () => {
       if (res.status !== 401) failures.push(`${key(r)} → ${res.status}`);
     }
     expect(failures).toEqual([]);
+  });
+
+  it("public routes say nothing but the sign-in mode", async () => {
+    for (const path of PUBLIC_ROUTES) {
+      const r = routes.find((x) => x.path === path)!;
+      const res = await call(r);
+      expect(res.status).toBe(200);
+      expect(await res.json()).toEqual({ auth_mode: "users" });
+    }
   });
 
   it("every self-authenticated route refuses a request with no secret or signature", async () => {
