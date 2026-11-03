@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { StyleSheet, Text, View } from "react-native";
 import { useSession } from "../session/SessionProvider";
 import { Button } from "../ui/Button";
@@ -19,8 +19,6 @@ export default function SignIn() {
   const [password, setPassword] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => setServer((s) => s || saved), [saved]);
 
   const run = async (work: () => Promise<void>) => {
     setBusy(true);

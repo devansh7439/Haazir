@@ -1,7 +1,7 @@
-import { useMemo, useState } from "react";
+import { useMemo, useState, type ReactNode } from "react";
 import { StyleSheet, Switch, Text, View } from "react-native";
 import { api } from "../../api/client";
-import { CreatedSchema, type Acuity, type AgeUnit, type Bootstrap, type CaseTemplate, type Sex } from "../../api/schema";
+import { CreatedSchema, type Acuity, type AgeUnit, type Bootstrap, type CaseTemplate, type Draft, type Sex } from "../../api/schema";
 import { newRequestId } from "../../lib/request-id";
 import { Button } from "../../ui/Button";
 import { Callout } from "../../ui/Callout";
@@ -24,15 +24,16 @@ const missingStep = (caseType: string, acuity: string, needs: string[]): string 
   !caseType ? "Choose a case" : !acuity ? "Set how urgent it is" : needs.length === 0 && caseType !== "other" ? "Add at least one need" : null;
 
 /** The "Find a bed" form, with a live preview of what hospitals will hear and who will be phoned. */
-export function ReferralForm({ boot, onCreated }: { boot: Bootstrap; onCreated: (id: string) => void }) {
+export function ReferralForm({ boot, onCreated, draft, header }: { boot: Bootstrap; onCreated: (id: string) => void; draft?: Draft | null; header?: ReactNode }) {
   const referrer = boot.referrer;
-  const [caseType, setCaseType] = useState("");
-  const [needs, setNeeds] = useState<string[]>([]);
-  const [acuity, setAcuity] = useState<Acuity | "">("");
-  const [age, setAge] = useState("");
-  const [ageUnit, setAgeUnit] = useState<AgeUnit>("years");
-  const [sex, setSex] = useState<Sex>("unknown");
-  const [note, setNote] = useState("");
+  const d = draft?.parsed;
+  const [caseType, setCaseType] = useState(d?.case_type ?? "");
+  const [needs, setNeeds] = useState<string[]>(d?.required_capabilities ?? []);
+  const [acuity, setAcuity] = useState<Acuity | "">(d?.acuity ?? "");
+  const [age, setAge] = useState(d?.age_value != null ? String(d.age_value) : "");
+  const [ageUnit, setAgeUnit] = useState<AgeUnit>(d?.age_unit ?? "years");
+  const [sex, setSex] = useState<Sex>(d?.sex ?? "unknown");
+  const [note, setNote] = useState(d?.note ?? "");
   const [radius, setRadius] = useState(DEFAULT_RADIUS_KM);
   const [showPatient, setShowPatient] = useState(false);
   const [patient, setPatient] = useState<PatientFields>(EMPTY_PATIENT);
@@ -80,7 +81,7 @@ export function ReferralForm({ boot, onCreated }: { boot: Bootstrap; onCreated: 
     try {
       const filled = showPatient || patient.patient_name || patient.attendant_phone;
       const created = await api("/api/referrals", CreatedSchema, {
-        body: { ...body, client_request_id: requestId, patient: filled ? { ...patient, attendant_language: patient.attendant_language || null } : undefined },
+        body: { ...body, draft_id: draft?.id, client_request_id: requestId, patient: filled ? { ...patient, attendant_language: patient.attendant_language || null } : undefined },
       });
       onCreated(created.id);
     } catch (err) {
@@ -111,6 +112,12 @@ export function ReferralForm({ boot, onCreated }: { boot: Bootstrap; onCreated: 
         </>
       }
     >
+      {header}
+      {draft ? (
+        <Callout kind="info" title="Filled from your WhatsApp">
+          {`${draft.parsed.matched.length ? `Understood: ${draft.parsed.matched.join(", ")}. ` : ""}Check every field before you start.${draft.parsed.note_dropped ? " The note was left out because it may contain a name or number." : ""}`}
+        </Callout>
+      ) : null}
       <Card style={{ gap: 20 }}>
         <CasePicker templates={boot.templates} caseType={caseType} onPick={pick} />
         <NeedsPicker capabilities={boot.capabilities} needs={needs} onToggle={toggleNeed} />

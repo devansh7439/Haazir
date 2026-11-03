@@ -31,7 +31,7 @@ const Metric = ({ label, value, strong }: { label: string; value: string; strong
 /** The live board for one referral: timers, a card per hospital, the hold panel and the activity feed. */
 export default function ReferralBoard() {
   const { id } = useLocalSearchParams<{ id: string }>();
-  const { view, nowMs, act, actionError, loadError, refresh } = useLiveReferral(id);
+  const { view, nowMs, act, actionError, loadError, stale, refresh } = useLiveReferral(id);
   const [selecting, setSelecting] = useState<AttemptView | null>(null);
   const [cancelling, setCancelling] = useState(false);
 
@@ -78,13 +78,15 @@ export default function ReferralBoard() {
         {isCancellable(r.status) && <Button variant="ghost" label="Cancel referral" onPress={() => setCancelling(true)} testID="cancel-referral" />}
       </Card>
 
+      {stale ? <Callout kind="warn" title="Reconnecting">No signal. Showing the last update; it refreshes when you are back online.</Callout> : null}
       {actionError ? <Callout kind="error">{actionError}</Callout> : null}
       {alerts.map((al) => <AlertCard key={al.event_id} alert={al} onDismiss={() => void run(`/api/referrals/${r.id}/dismiss-alert`, { event_id: al.event_id })} />)}
-      {showHold && <HoldPanel view={view} hold={hold} releases={releases} holdExpired={expired} facilityName={facilityName} act={run} />}
+      {showHold && <HoldPanel view={view} hold={hold} releases={releases} holdExpired={expired} facilityName={facilityName} nowMs={nowMs} act={run} />}
       {r.status === "exhausted" && (
         <ExhaustedPanel
           view={view}
           cards={cards.map((c) => c.a)}
+          nowMs={nowMs}
           onWiden={async () => {
             const res = await act(`/api/referrals/${r.id}/widen`, { radius_km: 80 });
             const next = res.data && typeof res.data === "object" ? (res.data as { id?: unknown }).id : undefined;
@@ -93,9 +95,10 @@ export default function ReferralBoard() {
         />
       )}
       {nextId && (
-        <Callout kind="info" title="The search continues in a new referral with a wider radius.">
-          Open it from the Referrals tab.
-        </Callout>
+        <View style={{ gap: 8 }}>
+          <Callout kind="info" title="The search continues in a new referral with a wider radius." />
+          <Button variant="primary" label="Open the new referral" onPress={() => router.replace(`/referral/${nextId}`)} />
+        </View>
       )}
 
       {groupCards(cards, nowMs).map(({ g, items }) => (
@@ -110,6 +113,7 @@ export default function ReferralBoard() {
               referralStatus={r.status}
               isSelected={r.selected_attempt_id === a.id}
               portalFlag={view.portal_flags[a.id] ?? null}
+              origin={view.origin}
               onSelect={() => setSelecting(a)}
               act={run}
             />

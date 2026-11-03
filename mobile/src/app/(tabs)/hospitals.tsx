@@ -1,20 +1,23 @@
 import { useMemo, useState } from "react";
 import { Linking, Pressable, StyleSheet, Text, View } from "react-native";
 import { api } from "../../api/client";
-import { FacilityListSchema, type FacilityListItem } from "../../api/schema";
+import { FacilityListSchema, RatingsSchema, type FacilityListItem, type Rating } from "../../api/schema";
 import { useLoad } from "../../api/useLoad";
 import { LANGUAGE_LABEL } from "../../lib/display";
+import { shortCount } from "../../lib/rating";
 import { CONTACT_ROLE_LABEL, KIND_LABEL, OWNERSHIP_LABEL, filterFacilities, groupByCategory, mapsLink, telLink } from "../../lib/facility";
 import { useSignedIn } from "../../session/SessionProvider";
 import { Button } from "../../ui/Button";
 import { Callout } from "../../ui/Callout";
+import { Chip } from "../../ui/Chip";
 import { Card } from "../../ui/Card";
 import { Field } from "../../ui/Field";
 import { Icon } from "../../ui/Icon";
 import { Screen } from "../../ui/Screen";
+import { Sheet } from "../../ui/Sheet";
 import { color, font } from "../../ui/theme";
 
-function Hospital({ f, open, onToggle, labels }: { f: FacilityListItem; open: boolean; onToggle: () => void; labels: Map<string, { code: string; label: string; spoken_en: string; category: string }> }) {
+function Hospital({ f, open, onToggle, rating, labels }: { f: FacilityListItem; open: boolean; onToggle: () => void; rating: Rating | undefined; labels: Map<string, { code: string; label: string; spoken_en: string; category: string }> }) {
   const groups = groupByCategory([...labels.values()], f.capabilities);
   const contacts = f.contacts.filter((c) => c.active).sort((a, b) => Number(a.is_ivr) - Number(b.is_ivr) || a.priority - b.priority);
   return (
@@ -25,6 +28,7 @@ function Hospital({ f, open, onToggle, labels }: { f: FacilityListItem; open: bo
           <Text style={styles.meta}>
             {[KIND_LABEL[f.kind] ?? f.kind, f.city ?? f.district, LANGUAGE_LABEL[f.call_language] ?? f.call_language].filter(Boolean).join(" · ")}
           </Text>
+          {rating ? <Text style={styles.meta}>{`★ ${rating.rating.toFixed(1)} on Google · ${shortCount(rating.count)} reviews`}</Text> : null}
         </View>
         <Icon name={open ? "chevron-up" : "chevron-down"} size={18} color={color.faint} />
       </Pressable>
@@ -50,6 +54,7 @@ function Hospital({ f, open, onToggle, labels }: { f: FacilityListItem; open: bo
               onPress={() => void Linking.openURL(telLink(c.phone_e164))}
             />
           ))}
+          {rating?.url ? <Button icon="star" variant="ghost" label="Reviews on Google" onPress={() => void Linking.openURL(rating.url!)} /> : null}
           <Button icon="map-pin" label="Directions" variant="ghost" onPress={() => void Linking.openURL(mapsLink(f.lat, f.lng))} />
         </View>
       )}
@@ -63,21 +68,50 @@ export default function Hospitals() {
   const { data, error, loading, refreshing, reload } = useLoad(() => api("/api/facilities", FacilityListSchema), []);
   const [query, setQuery] = useState("");
   const [openId, setOpenId] = useState<string | null>(null);
+  const [services, setServices] = useState<string[]>([]);
+  const [filtering, setFiltering] = useState(false);
+  // Google ratings load after the list, so a slow Google never delays it.
+  const ratings = useLoad(() => api("/api/facilities/ratings", RatingsSchema), []).data?.ratings ?? {};
   const labels = useMemo(() => new Map(boot.capabilities.map((c) => [c.code, c])), [boot.capabilities]);
-  const rows = useMemo(() => filterFacilities(data?.facilities ?? [], query, []), [data, query]);
+  const rows = useMemo(() => filterFacilities(data?.facilities ?? [], query, services), [data, query, services]);
   return (
     <Screen title="Hospitals" subtitle={data ? `${data.facilities.length} hospitals in your network` : undefined} refreshing={refreshing} onRefresh={reload} testID="hospitals">
       <Field label="Search" value={query} onChangeText={setQuery} placeholder="Name, town or district" autoCapitalize="none" autoCorrect={false} testID="search" />
+      <Button
+        compact
+        variant="secondary"
+        icon="sliders"
+        label={services.length ? `Services (${services.length})` : "Filter by service"}
+        onPress={() => setFiltering((v) => !v)}
+        testID="filter-toggle"
+      />
+      {filtering && (
+        <Sheet title="Filter by service" onClose={() => setFiltering(false)}>
+          {groupByCategory(boot.capabilities).map((g) => (
+            <View key={g.category} style={{ gap: 6 }}>
+              <Text style={styles.groupTitle}>{g.title}</Text>
+              <View style={styles.chips}>
+                {g.items.map((c) => (
+                  <Chip key={c.code} testID={`svc-${c.code}`} label={c.label} selected={services.includes(c.code)} onPress={() => setServices((s) => (s.includes(c.code) ? s.filter((x) => x !== c.code) : [...s, c.code]))} />
+                ))}
+              </View>
+            </View>
+          ))}
+          {services.length > 0 && <Button compact variant="ghost" label="Clear" onPress={() => setServices([])} />}
+          <Button variant="primary" label={`Show ${rows.length} hospital${rows.length === 1 ? "" : "s"}`} onPress={() => setFiltering(false)} testID="filter-done" />
+        </Sheet>
+      )}
       {error ? <Callout kind="error">{error}</Callout> : null}
-      {!loading && !error && rows.length === 0 ? <Callout>{query ? "No hospital matches that search." : "No hospitals listed yet."}</Callout> : null}
+      {!loading && !error && rows.length === 0 ? <Callout>{query || services.length ? "No hospital matches that search." : "No hospitals listed yet."}</Callout> : null}
       {rows.map((f) => (
-        <Hospital key={f.id} f={f} open={openId === f.id} onToggle={() => setOpenId(openId === f.id ? null : f.id)} labels={labels} />
+        <Hospital key={f.id} f={f} open={openId === f.id} onToggle={() => setOpenId(openId === f.id ? null : f.id)} rating={ratings[f.id]} labels={labels} />
       ))}
     </Screen>
   );
 }
 
 const styles = StyleSheet.create({
+  chips: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
   head: { flexDirection: "row", alignItems: "center", gap: 8, minHeight: 44 },
   name: { fontSize: font.lg, fontWeight: "600", color: color.text },
   meta: { fontSize: font.sm, color: color.muted },

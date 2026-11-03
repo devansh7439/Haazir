@@ -2,6 +2,7 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useRef, use
 import { ApiError, api, configureApi } from "../api/client";
 import { BootstrapSchema, ConfigSchema, LoginSchema, type Bootstrap } from "../api/schema";
 import { normalizeServerUrl } from "../lib/url";
+import { unregisterPush } from "../push/push";
 import { storage } from "./storage";
 
 const SESSION_KEY = "haazir.session";
@@ -34,6 +35,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
   const serverRef = useRef("");
 
   const signOut = useCallback(async () => {
+    await unregisterPush(); // while the token is still valid
     configureApi(null);
     await storage.remove(SESSION_KEY);
     setState({ status: "signedOut", serverUrl: serverRef.current });
@@ -48,7 +50,6 @@ export function SessionProvider({ children }: { children: ReactNode }) {
   );
 
   const restore = useCallback(async () => {
-    setState({ status: "loading" });
     serverRef.current = (await storage.get(SERVER_KEY)) ?? process.env.EXPO_PUBLIC_API_URL ?? "";
     const saved = await storage.get(SESSION_KEY);
     let session: { serverUrl: string; token: string | null } | null = null;
@@ -70,6 +71,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
   }, [open]);
 
   useEffect(() => {
+    // Starts in "loading"; this only reads storage and the server, then sets the real state.
     void restore();
   }, [restore]);
 
@@ -103,7 +105,10 @@ export function SessionProvider({ children }: { children: ReactNode }) {
         if (s.status !== "signedIn") return;
         setState({ ...s, boot: await api("/api/mobile/bootstrap", BootstrapSchema) });
       },
-      retry: () => void restore(),
+      retry: () => {
+        setState({ status: "loading" });
+        void restore();
+      },
     }),
     [state, open, signOut, restore],
   );

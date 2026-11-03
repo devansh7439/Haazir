@@ -14,6 +14,7 @@ import { EventRepository } from "@/lib/modules/event/event.repository";
 import { FacilityRepository } from "@/lib/modules/facility/facility.repository";
 import { CONFIRMABLE, SELECTABLE, handoffFacts, holdUntil } from "@/lib/modules/referral/referral.helper";
 import { EvaluationService } from "@/lib/modules/referral/evaluation.service";
+import { PushService } from "@/lib/modules/push/push.service";
 import { ReferralRepository } from "@/lib/modules/referral/referral.repository";
 
 /** A hold call's result, from the function, the call's extraction or a WhatsApp reply. */
@@ -85,6 +86,7 @@ export const HoldService = {
       const whatsapp = result.whatsapp_number && hold.facility_id ? normalizePhone(result.whatsapp_number) : null;
       if (whatsapp && hold.facility_id) await FacilityRepository.setWhatsappNumber(hold.facility_id, whatsapp);
       await EventRepository.add(r.id, "hold_confirmed", { facility_id: hold.facility_id, contact_person: result.contact_person }, hold.id);
+      if (confirmed) await PushService.notify(r.id, "bed_held", hold.facility_id);
       if (!confirmed) return evaluate;
       return async () => {
         await HoldService.sendHandoff(r.id);
@@ -102,6 +104,7 @@ export const HoldService = {
       });
     }
     await EventRepository.add(r.id, "hold_declined", { facility_id: hold.facility_id, contact_person: result.contact_person }, hold.id);
+    await PushService.notify(r.id, "bed_declined", hold.facility_id);
     return evaluate;
   },
 

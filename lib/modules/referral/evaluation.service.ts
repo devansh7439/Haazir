@@ -4,6 +4,7 @@ import type { Attempt, Referral } from "@/lib/core/types";
 import { CallRepository } from "@/lib/modules/call/call.repository";
 import { CallService } from "@/lib/modules/call/call.service";
 import { EventRepository } from "@/lib/modules/event/event.repository";
+import { PushService } from "@/lib/modules/push/push.service";
 import { FacilityRepository } from "@/lib/modules/facility/facility.repository";
 import { isInert, planEvaluation } from "@/lib/modules/referral/referral.helper";
 import { ReferralRepository } from "@/lib/modules/referral/referral.repository";
@@ -11,7 +12,9 @@ import type { EvaluationStep, ReferralCtx } from "@/lib/modules/referral/referra
 
 const exhaust = async (id: string, actions: string[]): Promise<void> => {
   if (await ReferralRepository.update(id, { status: "exhausted" }, ["searching"])) {
-    await EventRepository.addOnce(id, "referral_exhausted", { reason: "all waves finished with no acceptance" });
+    if (await EventRepository.addOnce(id, "referral_exhausted", { reason: "all waves finished with no acceptance" })) {
+      await PushService.notify(id, "exhausted");
+    }
     actions.push("exhausted");
   }
 };
@@ -94,6 +97,7 @@ export const EvaluationService = {
       facility_id: attempt.facility_id,
       ttfa_seconds: Math.floor((at.getTime() - new Date(r.created_at).getTime()) / 1000),
     }, attempt.id);
+    await PushService.notify(r.id, "first_yes", attempt.facility_id);
     return true;
   },
 };

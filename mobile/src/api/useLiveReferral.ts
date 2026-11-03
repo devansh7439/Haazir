@@ -30,6 +30,8 @@ export function useLiveReferral(id: string) {
   const [view, setView] = useState<ReferralView | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
+  /** The last re-read failed (no signal): the board shows the previous update. */
+  const [stale, setStale] = useState(false);
   const skewMs = useRef(0);
   const [nowMs, setNowMs] = useState(() => Date.now());
   const lastRequest = useRef(0);
@@ -44,8 +46,10 @@ export function useLiveReferral(id: string) {
       skewMs.current = new Date(next.server_time).getTime() - Date.now();
       setView(next);
       setLoadError(null);
+      setStale(false);
     } catch (err) {
       if (seq !== lastRequest.current) return;
+      setStale(true);
       // A blip while the board is already showing is ignored; the next poll tries again.
       if (err instanceof ApiError && (err.status === 404 || err.code === "BAD_RESPONSE")) setLoadError(err.message);
       else setLoadError((prev) => prev ?? (err instanceof Error ? err.message : "Can't load the referral"));
@@ -78,6 +82,7 @@ export function useLiveReferral(id: string) {
     return () => clearInterval(t);
   }, []);
 
+  const hasView = view !== null;
   const live = view ? isLive(view) : true;
   const idle = view ? isIdle(view) : false;
   const tickMs = view ? Math.max(MIN_TICK_MS, view.tick_interval_ms) : MIN_TICK_MS;
@@ -88,25 +93,23 @@ export function useLiveReferral(id: string) {
     let stop = false;
     let timer: ReturnType<typeof setTimeout>;
     const loop = async () => {
-      if (view) await api(`/api/referrals/${id}/tick`, AnyOk, { method: "POST", body: {} }).catch(() => {});
+      if (hasView) await api(`/api/referrals/${id}/tick`, AnyOk, { method: "POST", body: {} }).catch(() => {});
       await refresh();
       if (!stop) timer = setTimeout(loop, idle ? IDLE_TICK_MS : tickMs);
     };
-    timer = setTimeout(loop, view ? 300 : 0);
+    timer = setTimeout(loop, hasView ? 300 : 0);
     return () => {
       stop = true;
       clearTimeout(timer);
     };
-    // `view` is read only to skip the first tick before there is a view; it must not restart the loop.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [id, live, idle, foreground, refresh, tickMs, view === null]);
+  }, [id, live, idle, foreground, refresh, tickMs, hasView]);
 
   // Between ticks, re-read every second while calls are in flight.
   useEffect(() => {
-    if (!live || idle || !foreground || view === null) return;
+    if (!live || idle || !foreground || !hasView) return;
     const t = setInterval(() => void refresh(), FAST_POLL_MS);
     return () => clearInterval(t);
-  }, [live, idle, foreground, refresh, view === null]);
+  }, [live, idle, foreground, refresh, hasView]);
 
   // One buzz when the first hospital says yes while the screen is open.
   const accepted = view ? view.referral.first_acceptance_at !== null : null;
@@ -116,5 +119,5 @@ export function useLiveReferral(id: string) {
     sawAccepted.current = accepted;
   }, [accepted]);
 
-  return { view, nowMs, act, actionError, loadError, refresh };
+  return { view, nowMs, act, actionError, loadError, stale, refresh };
 }

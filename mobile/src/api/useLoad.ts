@@ -4,14 +4,16 @@ import { useCallback, useEffect, useRef, useState } from "react";
  * Loads data once, and again on `reload` (pull to refresh) or when `deps` change. Only the newest request may set
  * the result, so a slow older answer can't replace a newer one.
  */
-export function useLoad<T>(load: () => Promise<T>, deps: ReadonlyArray<unknown>) {
+export function useLoad<T>(load: () => Promise<T>, deps: readonly unknown[]) {
   const [data, setData] = useState<T | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const seq = useRef(0);
   const loadRef = useRef(load);
-  loadRef.current = load;
+  useEffect(() => {
+    loadRef.current = load;
+  });
 
   const run = useCallback(async (pull: boolean) => {
     const mine = ++seq.current;
@@ -31,10 +33,10 @@ export function useLoad<T>(load: () => Promise<T>, deps: ReadonlyArray<unknown>)
         setRefreshing(false);
       }
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- loading data when the screen opens or its inputs change
     void run(false);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, deps);

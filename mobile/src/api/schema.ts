@@ -234,3 +234,27 @@ export type FacilityListItem = z.infer<typeof Facility>;
 
 /** GET /api/facilities */
 export const FacilityListSchema = z.object({ facilities: z.array(Facility) });
+
+const Parsed = z.object({
+  case_type: z.string().nullable(),
+  required_capabilities: z.array(z.string()),
+  acuity: z.enum(ACUITIES).nullable(),
+  age_value: z.number().nullable(),
+  age_unit: z.enum(["days", "months", "years"]),
+  sex: z.enum(["male", "female", "other", "unknown"]),
+  note: z.string().nullable(),
+  note_dropped: z.boolean(),
+  matched: z.array(z.string()),
+});
+const Draft = z.object({ id: z.string(), kind: z.enum(["text", "voice"]), created_at: z.string(), parsed: Parsed });
+export type Draft = z.infer<typeof Draft>;
+
+/** GET /api/intake-drafts: referrals a doctor sent by WhatsApp, waiting to be reviewed. */
+export const DraftsSchema = z.object({ drafts: z.array(Draft) });
+
+/** GET /api/facilities/ratings: Google star ratings by hospital id (empty unless the server has a Places key). */
+export const RatingsSchema = z.object({
+  enabled: z.boolean(),
+  ratings: z.record(z.object({ rating: z.number(), count: z.number(), url: z.string().nullable() })),
+});
+export type Rating = z.infer<typeof RatingsSchema>["ratings"][string];

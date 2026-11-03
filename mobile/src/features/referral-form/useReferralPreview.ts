@@ -16,13 +16,10 @@ export function useReferralPreview(body: Record<string, unknown>, caseType: stri
   const key = JSON.stringify(body);
 
   useEffect(() => {
-    if (!caseType) {
-      setPreview(null);
-      return;
-    }
+    if (!caseType) return;
     const ctl = new AbortController();
-    setLoading(true);
     const timer = setTimeout(async () => {
+      setLoading(true);
       try {
         const next = await api("/api/referrals/preview", PreviewSchema, { body: JSON.parse(key), signal: ctl.signal });
         setPreview(next);
@@ -39,5 +36,6 @@ export function useReferralPreview(body: Record<string, unknown>, caseType: stri
     };
   }, [key, caseType]);
 
-  return { preview, error, loading };
+  // Nothing is shown until a case is picked, even if an earlier preview is still held.
+  return { preview: caseType ? preview : null, error: caseType ? error : null, loading: caseType ? loading : false };
 }

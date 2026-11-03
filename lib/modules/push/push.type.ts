@@ -1,0 +1,7 @@
+/** What a notification is about. The text for each is in PushService; none of it holds patient identifiers. */
+export type PushKind = "first_yes" | "doctor_wanted" | "hospital_called_back" | "bed_held" | "bed_declined" | "exhausted";
+
+export interface PushToken {
+  token: string;
+  user_id: string | null;
+}

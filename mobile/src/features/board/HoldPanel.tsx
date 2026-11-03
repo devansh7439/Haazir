@@ -25,6 +25,7 @@ export function HoldPanel(props: {
   releases: AttemptView[];
   holdExpired: boolean;
   facilityName: (id: unknown) => string;
+  nowMs: number;
   act: (path: string, body?: unknown) => Promise<boolean>;
 }) {
   const { view, hold } = props;
@@ -36,7 +37,7 @@ export function HoldPanel(props: {
   const [previews, setPreviews] = useState(false);
 
   if (r.status === "confirming") {
-    const d = hold ? attemptDisplay(hold, Date.now()) : null;
+    const d = hold ? attemptDisplay(hold, props.nowMs) : null;
     return <Callout kind="info" title={`Confirming the bed with ${name}`}>{d ? `${d.text}. The desk is being asked to keep the bed ready.` : "Placing the confirmation call…"}</Callout>;
   }
   const family = view.attempts.filter((a) => a.purpose === "family_update");

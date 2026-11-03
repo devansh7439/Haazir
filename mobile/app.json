@@ -29,7 +29,28 @@
     "plugins": [
       "expo-router",
       "expo-secure-store",
-      ["expo-location", { "locationWhenInUsePermission": "Haazir uses your location as the starting point for the hospital search." }]
-    ]
+      [
+        "expo-location",
+        {
+          "locationWhenInUsePermission": "Haazir uses your location as the starting point for the hospital search."
+        }
+      ],
+      [
+        "expo-splash-screen",
+        {
+          "image": "./assets/splash-icon.png",
+          "imageWidth": 160,
+          "backgroundColor": "#18181B",
+          "resizeMode": "contain"
+        }
+      ],
+      [
+        "expo-notifications",
+        {
+          "color": "#18181B"
+        }
+      ]
+    ],
+    "backgroundColor": "#FAFAFA"
   }
 }

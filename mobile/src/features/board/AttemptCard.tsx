@@ -3,6 +3,7 @@ import { Linking, StyleSheet, Text, View } from "react-native";
 import type { AttemptView, ReferralView } from "../../api/schema";
 import { BED_LABEL, attemptDisplay, clock, shortName } from "../../lib/display";
 import { callEnded } from "../../lib/board";
+import { routeLink } from "../../lib/links";
 import { Button } from "../../ui/Button";
 import { Callout } from "../../ui/Callout";
 import { Card } from "../../ui/Card";
@@ -20,6 +21,7 @@ export function AttemptCard(props: {
   referralStatus: string;
   isSelected: boolean;
   portalFlag: ReferralView["portal_flags"][string] | null;
+  origin: { lat: number; lng: number };
   onSelect: () => void;
   act: (path: string, body?: unknown) => Promise<boolean>;
 }) {
@@ -78,6 +80,9 @@ export function AttemptCard(props: {
       {more && (
         <View style={{ gap: 8 }}>
           <Button icon="edit-2" label={a.needs_review || a.outcome === "unclear" ? "Set outcome" : "Record outcome"} onPress={() => setManual(true)} />
+          {a.facility_lat !== null && a.facility_lng !== null ? (
+            <Button icon="navigation" label="Route in Maps" onPress={() => void Linking.openURL(routeLink(props.origin, { lat: a.facility_lat!, lng: a.facility_lng! }))} />
+          ) : null}
           {a.recording_url ? <Button icon="headphones" label="Open recording" onPress={() => void Linking.openURL(a.recording_url!)} /> : null}
           {a.transcript ? <Text style={styles.transcript} selectable>{a.transcript}</Text> : null}
         </View>

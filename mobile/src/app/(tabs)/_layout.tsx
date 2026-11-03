@@ -5,9 +5,13 @@ import { Icon, type IconName } from "../../ui/Icon";
 import { color } from "../../ui/theme";
 
 /** A tab icon in the colour the tab bar gives it (always a string on iOS, Android and web). */
-const tabIcon = (name: IconName) => ({ color: c, size }: { color: ColorValue; size: number }) => (
-  <Icon name={name} size={size} color={typeof c === "string" ? c : color.brand} />
-);
+function TabIcon({ name, tint, size }: { name: IconName; tint: ColorValue; size: number }) {
+  return <Icon name={name} size={size} color={typeof tint === "string" ? tint : color.brand} />;
+}
+const tabIcon = (name: IconName) => {
+  const render = ({ color: c, size }: { color: ColorValue; size: number }) => <TabIcon name={name} tint={c} size={size} />;
+  return render;
+};
 
 /** The four places a doctor goes: start a referral, see their referrals, find a hospital, and their account. */
 export default function TabsLayout() {

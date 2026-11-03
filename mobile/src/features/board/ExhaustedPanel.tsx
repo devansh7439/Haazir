@@ -7,7 +7,7 @@ import { Card } from "../../ui/Card";
 import { color, font } from "../../ui/theme";
 
 /** Nobody accepted: the doctor can phone each desk directly, or widen the search to 80 km. */
-export function ExhaustedPanel({ view, cards, onWiden }: { view: ReferralView; cards: AttemptView[]; onWiden: () => Promise<void> }) {
+export function ExhaustedPanel({ view, cards, nowMs, onWiden }: { view: ReferralView; cards: AttemptView[]; nowMs: number; onWiden: () => Promise<void> }) {
   const calls = view.attempts.filter((a) => a.purpose === "availability").length;
   const rounds = view.referral.current_wave;
   return (
@@ -19,7 +19,7 @@ export function ExhaustedPanel({ view, cards, onWiden }: { view: ReferralView; c
         {[...cards].sort((a, b) => (a.rank ?? 99) - (b.rank ?? 99)).map((a) => (
           <View key={a.id} style={{ gap: 6 }}>
             <Text style={styles.name}>{`${a.rank ?? "•"}. ${shortName(a.facility_name)}`}</Text>
-            <Text style={styles.meta}>{`${a.eta_minutes ?? "?"} min · last answer: ${attemptDisplay(a, Date.now()).text}`}</Text>
+            <Text style={styles.meta}>{`${a.eta_minutes ?? "?"} min · last answer: ${attemptDisplay(a, nowMs).text}`}</Text>
             <Button compact icon="phone" label={a.to_number} onPress={() => void Linking.openURL(`tel:${a.to_number}`)} />
           </View>
         ))}

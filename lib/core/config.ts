@@ -42,6 +42,8 @@ export const env = {
   get bolnaFromNumber() { return str("BOLNA_FROM_NUMBER"); },
   get bolnaWebhookSecret() { return str("BOLNA_WEBHOOK_SECRET"); },
   get bolnaFunctionSecret() { return str("BOLNA_FUNCTION_SECRET"); },
+  get expoPushUrl() { return str("EXPO_PUSH_URL") || "https://exp.host/--/api/v2/push/send"; },
+  get expoAccessToken() { return str("EXPO_ACCESS_TOKEN"); },
   get whatsappProvider() { return (str("WHATSAPP_PROVIDER") || "none") as "none" | "meta" | "twilio"; },
   get metaToken() { return str("META_WA_TOKEN"); },
   get metaPhoneNumberId() { return str("META_WA_PHONE_NUMBER_ID"); },

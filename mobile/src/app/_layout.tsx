@@ -1,10 +1,14 @@
 import { Stack } from "expo-router";
 import { StatusBar } from "expo-status-bar";
-import { ActivityIndicator, StyleSheet, Text, View } from "react-native";
+import { ActivityIndicator, Platform, StyleSheet, Text, View } from "react-native";
 import { SafeAreaProvider } from "react-native-safe-area-context";
+import { PushBridge } from "../push/PushBridge";
+import { configureNotificationHandler } from "../push/push";
 import { SessionProvider, useSession } from "../session/SessionProvider";
 import { Button } from "../ui/Button";
 import { color, font, space } from "../ui/theme";
+
+configureNotificationHandler();
 
 /** Shows the sign-in screen until someone is signed in, and the app after. Sessions come back from secure storage. */
 function Gate() {
@@ -28,6 +32,8 @@ function Gate() {
   }
   const signedIn = state.status === "signedIn";
   return (
+    <>
+    {signedIn && Platform.OS !== "web" ? <PushBridge /> : null}
     <Stack screenOptions={{ headerShown: false }}>
       <Stack.Protected guard={signedIn}>
         <Stack.Screen name="(tabs)" />
@@ -40,6 +46,7 @@ function Gate() {
         <Stack.Screen name="sign-in" />
       </Stack.Protected>
     </Stack>
+    </>
   );
 }
 

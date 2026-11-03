@@ -4,6 +4,7 @@ import { addMinutes, now } from "@/lib/core/clock";
 import { cleanParams, normalizeBedType, normalizeOutcome, normalizePhone, normalizeReferralCode, normalizeYesNo, parseMinutes } from "@/lib/core/normalize";
 import type { Attempt, Purpose } from "@/lib/core/types";
 import { PortalService } from "@/lib/modules/portal/portal.service";
+import { PushService } from "@/lib/modules/push/push.service";
 import { spokenName } from "@/lib/modules/referral/summary.helper";
 import { isAcceptance } from "@/lib/modules/call/call.helper";
 import { CallRepository } from "@/lib/modules/call/call.repository";
@@ -141,6 +142,7 @@ export const FunctionService = {
         contact_person: p.contact_person,
         reason: p.reason,
       }, attempt.id);
+      await PushService.notify(attempt.referral_id, "doctor_wanted", attempt.facility_id);
     }
     const doctor = await doctorName(attempt.referral_id);
     return {
@@ -225,6 +227,7 @@ export const FunctionService = {
     }
     if (referralId) {
       await EventRepository.add(referralId, "inbound_callback", { facility_name: facilityName, number: from, message: p.message });
+      await PushService.notify(referralId, "hospital_called_back");
     } else {
       await WebhookLogRepository.log(null, "inbound_callback_unmatched", { hospital_name: p.hospital_name, code, from_number: from });
     }

@@ -1,5 +1,5 @@
 import { router, useFocusEffect } from "expo-router";
-import { useCallback } from "react";
+import { useCallback, useMemo } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 import { api } from "../../api/client";
 import { ReferralListSchema, type ReferralListItem } from "../../api/schema";
@@ -14,14 +14,14 @@ import { color, font } from "../../ui/theme";
 
 const ACTIVE = ["searching", "options_ready", "confirming", "confirmed"];
 
-function Row({ r }: { r: ReferralListItem }) {
+function Row({ r, nowMs }: { r: ReferralListItem; nowMs: number }) {
   const s = REFERRAL_STATUS[r.status] ?? { text: r.status, tone: "grey" as const };
   return (
     <Pressable accessibilityRole="button" accessibilityLabel={`${r.code} ${r.case_label}, ${s.text}`} onPress={() => router.push(`/referral/${r.id}`)}>
       <Card style={styles.row}>
         <View style={styles.rowTop}>
           <Text style={styles.code}>{r.code}</Text>
-          <Text style={styles.when}>{ago(r.created_at, Date.now())}</Text>
+          <Text style={styles.when}>{ago(r.created_at, nowMs)}</Text>
         </View>
         <Text style={styles.case}>
           {r.case_label}
@@ -40,6 +40,8 @@ function Row({ r }: { r: ReferralListItem }) {
 export default function Referrals() {
   const { data, error, loading, refreshing, reload } = useLoad(() => api("/api/referrals", ReferralListSchema), []);
   useFocusEffect(useCallback(() => void reload(), [reload]));
+  // The time the list was loaded: "5 min ago" is relative to this, and it stays steady between renders.
+  const nowMs = useMemo(() => Date.now(), [data]); // eslint-disable-line react-hooks/exhaustive-deps, react-hooks/purity
   const list = data?.referrals ?? [];
   const active = list.filter((r) => ACTIVE.includes(r.status));
   const past = list.filter((r) => !ACTIVE.includes(r.status));
@@ -48,9 +50,9 @@ export default function Referrals() {
       {error ? <Callout kind="error">{error}</Callout> : null}
       {!loading && !error && list.length === 0 ? <Callout>No referrals yet. Start one from the New referral tab.</Callout> : null}
       {active.length > 0 && <Text style={styles.group}>In progress</Text>}
-      {active.map((r) => <Row key={r.id} r={r} />)}
+      {active.map((r) => <Row key={r.id} r={r} nowMs={nowMs} />)}
       {past.length > 0 && <Text style={styles.group}>Earlier</Text>}
-      {past.map((r) => <Row key={r.id} r={r} />)}
+      {past.map((r) => <Row key={r.id} r={r} nowMs={nowMs} />)}
     </Screen>
   );
 }
