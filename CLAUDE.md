@@ -69,6 +69,7 @@ ngrok http 3000      # public URL for Bolna callbacks; put it in APP_BASE_URL an
 | `lib/modules/facility/` | Directory, eligibility SQL (`facility.repository.ts`) and ranking (`matching.helper.ts`, `docs/02-architecture.md` §7) |
 | `lib/modules/{handoff,intake,portal,analytics,maintenance,auth,event,setting}/` | WhatsApp handoff, WhatsApp intake, portal flags, analytics, cron and purge, sign-in and org scope, audit events, settings |
 | `lib/ui/display.ts` | Client-safe display helpers (tones, labels, timeline text) |
+| `mobile/` | Expo phone app. Own package; signs in with a Bearer token (`x-haazir-client: mobile` on `POST /api/login`). `mobile/src/api/schema.ts` checks every answer; `mobile/src/lib/{display,board,facility}.ts` are copies of `lib/ui/*`, kept in step by `tests/mobile-contract.test.ts`. A change to a response shape or to `lib/ui/display.ts` / `board.ts` / `facility.ts` must be mirrored there. `lib/modules/mobile/` serves its config and bootstrap |
 
 ## Unverified against live services
 Bolna's v2 agent payload (`lib/integrations/bolna/bolna.agents.ts`), Google Places ratings (`lib/integrations/google/google.places.ts`, only with `GOOGLE_PLACES_API_KEY`), the execution-polling response shape, Sarvam speech-to-text (`lib/integrations/sarvam/sarvam.stt.ts`), and Meta/Twilio WhatsApp sends were written without access to those docs or accounts. Each file says so; test them before relying on them.

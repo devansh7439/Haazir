@@ -57,6 +57,14 @@ bun run lint && bun run typecheck && bun run test
 - Check the shape of the `completed` webhook body against `lib/modules/call/webhook.helper.ts` (`id`, `status`, `transcript`, `telephony_data.recording_url`, `extracted_data`, `context_details`).
 - Account concurrency is at least 10.
 
+## Mobile app
+
+`mobile/` is the doctor's phone app (Expo, React Native): new referral, live board, select a hospital, referrals, hospitals. It signs in with a Bearer token from the same login route and shares the server's API. See [`mobile/README.md`](mobile/README.md).
+
+```bash
+cd mobile && bun install && bun run start
+```
+
 ## Layout
 
 ```
@@ -71,6 +79,7 @@ context.md           code-quality rules and the refactor plan
 scripts/             db-setup, create-user, bolna-agents
 supabase/            migrations and seed
 bolna/               agent prompts, tool JSON, extraction setup
+mobile/              the Expo phone app (own package.json; excluded from the root lint, typecheck and build)
 docs/                the build pack
 tests/               unit + integration tests; support/ holds the fake Bolna and the krait-bite script
 ```

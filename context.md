@@ -108,6 +108,8 @@ Run `bun run lint && bun run typecheck && bun run test` after every phase (not `
 
 ## 6. Changelog
 
+- 2026-11-03: added `mobile/` (Expo phone app) on branch `feat/mobile`; the server accepts `Authorization: Bearer` session tokens and serves `/api/mobile/{config,bootstrap}`. The contract test found that `distance_km` reaches JSON as a string (Postgres `numeric`), though `Attempt` types it as a number; the app's schema accepts both.
+
 - 2026-11-01: audit leftovers done (phase 6), including the items first kept on purpose. Routes are thin (login, WhatsApp inbound, missed call), `EvaluationService` is split out, loose components are in feature folders. Items kept on purpose are listed under Decisions.
 
 - 2026-10-31: phase 4 done: board, referral-form, facilities and demo split into feature folders; client-safe helpers in `lib/ui/board.ts`, `request-id.ts`, `demo.ts`; 147 tests. All phases done.
