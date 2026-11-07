@@ -159,7 +159,6 @@ const easing = { out: Easing.bezier(0.23, 1, 0.32, 1), slide: Easing.bezier(0.32
 
 const theme = { color, tint, tone, acuity, tabBar, font, type, space, radius, size, elevation, motion, easing } as const;
 
-export type Theme = typeof theme;
 export default theme;
 
 // Metro resolves font files only through require(); an ES import would not bundle the .ttf.

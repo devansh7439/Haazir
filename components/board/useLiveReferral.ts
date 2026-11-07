@@ -5,7 +5,7 @@ import { isIdle, isLive } from "@/lib/ui/board";
 import type { Post } from "./types";
 
 /** How often the board re-reads its view when Realtime isn't connected. */
-const FAST_POLL_MS = 1000;
+const FAST_POLL_MS = 2000;
 /** Tick interval once the bed is held and every call has finished: only the hold-expiry check is left. */
 const IDLE_TICK_MS = 30_000;
 /** Realtime tokens last an hour; they are renewed before that. */
@@ -28,14 +28,24 @@ export function useLiveReferral(initial: ReferralView) {
 
   // Tick, Realtime and actions all re-read; only the newest request may update the view, so a slow older response can't roll it back.
   const lastRequest = useRef(0);
+  const inFlight = useRef(0);
+  // The last body, without `server_time`: an identical answer leaves `view` alone, so nothing below re-renders.
+  const lastBody = useRef(JSON.stringify({ ...initial, server_time: "" }));
   const refresh = useCallback(async () => {
     const seq = ++lastRequest.current;
-    const res = await fetch(`/api/referrals/${id}`, { cache: "no-store" });
-    if (res.ok) {
+    inFlight.current++;
+    try {
+      const res = await fetch(`/api/referrals/${id}`, { cache: "no-store" });
+      if (!res.ok) return;
       const next = (await res.json()) as ReferralView;
       if (seq !== lastRequest.current) return;
       skewMs.current = new Date(next.server_time).getTime() - Date.now();
+      const body = JSON.stringify({ ...next, server_time: "" });
+      if (body === lastBody.current) return;
+      lastBody.current = body;
       setView(next);
+    } finally {
+      inFlight.current--;
     }
   }, [id]);
 
@@ -80,7 +90,8 @@ export function useLiveReferral(initial: ReferralView) {
   useEffect(() => {
     if (!live || idle || realtimeOn) return;
     const t = setInterval(() => {
-      if (document.visibilityState === "visible") void refresh().catch(() => {});
+      // A slow answer must not pile up more requests behind it.
+      if (document.visibilityState === "visible" && inFlight.current === 0) void refresh().catch(() => {});
     }, FAST_POLL_MS);
     return () => clearInterval(t);
   }, [live, idle, realtimeOn, refresh]);

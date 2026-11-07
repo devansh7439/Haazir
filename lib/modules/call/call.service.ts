@@ -7,19 +7,16 @@ import type { Attempt, Referral } from "@/lib/core/types";
 import { BolnaError, makeCall } from "@/lib/integrations/bolna/bolna.client";
 import { bedRequestMessage } from "@/lib/modules/handoff/message.helper";
 import { PortalService } from "@/lib/modules/portal/portal.service";
-import { describeKnownFacts, joinSpoken } from "@/lib/modules/referral/summary.helper";
 import { WhatsAppService } from "@/lib/modules/handoff/whatsapp.service";
-import { callLanguage, facilityArea, isAcceptance, withoutDemoTag } from "@/lib/modules/call/call.helper";
+import { callLanguage, isAcceptance, withoutDemoTag } from "@/lib/modules/call/call.helper";
+import { dialPlan, type DialFacts } from "@/lib/modules/call/dial.helper";
 import { CallRepository } from "@/lib/modules/call/call.repository";
 import type { DialTarget } from "@/lib/modules/call/call.type";
-import {
-  arrivalCheckUserData, availabilityUserData, familyUserData, holdConfirmUserData, releaseUserData, type CallContext,
-} from "@/lib/modules/call/user-data.helper";
 import { EventRepository } from "@/lib/modules/event/event.repository";
 import { FacilityRepository } from "@/lib/modules/facility/facility.repository";
 import { FacilityService } from "@/lib/modules/facility/facility.service";
 import { applyEtaCap, isNight, type RankedFacility } from "@/lib/modules/facility/matching.helper";
-import { ACTIVE, shortSummaryOf } from "@/lib/modules/referral/referral.helper";
+import { ACTIVE } from "@/lib/modules/referral/referral.helper";
 import { ReferralRepository } from "@/lib/modules/referral/referral.repository";
 import { EvaluationService } from "@/lib/modules/referral/evaluation.service";
 import type { ManualOutcome, ReferralCtx } from "@/lib/modules/referral/referral.type";
@@ -34,6 +31,21 @@ const followOnOf = (parent: Attempt) => ({
   eta_minutes: parent.eta_minutes,
   call_language: parent.call_language,
 });
+
+/** Loads only what the call's purpose reads, so a release call never touches `patient_details`. */
+const loadDialFacts = async (ctx: ReferralCtx, attempt: Attempt): Promise<DialFacts> => {
+  const facility = attempt.facility_id ? await FacilityRepository.get(attempt.facility_id) : null;
+  // At night, the needed services this hospital has only in the daytime: the agent asks about exactly those.
+  const dayOnly = attempt.purpose === "availability" && attempt.facility_id && isNight(now())
+    ? await FacilityRepository.dayOnlyNeeds(attempt.facility_id, ctx.needs.map((n) => n.code))
+    : [];
+  return {
+    facility,
+    day_only_codes: dayOnly,
+    accepted: attempt.purpose === "hold_confirm" && attempt.parent_attempt_id ? await CallRepository.get(attempt.parent_attempt_id) : null,
+    patient: attempt.purpose === "family_update" ? await ReferralRepository.patient(ctx.referral.id) : null,
+  };
+};
 
 /** Placing Bolna calls for a referral (docs/02-architecture.md §6), and the doctor's own actions on a call. */
 export const CallService = {
@@ -112,66 +124,17 @@ export const CallService = {
   /** Places one Bolna call for a queued attempt. False when dispatch failed; the attempt is then marked failed and an alert raised. */
   dispatchCall: async (ctx: ReferralCtx, attempt: Attempt, opts: { consented_test?: boolean } = {}): Promise<boolean> => {
     const r = ctx.referral;
-    const facility = attempt.facility_id ? await FacilityRepository.get(attempt.facility_id) : null;
-    const callCtx: CallContext = {
-      attempt_id: attempt.id,
-      doctor_name: ctx.referrer.name,
-      referring_facility: ctx.origin?.name ?? "the referring centre",
-      facility_name: facility?.name ?? "your hospital",
-      referral_code: r.code,
-      language: callLanguage(attempt.call_language),
-      consented_test: opts.consented_test,
-    };
-    let userData: Record<string, string>;
-    let recipient = attempt.to_number;
-    if (attempt.purpose === "availability") {
-      // At night, the needed services this hospital has only in the daytime: the agent asks about exactly those.
-      const dayOnly = attempt.facility_id && isNight(now()) ? await FacilityRepository.dayOnlyNeeds(attempt.facility_id, ctx.needs.map((n) => n.code)) : [];
-      userData = availabilityUserData(callCtx, {
-        case_summary: r.spoken_summary,
-        needs_spoken: joinSpoken(ctx.needs.map((n) => n.spoken_en)),
-        eta_minutes: attempt.eta_minutes,
-        known_facts: describeKnownFacts(r, r),
-        night_note: dayOnly.length > 0
-          ? `It is night, and this hospital usually has ${joinSpoken(ctx.needs.filter((n) => dayOnly.includes(n.code)).map((n) => n.spoken_en))} only in the daytime.`
-          : "",
-      });
-    } else if (attempt.purpose === "hold_confirm") {
-      const accepted = attempt.parent_attempt_id ? await CallRepository.get(attempt.parent_attempt_id) : null;
-      userData = holdConfirmUserData(callCtx, {
-        case_summary_short: shortSummaryOf(ctx),
-        bed_type: accepted?.bed_type ?? null,
-        accepted_by: accepted?.contact_person ?? null,
-        eta_minutes: attempt.eta_minutes,
-        whatsapp_on_file: !!facility?.whatsapp_number,
-      });
-    } else if (attempt.purpose === "arrival_check") {
-      userData = arrivalCheckUserData(callCtx, { case_summary_short: shortSummaryOf(ctx), eta_minutes: attempt.eta_minutes });
-    } else if (attempt.purpose === "family_update") {
-      const patient = await ReferralRepository.patient(r.id);
-      // The attendant's real number stays in patient_details; the attempt row only holds a masked copy.
-      recipient = patient?.attendant_phone_e164 ?? "";
-      userData = familyUserData(callCtx, {
-        attendant_name: patient?.attendant_name ?? null,
-        hospital_area: facilityArea(facility) || (facility?.name ?? ""),
-        eta_minutes: attempt.eta_minutes,
-      });
-    } else {
-      userData = releaseUserData(callCtx, { case_summary_short: shortSummaryOf(ctx, false) });
-    }
-
+    const { recipient, user_data } = dialPlan(ctx, attempt, await loadDialFacts(ctx, attempt), opts.consented_test);
     const agentId = env.agentId(attempt.purpose);
     try {
-      const res = await makeCall(
-        {
-          agent_id: agentId,
-          recipient_phone_number: recipient,
-          from_phone_number: env.bolnaFromNumber || undefined,
-          user_data: userData,
-          agent_data: { language: callLanguage(attempt.call_language) },
-          bypass_call_guardrails: true,
-        },
-      );
+      const res = await makeCall({
+        agent_id: agentId,
+        recipient_phone_number: recipient,
+        from_phone_number: env.bolnaFromNumber || undefined,
+        user_data,
+        agent_data: { language: callLanguage(attempt.call_language) },
+        bypass_call_guardrails: true,
+      });
       await CallRepository.update(attempt.id, {
         bolna_execution_id: res.execution_id,
         bolna_agent_id: agentId,

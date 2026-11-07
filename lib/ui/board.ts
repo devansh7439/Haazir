@@ -28,12 +28,14 @@ export interface MapPin {
   role: PinRole;
 }
 
+/** The heading of each group of hospitals on the board. */
 export const GROUP_TITLE: Record<Group, string> = {
   accepted: "Accepted",
   in_progress: "On the line",
   waiting: "Waiting",
   not_available: "Not available",
 };
+/** The order the groups show in. */
 export const GROUP_ORDER: Group[] = ["accepted", "in_progress", "waiting", "not_available"];
 
 const TERMINAL: AttemptStatus[] = ["completed", "no_answer", "busy", "failed", "canceled"];
@@ -55,6 +57,7 @@ export const isLive = (view: ReferralView): boolean => {
 export const isIdle = (view: ReferralView): boolean =>
   view.referral.status === "confirmed" && view.attempts.every((a) => callEnded(a.status));
 
+/** Whether a referral in this status can still be cancelled. */
 export const isCancellable = (status: ReferralStatus): boolean => CANCELLABLE.includes(status);
 
 /** One card per hospital: its latest availability call (redials and callbacks replace earlier ones). */

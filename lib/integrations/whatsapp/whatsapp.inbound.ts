@@ -1,6 +1,6 @@
 import "server-only";
 import { createHmac, timingSafeEqual } from "node:crypto";
-import { normalizePhone } from "@/lib/core/normalize";
+import { normalizePhone, readField, readText } from "@/lib/core/normalize";
 
 // Inbound WhatsApp from Meta and Twilio: signature checks and payload parsing. Provider-specific, no Haazir logic.
 
@@ -18,9 +18,7 @@ const safeEqual = (a: string, b: string): boolean => {
   return x.length === y.length && timingSafeEqual(x, y);
 };
 
-const field = (obj: unknown, key: string): unknown => (obj && typeof obj === "object" ? (obj as Record<string, unknown>)[key] : undefined);
 const list = (v: unknown): unknown[] => (Array.isArray(v) ? v : []);
-const textOf = (v: unknown): string | null => (typeof v === "string" ? v : null);
 
 /** Meta: X-Hub-Signature-256 = "sha256=" + HMAC-SHA256(app secret, raw body). False without a secret or a header. */
 export function verifyMetaSignature(rawBody: string, header: string | null, appSecret: string): boolean {
@@ -40,13 +38,17 @@ export function verifyTwilioSignature(url: string, params: Record<string, string
 /** The messages in a Meta webhook body; anything unreadable is skipped. */
 export function parseMetaPayload(body: unknown): InboundMessage[] {
   const out: InboundMessage[] = [];
-  for (const e of list(field(body, "entry"))) {
-    for (const c of list(field(e, "changes"))) {
-      for (const m of list(field(field(c, "value"), "messages"))) {
-        const from = normalizePhone(`+${String(field(m, "from") ?? "")}`);
+  for (const e of list(readField(body, "entry"))) {
+    for (const c of list(readField(e, "changes"))) {
+      for (const m of list(readField(readField(c, "value"), "messages"))) {
+        const from = normalizePhone(`+${String(readField(m, "from") ?? "")}`);
         if (!from) continue;
-        const audioId = textOf(field(field(m, "audio"), "id")) ?? textOf(field(field(m, "voice"), "id"));
-        out.push({ from, text: textOf(field(field(m, "text"), "body")), audio: audioId ? { provider: "meta", id: audioId } : null });
+        const audioId = readText(readField(m, "audio"), "id") ?? readText(readField(m, "voice"), "id");
+        out.push({
+          from,
+          text: readText(readField(m, "text"), "body"),
+          audio: audioId ? { provider: "meta", id: audioId } : null,
+        });
       }
     }
   }

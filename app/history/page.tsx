@@ -2,7 +2,7 @@ import { Plus } from "lucide-react";
 import Link from "next/link";
 import { PageHeader, ReferralStatusPill, Stat } from "@/components/ui";
 import { mmss } from "@/lib/ui/display";
-import { pageSession } from "@/lib/modules/auth/session.service";
+import { SessionService } from "@/lib/modules/auth/session.service";
 import { ViewService } from "@/lib/modules/referral/view.service";
 
 export const dynamic = "force-dynamic";
@@ -15,7 +15,7 @@ function median(xs: number[]): number | null {
 }
 
 export default async function HistoryPage() {
-  const s = await pageSession();
+  const s = await SessionService.page();
   const rows = await ViewService.list(s.org, 200);
   const ttfas = rows.map((r) => r.ttfa_seconds).filter((x): x is number => x !== null);
   const ttfa = median(ttfas);
@@ -31,10 +31,23 @@ export default async function HistoryPage() {
         actions={<Link href="/" className="btn btn-primary"><Plus aria-hidden className="size-4" /> New referral</Link>}
       />
       <div className="mb-6 grid grid-cols-2 gap-3 lg:grid-cols-4">
-        <Stat label="Median time to first yes" value={ttfa !== null ? mmss(ttfa) : "—"} hint={`${ttfas.length} referrals with a yes`} accent="green" />
-        <Stat label="Median time to confirmed bed" value={median(confirmedTimes) !== null ? mmss(median(confirmedTimes)!) : "—"} hint={`${confirmedTimes.length} confirmed`} />
+        <Stat
+          label="Median time to first yes"
+          value={ttfa !== null ? mmss(ttfa) : "—"}
+          hint={`${ttfas.length} referrals with a yes`}
+          accent="green"
+        />
+        <Stat
+          label="Median time to confirmed bed"
+          value={median(confirmedTimes) !== null ? mmss(median(confirmedTimes)!) : "—"}
+          hint={`${confirmedTimes.length} confirmed`}
+        />
         <Stat label="Referrals" value={rows.length} hint={`${open} still open`} />
-        <Stat label="Calls per referral" value={rows.length ? (totalCalls / rows.length).toFixed(1) : "—"} hint="availability, hold and release" />
+        <Stat
+          label="Calls per referral"
+          value={rows.length ? (totalCalls / rows.length).toFixed(1) : "—"}
+          hint="availability, hold and release"
+        />
       </div>
       <div className="card overflow-x-auto">
         <table className="w-full min-w-[720px] text-left text-sm">
@@ -58,9 +71,13 @@ export default async function HistoryPage() {
                 <td className="px-5 py-3 text-zinc-700">{r.case_label} <span className="text-zinc-400">· {r.acuity}</span></td>
                 <td className="px-5 py-3"><ReferralStatusPill status={r.status} size="sm" /></td>
                 <td className="kbd-num px-5 py-3 text-right text-zinc-900">{r.ttfa_seconds !== null ? mmss(r.ttfa_seconds) : "—"}</td>
-                <td className="kbd-num px-5 py-3 text-right text-zinc-700">{r.time_to_confirmed_seconds !== null ? mmss(r.time_to_confirmed_seconds) : "—"}</td>
+                <td className="kbd-num px-5 py-3 text-right text-zinc-700">
+                  {r.time_to_confirmed_seconds !== null ? mmss(r.time_to_confirmed_seconds) : "—"}
+                </td>
                 <td className="kbd-num px-5 py-3 text-right text-zinc-700">{r.calls_total}</td>
-                <td className="px-5 py-3 text-zinc-500">{new Date(r.created_at).toLocaleString("en-IN", { timeZone: "Asia/Kolkata", day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}</td>
+                <td className="px-5 py-3 text-zinc-500">
+                  {new Date(r.created_at).toLocaleString("en-IN", { timeZone: "Asia/Kolkata", day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}
+                </td>
               </tr>
             ))}
             {rows.length === 0 && (

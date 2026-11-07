@@ -29,6 +29,7 @@ export function ipAllowed(req: Request): boolean {
   return [...BOLNA_IPS, ...env.bolnaExtraIps].includes(clientIp(req));
 }
 
+/** Whether a status webhook carries BOLNA_WEBHOOK_SECRET (query `token` or `x-haazir-token`) and passes the IP check. */
 export function webhookAuthorized(req: Request): boolean {
   const secret = env.bolnaWebhookSecret;
   if (!secret || !ipAllowed(req)) return false;
@@ -37,6 +38,7 @@ export function webhookAuthorized(req: Request): boolean {
   return same(token, secret);
 }
 
+/** Whether a function call carries `Authorization: Bearer ${BOLNA_FUNCTION_SECRET}` and passes the IP check. */
 export function functionAuthorized(req: Request): boolean {
   const secret = env.bolnaFunctionSecret;
   if (!secret || !ipAllowed(req)) return false;

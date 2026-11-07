@@ -10,6 +10,7 @@ export const SettingRepository = {
     return row?.value ?? null;
   },
 
+  /** Saves a value under the key, replacing any earlier one. */
   set: async (key: string, value: string | null): Promise<void> => {
     await q(
       `insert into app_settings (key, value, updated_at) values ($1, $2, $3)

@@ -6,6 +6,7 @@ import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 // /api/realtime-token. No Supabase config, or no token = the board refreshes on each tick instead.
 let client: SupabaseClient | null | undefined;
 
+/** The browser's Supabase client for Realtime, or null without Supabase settings. */
 export function browserSupabase(): SupabaseClient | null {
   if (client !== undefined) return client;
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;

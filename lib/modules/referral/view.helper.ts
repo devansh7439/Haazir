@@ -1,8 +1,12 @@
+import { readField } from "@/lib/core/normalize";
 import type { EventRow, Referral } from "@/lib/core/types";
 import type { Audience } from "@/lib/modules/handoff/message.repository";
 import type { Alert, AttemptView, MessageView, PortalFlag } from "@/lib/modules/referral/view.type";
 
-const ALERT_TYPES = new Set<string>(["doctor_callback_requested", "inbound_callback", "alert"]);
+const ALERT_TYPES: ReadonlyArray<Alert["type"]> = ["doctor_callback_requested", "inbound_callback", "alert"];
+
+/** The value if it is one of the allowed ones, otherwise null. */
+const oneOf = <T extends string>(allowed: readonly T[], value: string | null): T | null => allowed.find((a) => a === value) ?? null;
 
 /**
  * Whether the board lists the nearest emergency departments: once nobody accepted, and for a critical patient while the
@@ -13,13 +17,13 @@ export const showsNearestEd = (r: Pick<Referral, "status" | "acuity">): boolean 
 
 /** A text field of an event payload, or null when it is missing or not text. */
 const text = (payload: unknown, key: string): string | null => {
-  const v = payload && typeof payload === "object" ? (payload as Record<string, unknown>)[key] : undefined;
+  const v = readField(payload, key);
   return typeof v === "string" ? v : null;
 };
 
 /** A number field of an event payload, or null. */
 const num = (payload: unknown, key: string): number | null => {
-  const v = payload && typeof payload === "object" ? (payload as Record<string, unknown>)[key] : undefined;
+  const v = readField(payload, key);
   return typeof v === "number" ? v : null;
 };
 
@@ -35,26 +39,27 @@ export const alertsOf = (events: EventRow[], attempts: AttemptView[]): Alert[] =
   const dismissed = new Set(events.filter((e) => e.type === "alert_dismissed").map((e) => num(e.payload, "event_id")));
   const answered = new Set(attempts.filter((a) => a.outcome && a.outcome !== "needs_doctor").map((a) => a.id));
   return events
-    .filter((e) => ALERT_TYPES.has(e.type) && !dismissed.has(e.id))
+    .filter((e) => !dismissed.has(e.id))
     .filter((e) => !(e.type === "doctor_callback_requested" && e.attempt_id && answered.has(e.attempt_id)))
-    .map((e) => ({
-      event_id: e.id,
-      type: e.type as Alert["type"],
-      attempt_id: e.attempt_id,
-      facility_name: text(e.payload, "facility_name"),
-      number: text(e.payload, "number"),
-      reason: text(e.payload, "reason") ?? text(e.payload, "message"),
-      contact_person: text(e.payload, "contact_person"),
-      kind: text(e.payload, "kind"),
-      created_at: new Date(e.created_at).toISOString(),
-    }));
+    .flatMap((e) => {
+      const type = oneOf(ALERT_TYPES, e.type);
+      if (!type) return [];
+      return [{
+        event_id: e.id,
+        type,
+        attempt_id: e.attempt_id,
+        facility_name: text(e.payload, "facility_name"),
+        number: text(e.payload, "number"),
+        reason: text(e.payload, "reason") ?? text(e.payload, "message"),
+        contact_person: text(e.payload, "contact_person"),
+        kind: text(e.payload, "kind"),
+        created_at: new Date(e.created_at).toISOString(),
+      }];
+    });
 };
 
 const AUDIENCES: readonly Audience[] = ["receiving_facility", "referrer", "family", "availability_ping"];
 const SEND_STATUSES: ReadonlyArray<MessageView["status"]> = ["sent", "simulated", "failed"];
-
-/** The value if it is one of the allowed ones, otherwise null. */
-const oneOf = <T extends string>(allowed: readonly T[], value: string | null): T | null => allowed.find((a) => a === value) ?? null;
 
 /** The WhatsApp messages sent, from their redacted events. An event with an unknown audience or status is skipped. */
 export const messagesOf = (events: EventRow[]): MessageView[] =>

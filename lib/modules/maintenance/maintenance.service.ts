@@ -2,10 +2,12 @@ import "server-only";
 import { env } from "@/lib/core/config";
 import { now } from "@/lib/core/clock";
 import { createLogger } from "@/lib/core/logger";
+import type { Referral, ReferralStatus } from "@/lib/core/types";
 import { WebhookService } from "@/lib/modules/call/webhook.service";
 import { MaintenanceRepository } from "@/lib/modules/maintenance/maintenance.repository";
 import type { PurgeResult } from "@/lib/modules/maintenance/maintenance.type";
 import { EvaluationService } from "@/lib/modules/referral/evaluation.service";
+import { ReferralRepository } from "@/lib/modules/referral/referral.repository";
 import { SettingRepository } from "@/lib/modules/setting/setting.repository";
 
 const log = createLogger("maintenance");
@@ -30,6 +32,21 @@ export const MaintenanceService = {
    */
   purgeIdentifiers: (days = env.retentionDays): Promise<PurgeResult> =>
     MaintenanceRepository.purgeBefore(new Date(now().getTime() - days * 24 * HOUR_MS)),
+
+  /**
+   * The console's tick for the referral it has open: recovers a missed webhook for it, then evaluates it. Idempotent.
+   * `changed` tells the board whether to reload.
+   */
+  tickReferral: async (before: Referral): Promise<{ changed: boolean; actions: string[]; status: ReferralStatus }> => {
+    const recovered = await WebhookService.recoverStale(before.id);
+    const actions = await EvaluationService.evaluate(before.id);
+    const after = await ReferralRepository.get(before.id);
+    return {
+      changed: recovered > 0 || actions.length > 0 || after?.status !== before.status,
+      actions,
+      status: after?.status ?? before.status,
+    };
+  },
 
   /** One background tick. One referral failing never stops the others. The purge runs at most hourly. */
   tick: async (): Promise<{ referrals: number; recovered: number; actions: number; purged: PurgeResult | null }> => {

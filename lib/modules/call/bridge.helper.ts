@@ -10,4 +10,5 @@ export const dialXml = (doctorPhone: string): string =>
 
 /** What the caller hears when no live referral matches: nobody is dialled. */
 export const declineXml = (): string =>
-  '<?xml version="1.0" encoding="UTF-8"?><Response><Speak>Sorry, we could not connect you. The referring doctor will call you back.</Speak><Hangup/></Response>';
+  '<?xml version="1.0" encoding="UTF-8"?>' +
+  "<Response><Speak>Sorry, we could not connect you. The referring doctor will call you back.</Speak><Hangup/></Response>";

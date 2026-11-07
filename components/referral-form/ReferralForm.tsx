@@ -1,39 +1,24 @@
 "use client";
 
-import { ArrowLeft, ArrowRight, Check, Sparkles, Zap } from "lucide-react";
-import { useRouter } from "next/navigation";
+import { Zap } from "lucide-react";
 import { useMemo, useState } from "react";
-import { cx } from "@/components/ui";
 import type { Capability, CaseTemplate } from "@/lib/core/types";
 import { parseIntake, type ParsedIntake } from "@/lib/modules/intake/intake.helper";
 import { newRequestId } from "@/lib/ui/request-id";
 import { CallPreview } from "./CallPreview";
-import { CaseSection } from "./CaseSection";
-import { FactsSection } from "./FactsSection";
-import { FormSection } from "./FormSection";
-import { HandoverSection } from "./HandoverSection";
-import { NeedsSection } from "./NeedsSection";
-import { PatientDetails } from "./PatientDetails";
-import { PatientSection } from "./PatientSection";
+import { CasePage } from "./CasePage";
+import { DraftBanner } from "./DraftBanner";
+import { PageTabs } from "./PageTabs";
+import { PatientPage } from "./PatientPage";
 import { QuickEntry } from "./QuickEntry";
-import { SearchOptions } from "./SearchOptions";
-import { TransferSection } from "./TransferSection";
 import { NO_FACTS, factsBody, factsValid } from "./facts";
 import { NO_HANDOVER, NO_TRANSFER, handoverBody, handoverValid, transferBody } from "./handover";
 import { DEFAULT_RADIUS_KM, WIDE_RADIUS_KM } from "./options";
 import { clinicalNote } from "./quick";
+import { missingCase, missingStep, type Page } from "./steps";
 import type { Acuity, AgeUnit, FactFields, HandoverFields, PatientFields, Sex, TransferFields } from "./types";
 import { useReferralPreview } from "./useReferralPreview";
-
-/** What the form still needs before it can be sent, as the hint under the button; null when nothing is missing. */
-const missingStep = (caseType: string, acuity: string, needs: string[]): string | null =>
-  !caseType ? "Choose a case" : !acuity ? "Set the acuity" : needs.length === 0 && caseType !== "other" ? "Add at least one need" : null;
-
-/** The page of the full form that is missing something, as the hint under "Continue"; null when the case page is complete. */
-const missingCase = (caseType: string, needs: string[]): string | null =>
-  !caseType ? "Choose a case" : needs.length === 0 && caseType !== "other" ? "Add at least one need" : null;
-
-type Page = "case" | "patient";
+import { useReferralSubmit } from "./useReferralSubmit";
 
 /**
  * The referral, two ways in. "Who needs a bed?" takes one typed sentence and fills in what it recognises; "Find a bed" is the
@@ -48,7 +33,6 @@ export function ReferralForm(props: {
   draft?: { id: string; parsed: ParsedIntake } | null;
 }) {
   const d = props.draft?.parsed;
-  const router = useRouter();
   const capByCode = useMemo(() => new Map(props.capabilities.map((c) => [c.code, c])), [props.capabilities]);
   const [mode, setMode] = useState<"quick" | "form">(props.draft ? "form" : "quick");
   const [page, setPage] = useState<Page>("case");
@@ -69,8 +53,7 @@ export function ReferralForm(props: {
   // One id per press of "Find a bed": a double-click or a retry after a network error reuses it, so hospitals are
   // never called twice for the same patient.
   const [requestId] = useState(newRequestId);
-  const [submitting, setSubmitting] = useState(false);
-  const [submitError, setSubmitError] = useState<string | null>(null);
+  const { submitting, submitError, send } = useReferralSubmit();
 
   const ready = !!caseType && !!acuity && (needs.length > 0 || caseType === "other");
   const toggleNeed = (code: string) => setNeeds((n) => (n.includes(code) ? n.filter((c) => c !== code) : [...n, code]));
@@ -133,30 +116,12 @@ export function ReferralForm(props: {
     // Enter or ⌘/Ctrl + Enter on the case page moves on to the patient page instead of starting calls.
     if (mode === "form" && page === "case") return goTo("patient");
     if (!canSubmit) return;
-    setSubmitting(true);
-    setSubmitError(null);
-    try {
-      const res = await fetch("/api/referrals", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          ...body,
-          draft_id: props.draft?.id,
-          client_request_id: requestId,
-          patient: showPatient || patient.patient_name || patient.attendant_phone ? patient : undefined,
-        }),
-      });
-      const data = await res.json();
-      if (!res.ok) {
-        setSubmitError(data?.error?.message ?? "Could not start the referral");
-        setSubmitting(false);
-        return;
-      }
-      router.push(`/referrals/${data.id}`);
-    } catch {
-      setSubmitError("Network error: check the connection and try again");
-      setSubmitting(false);
-    }
+    await send({
+      ...body,
+      draft_id: props.draft?.id,
+      client_request_id: requestId,
+      patient: showPatient || patient.patient_name || patient.attendant_phone ? patient : undefined,
+    });
   }
 
   // ⌘/Ctrl + Enter sends the referral from anywhere in the form, including from inside a text box.
@@ -216,98 +181,50 @@ export function ReferralForm(props: {
           <Zap aria-hidden className="size-4" /> Quick entry
         </button>
       </div>
-      {props.draft && (
-        <div className="mb-8 flex items-start gap-3 rounded-xl border border-line bg-zinc-50 px-4 py-3 text-sm">
-          <Sparkles aria-hidden className="mt-0.5 size-4 shrink-0 text-zinc-600" />
-          <p className="text-zinc-800">
-            Filled from your WhatsApp {props.draft.parsed.matched.length ? `(${props.draft.parsed.matched.join(", ")})` : "message"}. Check every field before you start.
-            {props.draft.parsed.note_dropped && " The note was left out because it may contain a name or number."}
-          </p>
-        </div>
-      )}
-      <nav aria-label="Referral pages" className="mb-8 flex items-center gap-2 text-sm">
-        <button
-          type="button"
-          onClick={() => goTo("case")}
-          aria-current={page === "case" ? "step" : undefined}
-          className={cx("inline-flex items-center gap-2 rounded-full px-3 py-1.5 transition", page === "case" ? "bg-zinc-900 text-white" : "text-zinc-600 hover:bg-zinc-100")}
-        >
-          <span aria-hidden className={cx("grid size-5 place-items-center rounded-full text-[11px]", page === "case" ? "bg-white/20" : "bg-zinc-900 text-white")}>
-            {page === "patient" && !caseMissing ? <Check className="size-3" strokeWidth={3} /> : 1}
-          </span>
-          Case
-        </button>
-        <span aria-hidden className="h-px w-6 bg-zinc-300" />
-        <button
-          type="button"
-          onClick={() => goTo("patient")}
-          disabled={!!caseMissing}
-          aria-current={page === "patient" ? "step" : undefined}
-          className={cx(
-            "inline-flex items-center gap-2 rounded-full px-3 py-1.5 transition disabled:cursor-not-allowed disabled:text-zinc-400",
-            page === "patient" ? "bg-zinc-900 text-white" : "text-zinc-600 enabled:hover:bg-zinc-100",
-          )}
-        >
-          <span aria-hidden className={cx("grid size-5 place-items-center rounded-full text-[11px]", page === "patient" ? "bg-white/20" : "border border-zinc-300")}>2</span>
-          Patient
-        </button>
-      </nav>
+      {props.draft && <DraftBanner parsed={props.draft.parsed} />}
+      <PageTabs page={page} caseMissing={caseMissing} onGo={goTo} />
       <div className="grid grid-cols-1 items-start gap-10 xl:grid-cols-[minmax(0,1fr)_420px]">
         <div className="min-w-0">
           {page === "case" ? (
-            <>
-              <FormSection step={1} title="Case" done={!!caseType}>
-                <CaseSection templates={props.templates} caseType={caseType} onPick={pickCase} />
-              </FormSection>
-              <FormSection step={2} title="Needs" hint={caseType ? "Filled from the case. Tap to change." : "Pick a case first; its usual needs are filled in."} done={needs.length > 0}>
-                <NeedsSection capabilities={props.capabilities} needs={needs} onToggle={toggleNeed} />
-              </FormSection>
-              <FormSection step={3} title="Search" last>
-                <SearchOptions radius={radius} onRadius={setRadius} bolnaReady={props.bolnaReady} />
-              </FormSection>
-              <div className="mt-8 flex flex-wrap items-center justify-end gap-3">
-                {caseMissing && <span className="text-sm text-zinc-500">{caseMissing} to continue.</span>}
-                <button type="button" onClick={() => goTo("patient")} disabled={!!caseMissing} className="btn btn-primary btn-lg rounded-xl px-5">
-                  Continue to patient <ArrowRight aria-hidden className="size-4" />
-                </button>
-              </div>
-            </>
+            <CasePage
+              templates={props.templates}
+              capabilities={props.capabilities}
+              caseType={caseType}
+              onPickCase={pickCase}
+              needs={needs}
+              onToggleNeed={toggleNeed}
+              radius={radius}
+              onRadius={setRadius}
+              bolnaReady={props.bolnaReady}
+              missing={caseMissing}
+              onContinue={() => goTo("patient")}
+            />
           ) : (
-            <>
-              <FormSection step={1} title="Patient" done={!!acuity}>
-                <PatientSection
-                  acuity={acuity}
-                  onAcuity={setAcuity}
-                  age={age}
-                  onAge={setAge}
-                  ageUnit={ageUnit}
-                  onAgeUnit={setAgeUnit}
-                  sex={sex}
-                  onSex={setSex}
-                  note={note}
-                  onNote={setNote}
-                  noteErrors={noteErrors}
-                  warnings={preview?.warnings ?? []}
-                />
-              </FormSection>
-              <FormSection step={2} title="Bedside status and cover" hint="Optional. Airway, SpO₂ and GCS are read to every hospital; payment and medico-legal are told only if a desk asks.">
-                <FactsSection facts={facts} onChange={setFacts} />
-              </FormSection>
-              <FormSection step={3} title="Handover" hint="Optional. Pregnancy, how it happened, infection risk and blood need are read to every hospital; treatment given and blood group are told only if a desk asks.">
-                <HandoverSection handover={handover} sex={sex} onChange={setHandover} />
-              </FormSection>
-              <FormSection step={4} title="Transfer consent" hint="Optional. Kept on the referral and printed on the referral slip.">
-                <TransferSection transfer={transfer} onChange={setTransfer} />
-              </FormSection>
-              <FormSection step={5} title="Private details" hint="Optional." last>
-                <PatientDetails open={showPatient} onToggle={() => setShowPatient((s) => !s)} patient={patient} onChange={setPatient} />
-              </FormSection>
-              <div className="mt-8">
-                <button type="button" onClick={() => goTo("case")} className="btn btn-secondary">
-                  <ArrowLeft aria-hidden className="size-4" /> Back to case
-                </button>
-              </div>
-            </>
+            <PatientPage
+              acuity={acuity}
+              onAcuity={setAcuity}
+              age={age}
+              onAge={setAge}
+              ageUnit={ageUnit}
+              onAgeUnit={setAgeUnit}
+              sex={sex}
+              onSex={setSex}
+              note={note}
+              onNote={setNote}
+              noteErrors={noteErrors}
+              warnings={preview?.warnings ?? []}
+              facts={facts}
+              onFacts={setFacts}
+              handover={handover}
+              onHandover={setHandover}
+              transfer={transfer}
+              onTransfer={setTransfer}
+              showPatient={showPatient}
+              onTogglePatient={() => setShowPatient((v) => !v)}
+              patient={patient}
+              onPatient={setPatient}
+              onBack={() => goTo("case")}
+            />
           )}
         </div>
 

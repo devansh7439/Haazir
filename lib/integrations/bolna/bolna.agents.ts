@@ -34,6 +34,7 @@ function perLanguage(text: string): Record<string, string> {
   return out;
 }
 
+/** Reads one prompt file in `bolna/prompts/` into its title, welcome lines, prompt text and settings. */
 export function parsePromptDoc(key: string, raw: string): PromptDoc {
   // Git on Windows (core.autocrlf) checks the prompts out with CRLF; every parser below expects "\n".
   const md = raw.replace(/\r\n/g, "\n");
@@ -217,6 +218,7 @@ export function multilingualConfig(
   };
 }
 
+/** The Bolna v2 agent payload for a prompt file and its tools. Unverified against live Bolna (CLAUDE.md). */
 export function buildAgent(doc: PromptDoc, tools: ToolDef[], o: BuildOptions): Record<string, unknown> {
   const app = o.appUrl.replace(/\/$/, "");
   const filled = tools.map((t) => fillTool(t, app, o.functionSecret));
@@ -225,7 +227,8 @@ export function buildAgent(doc: PromptDoc, tools: ToolDef[], o: BuildOptions): R
   const start = startLanguageOf(doc, o.startLanguage);
   const welcome = doc.welcome[start] ?? "";
   const languageNote =
-    `\n\n# Languages\nStart in the language of the welcome message. Switch to ${languageList(Object.keys(doc.welcome))} as soon as the person does. ` +
+    "\n\n# Languages\nStart in the language of the welcome message. " +
+    `Switch to ${languageList(Object.keys(doc.welcome))} as soon as the person does. ` +
     "In every language except English use polite plural forms.";
   const knowledgeBase = o.knowledgeBaseId && KNOWLEDGE_AGENTS.includes(doc.key) ? o.knowledgeBaseId : null;
   // Calls are billed by the minute, so a reply is capped well above the prompts' "under 25 words" but below a monologue.

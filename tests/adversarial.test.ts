@@ -20,7 +20,7 @@ import { clientIp } from "@/lib/integrations/bolna/bolna.auth";
 import { hashPassword } from "@/lib/modules/auth/password.helper";
 import { parseQuickReply } from "@/lib/modules/intake/quick-reply.helper";
 import { safeNext } from "@/lib/modules/auth/safe-next.helper";
-import { sessionFromCookies } from "@/lib/modules/auth/session.service";
+import { SessionService } from "@/lib/modules/auth/session.service";
 import { KRAIT, advanceCalls } from "./support/scripted-calls";
 import { IDS, fakeClock, freshDb } from "./helpers";
 import * as loginRoute from "@/app/api/login/route";
@@ -73,9 +73,9 @@ afterEach(async () => {
 describe("access", () => {
   it("a production deploy that forgot DEMO_PASSCODE is closed, not open to the internet", async () => {
     vi.stubEnv("NODE_ENV", "production");
-    expect(await sessionFromCookies(() => undefined)).toBeNull();
+    expect(await SessionService.fromCookies(() => undefined)).toBeNull();
     vi.stubEnv("NODE_ENV", "development");
-    expect(await sessionFromCookies(() => undefined)).not.toBeNull();
+    expect(await SessionService.fromCookies(() => undefined)).not.toBeNull();
   });
 
   it("passcode guessing is throttled per IP", async () => {

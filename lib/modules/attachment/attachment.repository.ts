@@ -6,7 +6,11 @@ const META = "id, kind, content_type, size_bytes, created_at";
 
 /** Attachments of referrals (`referral_attachments`, server-only). */
 export const AttachmentRepository = {
-  insert: (a: { referral_id: string; kind: AttachmentKind; content_type: AttachmentType; data: Uint8Array; created_by: string | null }, at: Date) =>
+  /** Stores a file with its bytes; returns its metadata, or null when the insert fails. */
+  insert: (
+    a: { referral_id: string; kind: AttachmentKind; content_type: AttachmentType; data: Uint8Array; created_by: string | null },
+    at: Date,
+  ) =>
     one<AttachmentMeta>(
       `insert into referral_attachments (referral_id, kind, content_type, size_bytes, data, created_by, created_at)
        values ($1, $2, $3, $4, $5, $6, $7) returning ${META}`,

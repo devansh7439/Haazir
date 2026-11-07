@@ -12,7 +12,8 @@ const log = createLogger("whatsapp");
 // Meta's one-time webhook verification.
 export async function GET(req: Request) {
   const u = new URL(req.url);
-  if (u.searchParams.get("hub.mode") === "subscribe" && env.metaVerifyToken && u.searchParams.get("hub.verify_token") === env.metaVerifyToken) {
+  const verifying = u.searchParams.get("hub.mode") === "subscribe" && env.metaVerifyToken;
+  if (verifying && u.searchParams.get("hub.verify_token") === env.metaVerifyToken) {
     return new Response(u.searchParams.get("hub.challenge") ?? "", { status: 200 });
   }
   return new Response("forbidden", { status: 403 });

@@ -35,6 +35,7 @@ export const HospitalService = {
     await resolve(token);
   },
 
+  /** What the desk screen shows for a link: the hospital's recent calls and whether it is marked full. 401 for a link that doesn't work. */
   snapshot: async (token: string): Promise<DeskSnapshot> => {
     const f = await resolve(token);
     const t = now();

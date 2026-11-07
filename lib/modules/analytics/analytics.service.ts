@@ -4,6 +4,7 @@ import type { HospitalStat, HourStat, ProofStats } from "@/lib/modules/analytics
 
 /** Acceptance analytics per hospital and per hour of day (C5). */
 export const AnalyticsService = {
+  /** How each hospital in the organisation answered: calls made, answered and accepted. */
   hospitalStats: async (orgId: string): Promise<HospitalStat[]> =>
     (await AnalyticsRepository.hospitals(orgId)).map((r) => ({
       ...r,

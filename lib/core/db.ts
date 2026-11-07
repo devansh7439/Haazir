@@ -17,19 +17,23 @@ export interface Db {
 type GlobalWithDb = typeof globalThis & { __haazirDb?: Promise<Db> };
 const g = globalThis as GlobalWithDb;
 
+/** Replaces the connection with `db`; null makes the next query connect from DATABASE_URL. For tests and scripts. */
 export function setDb(db: Db | null): void {
   g.__haazirDb = db ? Promise.resolve(db) : undefined;
 }
 
+/** The shared connection, opened from DATABASE_URL on first use. */
 export function getDb(): Promise<Db> {
   if (!g.__haazirDb) g.__haazirDb = connect(env.databaseUrl);
   return g.__haazirDb;
 }
 
+/** All rows of a query. */
 export async function q<T = Record<string, unknown>>(sql: string, params: unknown[] = []): Promise<T[]> {
   return (await getDb()).query<T>(sql, params);
 }
 
+/** The first row of a query, or null when there is none. */
 export async function one<T = Record<string, unknown>>(sql: string, params: unknown[] = []): Promise<T | null> {
   const rows = await q<T>(sql, params);
   return rows[0] ?? null;
@@ -50,6 +54,7 @@ export function setClause(fields: Record<string, unknown>, startIndex: number): 
   return { sql, values };
 }
 
+/** Opens a connection: an embedded PGlite for `pglite:<dir>`, otherwise any Postgres. */
 export async function connect(url: string): Promise<Db> {
   if (url.startsWith("pglite:")) return connectPglite(url.slice("pglite:".length));
   return connectPg(url);
@@ -107,10 +112,12 @@ async function connectPglite(dir: string): Promise<Db> {
 
 const ROOT = process.cwd();
 
+/** The text of a SQL file under the project root. */
 export function readSql(rel: string): string {
   return fs.readFileSync(path.join(ROOT, rel), "utf8");
 }
 
+/** The migration files, oldest first. */
 export function migrationFiles(): string[] {
   const dir = path.join(ROOT, "supabase/migrations");
   return fs

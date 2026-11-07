@@ -21,7 +21,8 @@ export const BridgeService = {
     const referral = recent ? await ReferralRepository.get(recent.referral_id) : null;
     const doctor = referral && CANCELLABLE.includes(referral.status) ? await ReferralRepository.referrer(referral.referrer_id) : null;
     // Server-only log: the desk's number stays out of the events the browser reads.
-    await WebhookLogRepository.log(null, "function:bridge", { matched: !!doctor, referral_id: referral?.id ?? null, facility_id: recent?.facility_id ?? null });
+    const logged = { matched: !!doctor, referral_id: referral?.id ?? null, facility_id: recent?.facility_id ?? null };
+    await WebhookLogRepository.log(null, "function:bridge", logged);
     return doctor?.phone_e164 ?? null;
   },
 };

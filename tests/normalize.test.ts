@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { clean, cleanParams, maskPhone, normalizeBedType, normalizeOutcome, normalizePhone, normalizeReferralCode, normalizeYesNo, parseMinutes } from "@/lib/core/normalize";
+import { clean, cleanParams, isRecord, maskPhone, normalizeBedType, normalizeOutcome, normalizePhone, normalizeReferralCode, normalizeYesNo, parseMinutes, readField, readText, toBolnaStatus } from "@/lib/core/normalize";
 
 describe("function payload normaliser", () => {
   it("treats empty, None and unreplaced tokens as missing", () => {
@@ -44,5 +44,33 @@ describe("function payload normaliser", () => {
     expect(normalizeYesNo("maybe")).toBeNull();
     expect(normalizeReferralCode("R 4 8 2 1")).toBe("R-4821");
     expect(normalizeReferralCode("r4821")).toBe("R-4821");
+  });
+});
+
+describe("untrusted object readers", () => {
+  it("accepts a plain object and refuses null, arrays and primitives", () => {
+    expect(isRecord({ a: 1 })).toBe(true);
+    expect(isRecord(null)).toBe(false);
+    expect(isRecord([1])).toBe(false);
+    expect(isRecord("text")).toBe(false);
+  });
+
+  it("reads a field only from an object", () => {
+    expect(readField({ a: 1 }, "a")).toBe(1);
+    expect(readField({ a: 1 }, "b")).toBeUndefined();
+    expect(readField(null, "a")).toBeUndefined();
+    expect(readField([5], "0")).toBeUndefined();
+  });
+
+  it("reads text only when the field is a string", () => {
+    expect(readText({ a: "x" }, "a")).toBe("x");
+    expect(readText({ a: 3 }, "a")).toBeNull();
+    expect(readText(undefined, "a")).toBeNull();
+    expect(readText({ error: { message: "nope" } }, "error")).toBeNull();
+  });
+
+  it("knows Bolna's statuses and nothing else", () => {
+    expect(toBolnaStatus("call-disconnected")).toBe("call-disconnected");
+    expect(toBolnaStatus("dispatching")).toBeNull();
   });
 });

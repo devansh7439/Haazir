@@ -12,6 +12,7 @@ export const IntakeRepository = {
   /** Case types and their default needs, for parsing a message. */
   caseTemplates: (): Promise<CaseTemplate[]> => q<CaseTemplate>(`select case_type, default_capabilities from case_templates`),
 
+  /** Saves a draft and returns its id. */
   insert: async (d: NewDraft): Promise<string> => {
     const row = await one<{ id: string }>(
       `insert into intake_drafts (org_id, referrer_id, kind, transcript, parsed, created_at)
@@ -28,9 +29,11 @@ export const IntakeRepository = {
       [orgId, limit],
     ),
 
+  /** One draft of the organisation, or null. */
   get: (orgId: string, id: string): Promise<DraftRow | null> =>
     one<DraftRow>(`select id, kind, created_at, parsed from intake_drafts where id = $1 and org_id = $2`, [id, orgId]),
 
+  /** Marks a draft used or dismissed. */
   setStatus: async (orgId: string, id: string, status: "used" | "dismissed"): Promise<void> => {
     await q(`update intake_drafts set status = $3 where id = $1 and org_id = $2`, [id, orgId, status]);
   },

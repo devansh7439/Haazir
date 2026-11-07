@@ -1,6 +1,8 @@
+/** What an attachment is for. */
 export const ATTACHMENT_KINDS = ["ecg", "photo", "record", "other"] as const;
 export type AttachmentKind = (typeof ATTACHMENT_KINDS)[number];
 
+/** The file types accepted, read from the bytes. */
 export const ATTACHMENT_TYPES = ["image/jpeg", "image/png", "image/webp", "application/pdf"] as const;
 export type AttachmentType = (typeof ATTACHMENT_TYPES)[number];
 

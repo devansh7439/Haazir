@@ -23,9 +23,11 @@ export const HospitalRepository = {
     );
   },
 
+  /** Whether the hospital has a desk-screen link. */
   hasLink: async (facilityId: string): Promise<boolean> =>
     !!(await one(`select 1 from facility_desk_links where facility_id = $1`, [facilityId])),
 
+  /** Marks the hospital full until `until`; null clears it. */
   setFullUntil: async (facilityId: string, until: Date | null): Promise<void> => {
     await q(`update facilities set full_until = $2 where id = $1`, [facilityId, until]);
   },
@@ -33,7 +35,8 @@ export const HospitalRepository = {
   /** The availability calls this hospital took since `since`, newest first, with their referral's de-identified summary. */
   recentCalls: (facilityId: string, since: Date): Promise<DeskCallRow[]> =>
     q<DeskCallRow>(
-      `select r.code, r.status as referral_status, r.selected_facility_id, r.hold_expires_at, r.treatment_started_at, r.spoken_summary as summary,
+      `select r.code, r.status as referral_status, r.selected_facility_id, r.hold_expires_at, r.treatment_started_at,
+              r.spoken_summary as summary,
               d.name as doctor_name, o.name as origin_name,
               a.outcome, a.status, a.eta_minutes, a.created_at
        from call_attempts a

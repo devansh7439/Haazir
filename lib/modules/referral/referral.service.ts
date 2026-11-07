@@ -28,7 +28,10 @@ const prepare = async (input: ReferralInput, orgId?: string): Promise<PreparedRe
   // A referrer from another organisation is reported exactly like a missing one.
   if (!referrer || (orgId && referrer.org_id !== orgId)) throw ApiError.unprocessable("UNKNOWN_REFERRER", "Referrer not found");
   if (!mayRefer(referrer.verification_status, env.requireVerifiedReferrer)) {
-    throw ApiError.unprocessable("REFERRER_NOT_VERIFIED", "Your medical registration has not been verified yet. Ask an admin to verify it.");
+    throw ApiError.unprocessable(
+      "REFERRER_NOT_VERIFIED",
+      "Your medical registration has not been verified yet. Ask an admin to verify it.",
+    );
   }
   const origin = referrer.facility_id ? await FacilityRepository.get(referrer.facility_id) : null;
   const lat = origin?.lat ?? input.origin_lat;
@@ -75,7 +78,8 @@ const prepare = async (input: ReferralInput, orgId?: string): Promise<PreparedRe
   };
   const ranked = await FacilityService.rankEligible(params, needs.map((n) => n.label));
   const { kept, skipped } = applyEtaCap(ranked, env.maxEtaMinutes(input.acuity));
-  return { referrer, origin, template, needs, params, spoken_summary, warnings: [...noteCheck.warnings, ...treatmentCheck.warnings], ranked: kept, skipped_far: skipped };
+  const warnings = [...noteCheck.warnings, ...treatmentCheck.warnings];
+  return { referrer, origin, template, needs, params, spoken_summary, warnings, ranked: kept, skipped_far: skipped };
 };
 
 /** The referral an earlier press of the same "Find a bed" created, with its calls; null when this is the first. */
@@ -113,7 +117,7 @@ export const ReferralService = {
    * Creates the referral and calls the first wave. Idempotent on `client_request_id`: a repeat returns the first
    * referral with `duplicate`. Live referrals need Bolna configured and stay under the organisation's live cap.
    */
-  create: async (input: ReferralInput, opts: { orgId?: string } = {}): Promise<Created> => {
+  create: async (input: ReferralInput, opts: { orgId?: string; enteredBy?: string | null } = {}): Promise<Created> => {
     const p = await prepare(input, opts.orgId);
     const orgId = p.referrer.org_id;
     const repeat = await findRepeat(orgId, input.client_request_id);
@@ -148,6 +152,7 @@ export const ReferralService = {
     const referral = await ReferralRepository.insert(
       {
         referrer_id: p.referrer.id,
+        entered_by: opts.enteredBy ?? null,
         origin_facility_id: p.origin?.id ?? null,
         origin_lat: p.params.lat,
         origin_lng: p.params.lng,
@@ -225,6 +230,11 @@ export const ReferralService = {
     return updated ?? (await ReferralRepository.get(referral.id)) ?? referral;
   },
 
+  /** Marks an alert on the board as seen, so it stops showing. */
+  dismissAlert: async (referral: Referral, eventId: number): Promise<void> => {
+    await EventRepository.add(referral.id, "alert_dismissed", { event_id: eventId });
+  },
+
   /** Stops the search. Queued calls are stopped; calls already ringing finish. Returns the follow-up (releases). */
   cancel: async (referralId: string, reason: string | null): Promise<FollowUp> => {
     const r = await ReferralRepository.get(referralId);
@@ -277,7 +287,7 @@ export const ReferralService = {
         ...handoverFactsOf(r),
         transfer_consent: r.transfer_consent,
         transfer_reason: r.transfer_reason,
-        transport: r.transport as ReferralInput["transport"],
+        transport: r.transport,
         search_radius_km: Math.max(radiusKm, r.search_radius_km + 1),
         origin_lat: r.origin_lat,
         origin_lng: r.origin_lng,
@@ -291,6 +301,7 @@ export const ReferralService = {
             }
           : undefined,
       },
+      { enteredBy: r.entered_by },
     );
     const closeReason = `widened to ${radiusKm} km: ${created.referral.code}`;
     await ReferralRepository.update(r.id, { status: "closed", closed_at: now(), close_reason: closeReason });

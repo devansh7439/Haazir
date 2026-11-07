@@ -39,5 +39,6 @@ export const PortalService = {
     return true;
   },
 
+  /** The newest portal snapshot of each hospital in the organisation. */
   latestSnapshots: (orgId: string): Promise<PortalSnapshot[]> => PortalRepository.latestByFacility(orgId),
 };

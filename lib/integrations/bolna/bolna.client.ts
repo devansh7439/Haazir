@@ -1,6 +1,8 @@
 import "server-only";
 import { z } from "zod";
 import { env } from "@/lib/core/config";
+import { isRecord, readField, toBolnaStatus } from "@/lib/core/normalize";
+import { BOLNA_STATUSES, type BolnaStatus } from "@/lib/core/types";
 
 // Bolna REST client (docs/04-api-spec.md §6).
 
@@ -13,15 +15,7 @@ export interface MakeCallRequest {
   bypass_call_guardrails: true;
 }
 
-/** Every execution status Bolna documents (CLAUDE.md, "Bolna essentials"). */
-export const BOLNA_STATUSES = [
-  "queued", "scheduled", "rescheduled", "initiated", "ringing", "in-progress", "call-disconnected", "completed",
-  "no-answer", "busy", "failed", "canceled", "stopped", "error", "balance-low",
-] as const;
-export type BolnaStatus = (typeof BOLNA_STATUSES)[number];
-
-/** The status if it is one Bolna documents; null for anything else. */
-export const toBolnaStatus = (raw: unknown): BolnaStatus | null => BOLNA_STATUSES.find((s) => s === raw) ?? null;
+export { BOLNA_STATUSES, toBolnaStatus, type BolnaStatus };
 
 /** POST /call's answer. A status we don't know becomes null rather than an error: the call was still queued. */
 const MakeCallResponseSchema = z
@@ -29,9 +23,7 @@ const MakeCallResponseSchema = z
   .transform((r) => ({ execution_id: r.execution_id, status: toBolnaStatus(r.status) }));
 export type MakeCallResponse = z.infer<typeof MakeCallResponseSchema>;
 
-/** The text under `key` when `obj` is an object; undefined otherwise. */
-const field = (obj: unknown, key: string): unknown => (obj && typeof obj === "object" ? (obj as Record<string, unknown>)[key] : undefined);
-
+/** A failed Bolna request: its HTTP status (0 when none was made) and the delay Bolna asked for, if any. */
 export class BolnaError extends Error {
   constructor(
     message: string,
@@ -60,14 +52,15 @@ async function request(method: string, path: string, body?: unknown): Promise<un
     data = { raw: text };
   }
   if (!res.ok) {
-    const reason = field(data, "message") ?? field(data, "error") ?? field(data, "detail");
+    const reason = readField(data, "message") ?? readField(data, "error") ?? readField(data, "detail");
     const message = String(reason ?? `Bolna ${method} ${path} failed with ${res.status}`);
-    const retry = Number(field(data, "retry_after_seconds") ?? res.headers.get("retry-after"));
+    const retry = Number(readField(data, "retry_after_seconds") ?? res.headers.get("retry-after"));
     throw new BolnaError(message, res.status, Number.isFinite(retry) && retry > 0 ? retry : null);
   }
   return data;
 }
 
+/** Places one call. Waits once and retries when Bolna answers 429 with a short delay; otherwise throws `BolnaError`. */
 export async function makeCall(req: MakeCallRequest): Promise<MakeCallResponse> {
   if (!req.agent_id) throw new BolnaError("Bolna agent ID is not configured for this call type", 0);
   const body: MakeCallRequest = { ...req };
@@ -93,5 +86,5 @@ export async function stopCall(executionId: string): Promise<void> {
 /** Recover a missed webhook. */
 export async function getExecution(executionId: string): Promise<Record<string, unknown>> {
   const data = await request("GET", `/executions/${encodeURIComponent(executionId)}`);
-  return data && typeof data === "object" && !Array.isArray(data) ? Object.fromEntries(Object.entries(data)) : {};
+  return isRecord(data) ? data : {};
 }

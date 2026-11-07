@@ -1,12 +1,11 @@
 import "server-only";
-import { LINK_TTL_H } from "@/lib/modules/attachment/attachment.helper";
 import { env } from "@/lib/core/config";
 import { now } from "@/lib/core/clock";
 import { ApiError } from "@/lib/core/error";
 import { createLogger } from "@/lib/core/logger";
 import type { Referral } from "@/lib/core/types";
 import { EventRepository } from "@/lib/modules/event/event.repository";
-import { LINK_STATUSES, checkUpload, labelsFor, signLink, verifyLink } from "@/lib/modules/attachment/attachment.helper";
+import { LINK_STATUSES, LINK_TTL_H, checkUpload, labelsFor, signLink, verifyLink } from "@/lib/modules/attachment/attachment.helper";
 import { AttachmentRepository } from "@/lib/modules/attachment/attachment.repository";
 import type { AttachmentFile, AttachmentKind, AttachmentLink, AttachmentMeta, FileAccess } from "@/lib/modules/attachment/attachment.type";
 import { CANCELLABLE } from "@/lib/modules/referral/referral.helper";
@@ -24,7 +23,8 @@ export const AttachmentService = {
     const existing = (await AttachmentRepository.list(referral.id)).length;
     const check = checkUpload(bytes, existing);
     if (!check.ok) throw ApiError.unprocessable(check.code, check.message);
-    const meta = await AttachmentRepository.insert({ referral_id: referral.id, kind, content_type: check.content_type, data: bytes, created_by: by }, now());
+    const row = { referral_id: referral.id, kind, content_type: check.content_type, data: bytes, created_by: by };
+    const meta = await AttachmentRepository.insert(row, now());
     if (!meta) throw ApiError.internal("INSERT_FAILED", "Could not save the file");
     await EventRepository.add(referral.id, "attachment_added", { kind, size_bytes: meta.size_bytes });
     log.info({ referral_id: referral.id, kind, size_bytes: meta.size_bytes }, "attachment added");
@@ -57,6 +57,27 @@ export const AttachmentService = {
   },
 
   /**
+   * The file for a request that may carry a console session, a signed link, or both. The link is tried first, so hospital
+   * staff signed in to some other organisation can still open the link they were sent; a link that fails falls back to the
+   * session. 401 when neither works.
+   */
+  openForRequest: async (
+    id: string,
+    session: { org: string } | null,
+    link: { exp: number; sig: string } | null,
+  ): Promise<AttachmentFile> => {
+    if (link) {
+      try {
+        return await AttachmentService.open(id, { kind: "link", ...link });
+      } catch (err) {
+        if (!session) throw err;
+      }
+    }
+    if (!session) throw ApiError.unauthorized("Sign in, or use the link you were sent");
+    return AttachmentService.open(id, { kind: "session", org: session.org });
+  },
+
+  /**
    * Links for the receiving hospital, one per file, empty until a bed is confirmed. Also empty without
    * ATTACHMENT_LINK_SECRET or APP_BASE_URL: a link no one can open is worse than none.
    */
@@ -67,6 +88,9 @@ export const AttachmentService = {
     const files = await AttachmentRepository.list(referral.id);
     const labels = labelsFor(files);
     const exp = Math.floor(now().getTime() / 1000) + LINK_TTL_H * 3600;
-    return files.map((f) => ({ label: labels.get(f.id) ?? "File", url: `${base}/api/attachments/${f.id}/file?exp=${exp}&sig=${signLink(f.id, exp, secret)}` }));
+    return files.map((f) => ({
+      label: labels.get(f.id) ?? "File",
+      url: `${base}/api/attachments/${f.id}/file?exp=${exp}&sig=${signLink(f.id, exp, secret)}`,
+    }));
   },
 };

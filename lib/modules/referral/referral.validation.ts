@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { AMBULANCE_STATUSES, BLOOD_GROUPS, INFECTIOUS_RISKS, TRANSFER_CONSENTS, TRANSFER_REASONS, TRAUMA_MECHANISMS } from "@/lib/core/types";
+import { AMBULANCE_STATUSES, BLOOD_GROUPS, INFECTIOUS_RISKS, TRANSFER_CONSENTS, TRANSFER_REASONS, TRANSPORTS, TRAUMA_MECHANISMS } from "@/lib/core/types";
 import { languageCode, optionalText } from "@/lib/core/validation";
 
 /** POST /api/referrals: the "Find a bed" form. */
@@ -26,7 +26,7 @@ export const ReferralBody = z.object({
   blood_needed: z.boolean().optional().nullable(),
   transfer_consent: z.enum(TRANSFER_CONSENTS).optional().nullable(),
   transfer_reason: z.enum(TRANSFER_REASONS).optional().nullable(),
-  transport: z.enum(["ambulance", "private_vehicle", "unknown"]).default("ambulance"),
+  transport: z.enum(TRANSPORTS).default("ambulance"),
   search_radius_km: z.number().int().min(1).max(300).default(40),
   origin_lat: z.number().min(-90).max(90).optional(),
   origin_lng: z.number().min(-180).max(180).optional(),
@@ -42,7 +42,6 @@ export const ReferralBody = z.object({
     })
     .optional(),
 });
-export type ReferralBodyT = z.infer<typeof ReferralBody>;
 
 /** POST /api/referrals/preview: the same form, without identifiers or side effects. */
 export const PreviewBody = ReferralBody.omit({ patient: true, draft_id: true, client_request_id: true });

@@ -25,6 +25,7 @@ export const EXTRACTION_MODEL = "gpt-4.1-mini";
 
 const CALL = "You are reading a phone call between an automated referral assistant and a hospital emergency desk.";
 
+/** The extraction categories to set up on the availability agent, as `bolna/extractions.md` describes. */
 export const EXTRACTIONS: CategoryDef[] = [
   {
     agent: "availability",

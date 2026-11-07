@@ -4,7 +4,7 @@ import { env } from "@/lib/core/config";
 import { IntakeService } from "@/lib/modules/intake/intake.service";
 import { ReferralRepository } from "@/lib/modules/referral/referral.repository";
 import { ViewService } from "@/lib/modules/referral/view.service";
-import { getSession } from "@/lib/modules/auth/session.service";
+import { SessionService, type Session } from "@/lib/modules/auth/session.service";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -19,9 +19,8 @@ export const dynamic = "force-dynamic";
 const IN_PROGRESS = ["searching", "options_ready", "confirming", "confirmed"];
 
 /** The referrals still in progress and the drafts waiting from WhatsApp, for the sidebar and the top bar; empty when signed out. */
-async function sideData() {
+async function sideData(s: Session | null) {
   try {
-    const s = await getSession();
     if (!s) return { live: [], drafts: { count: 0, firstId: null as string | null } };
     const [recent, drafts] = await Promise.all([ViewService.list(s.org, 12), IntakeService.list(s.org)]);
     return {
@@ -33,9 +32,8 @@ async function sideData() {
   }
 }
 
-async function currentUser() {
+async function currentUser(s: Session | null) {
   try {
-    const s = await getSession();
     if (!s) return null;
     const row = await ReferralRepository.defaultReferrer(s.org, s.rid);
     const strip = (x: string | null | undefined) => x?.replace(/\s*\(Demo\)/i, "") ?? null;
@@ -43,6 +41,7 @@ async function currentUser() {
       name: s.name || strip(row?.name) || "Console",
       facility: strip(row?.facility),
       signOut: env.authMode === "users" || !!env.demoPasscode,
+      coordinator: s.role === "coordinator",
     };
   } catch {
     return null;
@@ -51,11 +50,13 @@ async function currentUser() {
 
 export default async function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   const live = !!env.bolnaApiKey && !!env.agentId("availability");
-  const side = await sideData();
+  // One session read, then the two side queries side by side.
+  const session = await SessionService.get().catch(() => null);
+  const [side, user] = await Promise.all([sideData(session), currentUser(session)]);
   return (
     <html lang="en">
       <body className="min-h-screen">
-        <AppShell user={await currentUser()} mode={live ? "live" : "not_configured"} live={side.live} drafts={side.drafts}>
+        <AppShell user={user} mode={live ? "live" : "not_configured"} live={side.live} drafts={side.drafts}>
           {children}
         </AppShell>
       </body>

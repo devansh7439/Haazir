@@ -30,8 +30,6 @@ export const FAMILY_LANGUAGES = ['en', 'hi', 'kn', 'ta', 'te'];
 
 /** The search distances a doctor can pick, in kilometres. */
 export const RADII_KM = [20, 40, 60, 80, 120];
-/** The search distance before a doctor has chosen their own. */
-export const DEFAULT_RADIUS_KM = 40;
 /** The most characters the note for hospitals may have. */
 export const NOTE_MAX = 160;
 

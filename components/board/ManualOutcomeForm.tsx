@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { BED_TYPES } from "@/lib/core/types";
 import { BED_LABEL } from "@/lib/ui/display";
 import type { AttemptView } from "@/lib/modules/referral/view.type";
 import type { Post } from "./types";
@@ -41,7 +42,7 @@ export function ManualOutcomeForm({ a, post, onDone }: { a: AttemptView; post: P
       {accepted && (
         <div>
           <label className="label" htmlFor={`b-${a.id}`}>Bed type</label>
-          <select id={`b-${a.id}`} className="input" value={bed} onChange={(e) => setBed(e.target.value)}>
+          <select id={`b-${a.id}`} className="input" value={bed} onChange={(e) => setBed(BED_TYPES.find((b) => b === e.target.value) ?? bed)}>
             {Object.entries(BED_LABEL).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
           </select>
         </div>

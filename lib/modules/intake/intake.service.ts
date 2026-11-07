@@ -26,7 +26,9 @@ export const IntakeService = {
     return r ? summaryOf(r) : null;
   },
 
+  /** Marks a draft as turned into a referral. */
   markUsed: (orgId: string, id: string): Promise<void> => IntakeRepository.setStatus(orgId, id, "used"),
 
+  /** Marks a draft as not wanted, so it stops showing. */
   dismiss: (orgId: string, id: string): Promise<void> => IntakeRepository.setStatus(orgId, id, "dismissed"),
 };

@@ -6,7 +6,8 @@ import type { EligibleRow } from "@/lib/modules/facility/matching.helper";
 import type { FacilityStats, MatchParams, NearestEmergency, NewContact, NewFacility } from "@/lib/modules/facility/facility.type";
 
 // Eligibility (docs/03-data-model.md §5.1). Parameters: $1 lat, $2 lng, $3 radius_km, $4 needs text[], $5 origin facility id
-// (nullable), $6 organisation id, $7 the clock's now (a hospital marked full until later is skipped). Kept as one tested statement so it runs unchanged on PGlite and Supabase.
+// (nullable), $6 organisation id, $7 the clock's now (a hospital marked full until later is skipped). Kept as one tested
+// statement so it runs unchanged on PGlite and Supabase.
 const ELIGIBLE_SQL = `
 with params as (
   select $1::float8 as lat, $2::float8 as lng, $3::int as radius_km,
@@ -76,8 +77,10 @@ order by distance_km limit $5::int
 
 /** Hospitals, their phone numbers and their capabilities. */
 export const FacilityRepository = {
+  /** One hospital by id, or null. */
   get: (id: string): Promise<Facility | null> => one<Facility>(`select * from facilities where id = $1`, [id]),
 
+  /** The hospitals with these ids. */
   getMany: (ids: string[]): Promise<Facility[]> => q<Facility>(`select * from facilities where id = any($1::uuid[])`, [ids]),
 
   /** Hospitals that can take the case: capable, in range, in the organisation, with an active number. Nearest first. */
@@ -85,7 +88,9 @@ export const FacilityRepository = {
     q<EligibleRow>(ELIGIBLE_SQL, [p.lat, p.lng, p.radius_km, p.needs, p.origin_id, p.org_id, now()]),
 
   /** The closest hospitals with a casualty desk number, whatever they can do: where to stabilise the patient if nobody accepts. */
-  nearestEmergency: (p: { lat: number; lng: number; org_id: string; origin_id: string | null; limit?: number }): Promise<NearestEmergency[]> =>
+  nearestEmergency: (
+    p: { lat: number; lng: number; org_id: string; origin_id: string | null; limit?: number },
+  ): Promise<NearestEmergency[]> =>
     q<NearestEmergency>(NEAREST_ED_SQL, [p.lat, p.lng, p.org_id, p.origin_id, p.limit ?? 3]),
 
   /** Each hospital's numbers, best first. */
@@ -99,6 +104,7 @@ export const FacilityRepository = {
     return map;
   },
 
+  /** One hospital contact by id, or null. */
   getContact: (id: string): Promise<Contact | null> => one<Contact>(`select * from facility_contacts where id = $1`, [id]),
 
   /** Adds an unverified number (e.g. from a redirect), or reactivates it. Null without a hospital. */
@@ -120,6 +126,7 @@ export const FacilityRepository = {
     await q(`update facilities set google_place_id = $2 where id = $1`, [id, placeId]);
   },
 
+  /** Sets the hospital's WhatsApp number; null clears it. */
   setWhatsappNumber: async (id: string, phone: string | null): Promise<void> => {
     await q(`update facilities set whatsapp_number = $2 where id = $1`, [id, phone]);
   },
@@ -151,6 +158,7 @@ export const FacilityRepository = {
       [orgId],
     ),
 
+  /** Every contact of the organisation's hospitals, best priority first. */
   contactsForOrg: (orgId: string): Promise<Contact[]> =>
     q<Contact>(`select * from facility_contacts where org_id = $1 order by priority, created_at`, [orgId]),
 
@@ -158,8 +166,10 @@ export const FacilityRepository = {
   stats: (): Promise<FacilityStats[]> =>
     q<FacilityStats>(`select facility_id, availability_calls::int, answered::int, accepted::int, last_called_at from facility_stats`),
 
+  /** Whether a hospital with this id exists. */
   exists: async (id: string): Promise<boolean> => !!(await one(`select 1 from facilities where id = $1`, [id])),
 
+  /** Adds a hospital to the organisation and returns it. */
   insert: async (orgId: string, f: NewFacility): Promise<Facility> => {
     const t = now();
     const row = await one<Facility>(

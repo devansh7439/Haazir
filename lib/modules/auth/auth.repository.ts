@@ -1,8 +1,8 @@
 import "server-only";
 import { one, q } from "@/lib/core/db";
-import type { Referrer } from "@/lib/core/types";
+import type { Referrer, Role } from "@/lib/core/types";
 
-export type Role = "admin" | "doctor";
+export type { Role };
 
 /** A console user as sign-in needs it. */
 export interface UserRow {
@@ -28,9 +28,11 @@ export interface NewUserRow {
 
 /** Console users (`app_users`, AUTH_MODE=users). */
 export const AuthRepository = {
+  /** The user with this email, or null. */
   byEmail: (email: string): Promise<UserRow | null> =>
     one<UserRow>(`select id, org_id, role, referrer_id, name, email, password_hash, active from app_users where email = $1`, [email]),
 
+  /** Stamps the user's last sign-in. */
   touchLastLogin: async (id: string, at: Date): Promise<void> => {
     await q(`update app_users set last_login_at = $2 where id = $1`, [id, at]);
   },

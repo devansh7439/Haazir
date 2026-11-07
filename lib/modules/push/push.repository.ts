@@ -1,15 +1,16 @@
 import "server-only";
 import { now } from "@/lib/core/clock";
 import { one, q } from "@/lib/core/db";
-import type { PushToken } from "@/lib/modules/push/push.type";
+import type { PushPlatform, PushToken } from "@/lib/modules/push/push.type";
 
 /** Expo push tokens of the mobile app's devices (`push_tokens`). */
 export const PushRepository = {
   /** Saves a device's token for this person; a token already saved for someone else moves to them. */
-  upsert: async (orgId: string, userId: string | null, token: string, platform: string): Promise<void> => {
+  upsert: async (orgId: string, userId: string | null, token: string, platform: PushPlatform): Promise<void> => {
     await q(
       `insert into push_tokens (org_id, user_id, token, platform, created_at, last_seen_at) values ($1, $2, $3, $4, $5, $5)
-       on conflict (token) do update set org_id = excluded.org_id, user_id = excluded.user_id, platform = excluded.platform, last_seen_at = excluded.last_seen_at`,
+       on conflict (token) do update set
+         org_id = excluded.org_id, user_id = excluded.user_id, platform = excluded.platform, last_seen_at = excluded.last_seen_at`,
       [orgId, userId, token, platform, now()],
     );
   },

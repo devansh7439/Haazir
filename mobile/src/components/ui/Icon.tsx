@@ -93,9 +93,6 @@ const ICONS = {
 
 export type IconName = keyof typeof ICONS;
 
-/** The icon for a name, so screens say what the icon means and never import a glyph. */
-export const iconFor = (name: IconName): PhosphorIcon => ICONS[name];
-
 // The statuses a hospital's answer can have, each drawn as a line icon (never emoji).
 const STATUS_ICONS: Record<IconKey, PhosphorIcon> = {
   queued: ClockIcon,

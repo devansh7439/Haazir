@@ -68,34 +68,11 @@ export const english = (text: string | Phrase): string => text as unknown as str
 /** The language the screens show now. */
 export const uiLanguage = (): UiLanguage => current;
 
-// While held, a change of language waits, so a sheet can close before every screen is drawn afresh under it.
-let held = false;
-let waiting: UiLanguage | null = null;
-
 /** Switches the language and redraws every screen that shows words; nothing happens when it is already that one. */
 export function setUiLanguage(language: UiLanguage) {
-  if (held) {
-    waiting = language;
-    return;
-  }
   if (language === current) return;
   current = language;
   listeners.forEach((listener) => listener());
-}
-
-/** Holds back any change of language until the returned release is called; a change made meanwhile applies then. */
-export function holdLanguageChange(): () => void {
-  held = true;
-  waiting = null;
-  let released = false;
-  return () => {
-    if (released) return;
-    released = true;
-    held = false;
-    const next = waiting;
-    waiting = null;
-    if (next) setUiLanguage(next);
-  };
 }
 
 const subscribe = (listener: () => void) => {
@@ -109,6 +86,3 @@ const subscribe = (listener: () => void) => {
 export function useUiLanguage(): UiLanguage {
   return useSyncExternalStore(subscribe, uiLanguage, uiLanguage);
 }
-
-/** Whether any Hindi wording has been recorded yet. */
-export const hasHindiWording = () => Object.keys(HINDI).length > 0;

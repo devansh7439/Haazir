@@ -12,14 +12,17 @@ export const ThrottleRepository = {
     return row?.n ?? 0;
   },
 
+  /** Counts one failure for each key. */
   record: async (keys: string[], at: Date): Promise<void> => {
     for (const key of keys) await q(`insert into login_failures (key, at) values ($1, $2)`, [key, at]);
   },
 
+  /** Forgets failures older than `at`. */
   deleteBefore: async (at: Date): Promise<void> => {
     await q(`delete from login_failures where at < $1`, [at]);
   },
 
+  /** Forgets every failure for these keys. */
   clear: async (keys: string[]): Promise<void> => {
     await q(`delete from login_failures where key = any($1::text[])`, [keys]);
   },

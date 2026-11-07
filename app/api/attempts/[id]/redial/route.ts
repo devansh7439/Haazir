@@ -1,13 +1,13 @@
 import { NextResponse } from "next/server";
 import { handle, parseBody } from "@/lib/core/route";
 import { ScopeService } from "@/lib/modules/auth/scope.service";
-import { requireSession } from "@/lib/modules/auth/session.service";
+import { SessionService } from "@/lib/modules/auth/session.service";
 import { RedialBody } from "@/lib/modules/call/call.validation";
 import { CallService } from "@/lib/modules/call/call.service";
 
 export async function POST(req: Request, { params }: { params: Promise<{ id: string }> }) {
   return handle(async () => {
-    const s = await requireSession();
+    const s = await SessionService.require();
     const a = await ScopeService.attempt(s, (await params).id);
     const body = await parseBody(req, RedialBody);
     if (body.contact_id) await ScopeService.contact(s, body.contact_id);

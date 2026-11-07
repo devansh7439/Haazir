@@ -2,7 +2,7 @@ import "server-only";
 import { LOST_TRACK_AFTER_S, POLL_EVERY_S, STALE_AFTER_S } from "@/lib/core/config";
 import { now, secondsBetween } from "@/lib/core/clock";
 import { createLogger } from "@/lib/core/logger";
-import { clean, normalizeYesNo, redactNumbers } from "@/lib/core/normalize";
+import { clean, isRecord, normalizeYesNo, redactNumbers } from "@/lib/core/normalize";
 import type { Attempt } from "@/lib/core/types";
 import { getExecution, toBolnaStatus } from "@/lib/integrations/bolna/bolna.client";
 import { PortalService } from "@/lib/modules/portal/portal.service";
@@ -87,7 +87,7 @@ export const WebhookService = {
    * accepted and ignored (`applied: false`). `log: false` skips the raw log when the caller already stored it.
    */
   handle: async (body: unknown, opts: { log?: boolean } = {}): Promise<WebhookResult> => {
-    const b: Body = body && typeof body === "object" ? (body as Body) : {};
+    const b: Body = isRecord(body) ? body : {};
     const executionId = executionIdOf(b);
     const rawStatus = typeof b.status === "string" ? b.status : null;
     if (opts.log !== false) await WebhookLogRepository.log(executionId, toBolnaStatus(rawStatus), b);

@@ -1,6 +1,6 @@
 "use client";
 
-import { BadgeCheck, BarChart3, Building2, ListFilter, LogOut, MessageCircle, Plus } from "lucide-react";
+import { BadgeCheck, BarChart3, Building2, ListChecks, ListFilter, LogOut, MessageCircle, Plus } from "lucide-react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, type ReactNode } from "react";
@@ -9,6 +9,7 @@ import { REFERRAL_STATUS, mmss } from "@/lib/ui/display";
 
 const NAV = [
   { href: "/", label: "New referral", icon: Plus, hint: "N", match: (p: string) => p === "/" },
+  { href: "/queue", label: "Queue", icon: ListChecks, hint: null, match: (p: string) => p.startsWith("/queue") },
   { href: "/history", label: "Referrals", icon: ListFilter, hint: null, match: (p: string) => p.startsWith("/history") || p.startsWith("/referrals") },
   { href: "/facilities", label: "Hospitals", icon: Building2, hint: null, match: (p: string) => p.startsWith("/facilities") },
   { href: "/analytics", label: "Analytics", icon: BarChart3, hint: null, match: (p: string) => p.startsWith("/analytics") },
@@ -18,6 +19,7 @@ const NAV = [
 /** What the top bar names the page. */
 const TITLES: Array<[(p: string) => boolean, string]> = [
   [(p) => p === "/", "New referral"],
+  [(p) => p.startsWith("/queue"), "Queue"],
   [(p) => p.startsWith("/referrals"), "Referral"],
   [(p) => p.startsWith("/history"), "Referrals"],
   [(p) => p.startsWith("/facilities"), "Hospitals"],
@@ -29,6 +31,8 @@ interface ShellUser {
   name: string;
   facility: string | null;
   signOut: boolean;
+  /** A coordinator has no registration of their own, so the Doctors page is not in their menu. */
+  coordinator: boolean;
 }
 
 /** A referral still in progress, for the "Live now" list. */
@@ -62,6 +66,7 @@ export function AppShell(props: {
 }) {
   const pathname = usePathname();
   const router = useRouter();
+  const nav = NAV.filter((n) => !(props.user?.coordinator && n.href === "/doctors"));
 
   // "N" starts a new referral from anywhere, unless a field has the keyboard.
   useEffect(() => {
@@ -91,7 +96,7 @@ export function AppShell(props: {
           <Logo />
         </Link>
         <nav aria-label="Main" className="space-y-0.5">
-          {NAV.map((n) => {
+          {nav.map((n) => {
             const active = n.match(pathname);
             return (
               <Link
@@ -171,7 +176,7 @@ export function AppShell(props: {
           </span>
         </div>
         <nav aria-label="Main" className="flex gap-1 overflow-x-auto px-3 pb-2">
-          {NAV.map((n) => {
+          {nav.map((n) => {
             const active = n.match(pathname);
             return (
               <Link

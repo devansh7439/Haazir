@@ -3,12 +3,12 @@ import { FacilitiesAdmin } from "@/components/facilities/FacilitiesAdmin";
 import { EscalationService } from "@/lib/modules/escalation/escalation.service";
 import { DirectoryService } from "@/lib/modules/facility/directory.service";
 import { FacilityRepository } from "@/lib/modules/facility/facility.repository";
-import { pageSession } from "@/lib/modules/auth/session.service";
+import { SessionService } from "@/lib/modules/auth/session.service";
 
 export const dynamic = "force-dynamic";
 
 export default async function FacilitiesPage() {
-  const s = await pageSession();
+  const s = await SessionService.page();
   const [facilities, capabilities] = await Promise.all([
     DirectoryService.list(s.org),
     FacilityRepository.allCapabilities(),

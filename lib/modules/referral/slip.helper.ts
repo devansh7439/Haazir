@@ -60,14 +60,18 @@ const VERIFICATION_LABEL: Record<Referrer["verification_status"], string> = {
 /** The slip for a confirmed referral, built only from its fields. */
 export function buildSlip(i: SlipInput): Slip {
   const r = i.referral;
-  const registration = i.referrer.registration_no ? `${i.referrer.registration_council ?? "Council not given"} ${i.referrer.registration_no}` : null;
+  const registration = i.referrer.registration_no
+    ? `${i.referrer.registration_council ?? "Council not given"} ${i.referrer.registration_no}`
+    : null;
   const consent = r.transfer_consent && r.transfer_consent_at ? { by: CONSENT_LABEL[r.transfer_consent], at: r.transfer_consent_at } : null;
   const reason = r.transfer_reason ? REASON_LABEL[r.transfer_reason] : "Not recorded";
   const sbar = buildSbar(r, { case_label: i.case_label, needs_labels: i.needs_labels, eta_minutes: i.eta_minutes });
   const lines = [
     `Referral slip ${r.code}`,
-    `From: ${i.referrer.name}${i.origin_name ? `, ${i.origin_name}` : ""} (${registration ?? "registration not given"}; ${VERIFICATION_LABEL[i.referrer.verification_status]})`,
-    `To: ${i.hospital_name}${i.hospital_address ? `, ${i.hospital_address}` : ""} · desk ${i.desk_number}${i.contact_person ? ` · ${i.contact_person}` : ""}`,
+    `From: ${i.referrer.name}${i.origin_name ? `, ${i.origin_name}` : ""} ` +
+      `(${registration ?? "registration not given"}; ${VERIFICATION_LABEL[i.referrer.verification_status]})`,
+    `To: ${i.hospital_name}${i.hospital_address ? `, ${i.hospital_address}` : ""} · ` +
+      `desk ${i.desk_number}${i.contact_person ? ` · ${i.contact_person}` : ""}`,
     `Reason for transfer: ${reason}`,
     `Consent to transfer: ${consent ? `given by ${consent.by}` : "not recorded"}`,
     `Ambulance: ${AMBULANCE_LABEL[r.ambulance_status]}`,
@@ -78,7 +82,13 @@ export function buildSlip(i: SlipInput): Slip {
     confirmed_at: r.confirmed_at,
     hold_until: r.hold_expires_at,
     from: { doctor: i.referrer.name, facility: i.origin_name, registration, verification: i.referrer.verification_status },
-    to: { hospital: i.hospital_name, address: i.hospital_address, desk_number: i.desk_number, contact_person: i.contact_person, bed_type: i.bed_type },
+    to: {
+      hospital: i.hospital_name,
+      address: i.hospital_address,
+      desk_number: i.desk_number,
+      contact_person: i.contact_person,
+      bed_type: i.bed_type,
+    },
     reason,
     ambulance: r.ambulance_status,
     consent,

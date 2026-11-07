@@ -10,7 +10,7 @@ import { GROUP_TITLE, cardsOf, groupCards, holdState, isCancellable, nextReferra
 import { TONE, attemptDisplay, mmss, shortName } from "@/lib/ui/display";
 import { ReferralStatusPill, SectionTitle, cx } from "@/components/ui";
 import { AlertCallout } from "./AlertCallout";
-import { AttemptCard } from "./AttemptCard";
+import { AttemptCard, showsTimer } from "./AttemptCard";
 import { Callout } from "./Callout";
 import { CancelButton } from "./CancelButton";
 import { ExhaustedPanel } from "./ExhaustedPanel";
@@ -153,11 +153,11 @@ export function LiveBoard({ initial }: { initial: ReferralView }) {
                     key={a.id}
                     a={a}
                     calls={calls}
-                    nowMs={nowMs}
+                    nowMs={showsTimer(a) ? nowMs : 0}
                     referralStatus={r.status}
                     isSelected={r.selected_attempt_id === a.id}
                     portalFlag={view.portal_flags[a.id] ?? null}
-                    onSelect={() => setSelecting(a)}
+                    onSelect={setSelecting}
                     post={post}
                   />
                 ))}

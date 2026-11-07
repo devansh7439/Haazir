@@ -1,10 +1,23 @@
 // Normalising untrusted values from Bolna function calls and console forms.
 // Every function param arrives as a string; Bolna may also send unreplaced "%(name)s" tokens.
 
-import { AVAILABILITY_OUTCOMES, BED_TYPES, type AvailabilityOutcome, type BedType } from "@/lib/core/types";
+import { AVAILABILITY_OUTCOMES, BED_TYPES, BOLNA_STATUSES, type AvailabilityOutcome, type BedType, type BolnaStatus } from "@/lib/core/types";
 
 const MISSING = new Set(["", "none", "null", "undefined", "nil", "n/a", "na"]);
 const UNREPLACED = /^%\([A-Za-z0-9_]+\)s$/;
+
+/** Whether `value` is a plain object (not null, not an array), so its keys can be read without a cast. */
+export const isRecord = (value: unknown): value is Record<string, unknown> =>
+  typeof value === "object" && value !== null && !Array.isArray(value);
+
+/** The value under `key` when `value` is an object; undefined otherwise. */
+export const readField = (value: unknown, key: string): unknown => (isRecord(value) ? value[key] : undefined);
+
+/** The text under `key` when `value` is an object and the field is a string; null otherwise. */
+export const readText = (value: unknown, key: string): string | null => {
+  const field = readField(value, key);
+  return typeof field === "string" ? field : null;
+};
 
 /** Trimmed string, or null for "", "None", "null", "undefined" and unreplaced %(name)s tokens. */
 export function clean(value: unknown): string | null {
@@ -14,6 +27,7 @@ export function clean(value: unknown): string | null {
   return s;
 }
 
+/** `clean` applied to every value of a function payload, keeping its keys. */
 export function cleanParams<T extends Record<string, unknown>>(params: T): { [K in keyof T]: string | null } {
   const out = {} as { [K in keyof T]: string | null };
   for (const k of Object.keys(params) as Array<keyof T>) out[k] = clean(params[k]);
@@ -41,6 +55,7 @@ export function parseMinutes(value: unknown): number | null {
 
 const E164 = /^\+[1-9][0-9]{7,14}$/;
 
+/** Whether the text is a phone number in E.164 form: "+", then 8 to 15 digits, not starting with 0. */
 export function isE164(value: string | null | undefined): boolean {
   return !!value && E164.test(value);
 }
@@ -103,19 +118,24 @@ export function normalizeOutcome(value: unknown): AvailabilityOutcome {
     ivr: "ivr_blocked",
     ivr_or_recording: "ivr_blocked",
   };
-  if ((AVAILABILITY_OUTCOMES as readonly string[]).includes(v)) return v as AvailabilityOutcome;
-  return aliases[v] ?? "unclear";
+  return AVAILABILITY_OUTCOMES.find((o) => o === v) ?? aliases[v] ?? "unclear";
 }
 
+/** Null when the value is missing; an unrecognised bed becomes "unknown", never a guess. */
 export function normalizeBedType(value: unknown): BedType | null {
   const s = clean(value);
   if (!s) return null;
   const v = slug(s);
-  if ((BED_TYPES as readonly string[]).includes(v)) return v as BedType;
+  const known = BED_TYPES.find((b) => b === v);
+  if (known) return known;
   if (v.includes("icu") && v.includes("vent")) return "icu_with_ventilator";
   return "unknown";
 }
 
+/** The status if it is one Bolna documents; null for anything else. */
+export const toBolnaStatus = (raw: unknown): BolnaStatus | null => BOLNA_STATUSES.find((s) => s === raw) ?? null;
+
+/** "yes" or "no" for the words a desk says in English, Hindi or Kannada; null for anything else. */
 export function normalizeYesNo(value: unknown): "yes" | "no" | null {
   const s = clean(value)?.toLowerCase();
   if (!s) return null;

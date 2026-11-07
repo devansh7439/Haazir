@@ -1,7 +1,7 @@
 import "server-only";
 import { now } from "@/lib/core/clock";
 import { json, one, q, setClause } from "@/lib/core/db";
-import type { Attempt, AttemptStatus, Outcome, Purpose } from "@/lib/core/types";
+import type { Attempt, AttemptStatus, BedType, Outcome, Purpose } from "@/lib/core/types";
 import type { NewAttempt, OutcomeSource } from "@/lib/modules/call/call.type";
 
 const OPEN_STATUSES = "('queued','dialing','ringing','in_progress','wrapping_up')";
@@ -11,7 +11,7 @@ const OPEN_STATUSES = "('queued','dialing','ringing','in_progress','wrapping_up'
 export interface AvailabilityAnswer {
   outcome: Outcome;
   source: OutcomeSource;
-  bed_type: string | null;
+  bed_type: BedType | null;
   specialist_available: string | null;
   ready_in_minutes: number | null;
   contact_person: string | null;
@@ -23,12 +23,14 @@ export interface AvailabilityAnswer {
 
 /** Call attempts (`call_attempts`): one row per phone call Haazir places. Every write stamps `updated_at` from the clock. */
 export const CallRepository = {
+  /** One call by id, or null. */
   get: (id: string): Promise<Attempt | null> => one<Attempt>(`select * from call_attempts where id = $1`, [id]),
 
   /** A referral's calls, oldest first. */
   listForReferral: (referralId: string): Promise<Attempt[]> =>
     q<Attempt>(`select * from call_attempts where referral_id = $1 order by created_at, rank nulls last`, [referralId]),
 
+  /** The call Bolna knows by this execution id, or null. */
   findByExecution: (executionId: string): Promise<Attempt | null> =>
     one<Attempt>(`select * from call_attempts where bolna_execution_id = $1`, [executionId]),
 
@@ -185,7 +187,10 @@ export const CallRepository = {
   },
 
   /** The latest call to a number since `since`, with the hospital's name: who a missed inbound call is about. */
-  latestToNumber: (toNumber: string, since: Date): Promise<{ referral_id: string; facility_id: string | null; name: string | null } | null> =>
+  latestToNumber: (
+    toNumber: string,
+    since: Date,
+  ): Promise<{ referral_id: string; facility_id: string | null; name: string | null } | null> =>
     one<{ referral_id: string; facility_id: string | null; name: string | null }>(
       `select a.referral_id, a.facility_id, f.name from call_attempts a left join facilities f on f.id = a.facility_id
        where a.to_number = $1 and a.created_at > $2 order by a.created_at desc limit 1`,
@@ -200,6 +205,7 @@ export const CallRepository = {
       [referralId],
     ),
 
+  /** Whether the referral has had a family call since `since`. */
   hasFamilyCallSince: async (referralId: string, since: Date): Promise<boolean> =>
     !!(await one(
       `select 1 from call_attempts where referral_id = $1 and purpose = 'family_update' and created_at > $2`,

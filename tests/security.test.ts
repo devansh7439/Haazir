@@ -191,7 +191,7 @@ describe("route access control", () => {
     const fromSource = new Set<string>();
     for (const r of routes) {
       const fn = r.source.split(/export async function /).find((s) => s.startsWith(`${r.method}(`)) ?? "";
-      if (/requireSession\(\{ admin: true \}\)/.test(fn)) fromSource.add(key(r));
+      if (/SessionService\.require\(\{ admin: true \}\)/.test(fn)) fromSource.add(key(r));
     }
     expect([...fromSource].sort()).toEqual([...ADMIN_ONLY].sort());
   });

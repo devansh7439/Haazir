@@ -2,6 +2,7 @@ import type { AttemptStatus, Outcome, Purpose } from "@/lib/core/types";
 
 // Client-safe display helpers (docs/06-ui-spec.md §2.1). Colour never carries meaning alone: every state has an icon and text.
 
+/** The name of each language a hospital desk or a family is called in. */
 export const LANGUAGE_LABEL: Record<string, string> = {
   en: "English",
   kn: "Kannada",
@@ -12,6 +13,7 @@ export const LANGUAGE_LABEL: Record<string, string> = {
   mr: "Marathi",
 };
 
+/** How each bed type reads on screen. */
 export const BED_LABEL: Record<string, string> = {
   icu_with_ventilator: "ICU + ventilator",
   icu: "ICU",
@@ -66,12 +68,14 @@ export interface Display {
   group: Group;
 }
 
+/** A time as 24-hour hours and minutes in India time; empty when there is none. */
 export function clock(d: string | Date | null | undefined): string {
   if (!d) return "";
   const format = { timeZone: "Asia/Kolkata", hour: "2-digit", minute: "2-digit", hour12: false } as const;
   return new Intl.DateTimeFormat("en-IN", format).format(new Date(d));
 }
 
+/** Seconds as `m:ss`; a negative number reads as 0:00. */
 export function mmss(totalSeconds: number): string {
   const s = Math.max(0, Math.floor(totalSeconds));
   const m = Math.floor(s / 60);
@@ -83,6 +87,7 @@ function readableReason(r: string | null): string {
   return r.replace(/^(no_bed|no_ventilator|no_specialist|full|not_our_case|other):\s*/i, "").replace(/_/g, " ");
 }
 
+/** What to show for a call at this moment: tone, icon, words and the group it belongs to. */
 export function attemptDisplay(a: AttemptLike, nowMs: number): Display {
   if (a.needs_review) return { tone: "orange", icon: "help", text: "Check the recording", group: "not_available" };
   switch (a.outcome) {
@@ -139,6 +144,7 @@ export function attemptDisplay(a: AttemptLike, nowMs: number): Display {
   }
 }
 
+/** How each referral status reads, and whether the board is still moving in it. */
 export const REFERRAL_STATUS: Record<string, { text: string; tone: Tone; live?: boolean }> = {
   draft: { text: "Draft", tone: "grey" },
   searching: { text: "Calling hospitals", tone: "blue", live: true },
@@ -150,6 +156,7 @@ export const REFERRAL_STATUS: Record<string, { text: string; tone: Tone; live?: 
   closed: { text: "Closed", tone: "grey" },
 };
 
+/** A hospital's name without its "(Demo)" marker. */
 export function shortName(name: string | null | undefined): string {
   return (name ?? "Hospital").replace(/\s*\(Demo\)\s*/i, "");
 }

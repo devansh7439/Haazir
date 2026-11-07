@@ -1,3 +1,5 @@
+import type { VerificationStatus } from "@/lib/core/types";
+
 // Medical registration of a referring doctor. Pure rules; the lookup itself is a human check (docs/09 §4).
 
 export interface Registration {
@@ -20,9 +22,11 @@ export function checkRegistration(no: string | null | undefined, council: string
     return { ok: false, error: "The registration number should be 3 to 32 letters, digits, / or -." };
   }
   const name = (council ?? "").replace(/\s+/g, " ").trim();
-  if (name.length < 2 || name.length > 60) return { ok: false, error: "Give the council that issued it: NMC or your state medical council." };
+  if (name.length < 2 || name.length > 60) {
+    return { ok: false, error: "Give the council that issued it: NMC or your state medical council." };
+  }
   return { ok: true, value: { registration_no: number, registration_council: NMC.test(name) ? "NMC" : name } };
 }
 
 /** Whether a doctor with this status may place referrals, given whether REQUIRE_VERIFIED_REFERRER is on. */
-export const mayRefer = (status: string, required: boolean): boolean => !required || status === "verified";
+export const mayRefer = (status: VerificationStatus, required: boolean): boolean => !required || status === "verified";

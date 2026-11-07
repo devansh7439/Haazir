@@ -164,7 +164,6 @@ export type Referral = z.infer<typeof Referral>;
 export type AttemptView = z.infer<typeof Attempt>;
 export type EventRow = z.infer<typeof EventRow>;
 export type Alert = z.infer<typeof Alert>;
-export type MessageView = z.infer<typeof Message>;
 export type ReferralView = z.infer<typeof ReferralViewSchema>;
 
 /** GET /api/referrals */

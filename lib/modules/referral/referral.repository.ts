@@ -9,8 +9,10 @@ import type { NewReferral, PatientDetails, ReferralCtx } from "@/lib/modules/ref
 
 /** Referrals, the doctor who made each one, case templates, and the server-only patient details. */
 export const ReferralRepository = {
+  /** One referral by id, or null. */
   get: (id: string): Promise<Referral | null> => one<Referral>(`select * from referrals where id = $1`, [id]),
 
+  /** One referral by its code, or null. */
   getByCode: (code: string): Promise<Referral | null> => one<Referral>(`select * from referrals where code = $1`, [code]),
 
   /** The referral an earlier press of "Find a bed" created, if any. */
@@ -25,9 +27,9 @@ export const ReferralRepository = {
           note, required_capabilities, spoken_summary, transport, search_radius_km, is_demo, created_at, updated_at,
           client_request_id, airway, spo2, gcs, on_oxygen, payer, medico_legal,
           pregnancy_weeks, trauma_mechanism, infectious_risk, treatment_given, blood_group, blood_needed,
-          transfer_consent, transfer_consent_at, transfer_reason)
+          transfer_consent, transfer_consent_at, transfer_reason, entered_by)
        values ('searching', $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11::text[], $12, $13, $14, $15, $16, $16, $17,
-               $18, $19, $20, $21, $22, $23, $24, $25, $26, $27, $28, $29, $30, $31, $32)
+               $18, $19, $20, $21, $22, $23, $24, $25, $26, $27, $28, $29, $30, $31, $32, $33)
        on conflict (org_id, client_request_id) where client_request_id is not null do nothing
        returning *`,
       [
@@ -63,6 +65,7 @@ export const ReferralRepository = {
         r.transfer_consent,
         r.transfer_consent_at,
         r.transfer_reason,
+        r.entered_by,
       ],
     );
   },
@@ -81,7 +84,10 @@ export const ReferralRepository = {
 
   /** Sets treatment_started_at once. Null when it was already set. */
   markTreatmentStarted: (id: string, at: Date): Promise<Referral | null> =>
-    one<Referral>(`update referrals set treatment_started_at = $2, updated_at = $2 where id = $1 and treatment_started_at is null returning *`, [id, at]),
+    one<Referral>(
+      `update referrals set treatment_started_at = $2, updated_at = $2 where id = $1 and treatment_started_at is null returning *`,
+      [id, at],
+    ),
 
   /** The atomic wave claim (CLAUDE.md rule 5, docs/03-data-model.md §5.4): only one caller can open a given wave. */
   claimWave: (id: string, expectedWave: number): Promise<Referral | null> => {
@@ -128,8 +134,10 @@ export const ReferralRepository = {
     return { referral, referrer, origin, template, needs };
   },
 
+  /** The referring doctor, or null. */
   referrer: (id: string): Promise<Referrer | null> => one<Referrer>(`select * from referrers where id = $1`, [id]),
 
+  /** The case template for a case type, or null. */
   caseTemplate: (caseType: string): Promise<CaseTemplate | null> =>
     one<CaseTemplate>(`select * from case_templates where case_type = $1`, [caseType]),
 
@@ -151,6 +159,7 @@ export const ReferralRepository = {
       [referralId],
     ),
 
+  /** Stamps when the patient's details were sent to the chosen hospital. */
   markSharedWithFacility: async (referralId: string): Promise<void> => {
     await q(`update patient_details set shared_with_facility_at = $2 where referral_id = $1`, [referralId, now()]);
   },
@@ -172,6 +181,14 @@ export const ReferralRepository = {
       `select r.id, r.name, f.name as facility from referrers r left join facilities f on f.id = r.facility_id
        where r.org_id = $1 and ($2::uuid is null or r.id = $2) order by r.created_at limit 1`,
       [orgId, referrerId],
+    ),
+
+  /** The organisation's referring doctors, by name, for a coordinator to choose from. */
+  referrersOf: (orgId: string): Promise<Array<{ id: string; name: string; facility: string | null }>> =>
+    q(
+      `select r.id, r.name, f.name as facility from referrers r left join facilities f on f.id = r.facility_id
+       where r.org_id = $1 order by r.name`,
+      [orgId],
     ),
 
   /** The newest referral confirmed since `since` whose attendant has this number: who a missed call is from (C3). */

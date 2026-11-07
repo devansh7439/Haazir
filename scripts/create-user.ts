@@ -1,9 +1,10 @@
 // Creates a console user for AUTH_MODE=users (and the organisation, and optionally their referrer record).
 //   DATABASE_URL=… bun run user:create -- --email dr.rao@example.org --name "Dr. Meera Rao" --password '…' \
-//     [--org "Hoskote PHC network" | --org-id <uuid>] [--role admin|doctor] [--referrer-phone +91… --facility-id <uuid>]
+//     [--org "Hoskote PHC network" | --org-id <uuid>] [--role admin|doctor|coordinator] [--referrer-phone +91… --facility-id <uuid>]
 // Without --org/--org-id the user joins the demo organisation. The work itself is AuthService.createUser.
 import { connect, setDb } from "../lib/core/db";
 import { normalizePhone } from "../lib/core/normalize";
+import { ROLES } from "../lib/core/types";
 import { AuthService } from "../lib/modules/auth/auth.service";
 
 function arg(name: string): string | undefined {
@@ -17,9 +18,9 @@ async function main() {
   const email = arg("email")?.trim().toLowerCase();
   const name = arg("name");
   const password = arg("password");
-  const role = arg("role") ?? "doctor";
+  const role = ROLES.find((r) => r === (arg("role") ?? "doctor"));
   if (!email || !name || !password) throw new Error("--email, --name and --password are required");
-  if (role !== "admin" && role !== "doctor") throw new Error("--role must be admin or doctor");
+  if (!role) throw new Error(`--role must be one of ${ROLES.join(", ")}`);
 
   const phone = arg("referrer-phone");
   const e164 = phone ? normalizePhone(phone) : null;

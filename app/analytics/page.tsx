@@ -2,7 +2,7 @@ import Link from "next/link";
 import { HourChart } from "@/components/analytics/HourChart";
 import { PageHeader, Stat, cx } from "@/components/ui";
 import { AnalyticsService } from "@/lib/modules/analytics/analytics.service";
-import { pageSession } from "@/lib/modules/auth/session.service";
+import { SessionService } from "@/lib/modules/auth/session.service";
 import { clock, mmss, shortName } from "@/lib/ui/display";
 
 export const dynamic = "force-dynamic";
@@ -25,7 +25,7 @@ function RateBar({ n, d }: { n: number; d: number }) {
 }
 
 export default async function AnalyticsPage({ searchParams }: { searchParams: Promise<{ scope?: string }> }) {
-  const s = await pageSession();
+  const s = await SessionService.page();
   const realOnly = (await searchParams).scope === "real";
   const [hospitals, hours, proof] = await Promise.all([
     AnalyticsService.hospitalStats(s.org),
@@ -55,8 +55,17 @@ export default async function AnalyticsPage({ searchParams }: { searchParams: Pr
           </div>
         </div>
         <div className="grid grid-cols-2 gap-3 lg:grid-cols-5">
-          <Stat label="Median time to first yes" value={proof.median_ttfa_s === null ? "—" : mmss(proof.median_ttfa_s)} hint={`${proof.referrals} referrals, ${proof.placed} placed`} accent="brand" />
-          <Stat label="Answer rate" value={proof.calls ? `${Math.round((100 * proof.answered) / proof.calls)}%` : "—"} hint={`${proof.answered} of ${proof.calls} availability calls`} />
+          <Stat
+            label="Median time to first yes"
+            value={proof.median_ttfa_s === null ? "—" : mmss(proof.median_ttfa_s)}
+            hint={`${proof.referrals} referrals, ${proof.placed} placed`}
+            accent="brand"
+          />
+          <Stat
+            label="Answer rate"
+            value={proof.calls ? `${Math.round((100 * proof.answered) / proof.calls)}%` : "—"}
+            hint={`${proof.answered} of ${proof.calls} availability calls`}
+          />
           <Stat
             label="Answers flagged for review"
             value={proof.with_outcome ? `${Math.round((100 * proof.needs_review) / proof.with_outcome)}%` : "—"}
@@ -74,7 +83,11 @@ export default async function AnalyticsPage({ searchParams }: { searchParams: Pr
           />
         </div>
         <div className="mt-3 grid grid-cols-2 gap-3 lg:grid-cols-5">
-          <Stat label="Median time to a confirmed bed" value={proof.median_to_bed_s === null ? "—" : mmss(proof.median_to_bed_s)} hint={`${proof.placed} placed`} />
+          <Stat
+            label="Median time to a confirmed bed"
+            value={proof.median_to_bed_s === null ? "—" : mmss(proof.median_to_bed_s)}
+            hint={`${proof.placed} placed`}
+          />
           <Stat
             label="Median time to treatment"
             value={proof.median_to_treatment_s === null ? "—" : mmss(proof.median_to_treatment_s)}
@@ -88,9 +101,23 @@ export default async function AnalyticsPage({ searchParams }: { searchParams: Pr
 
       <div className="mb-6 grid grid-cols-2 gap-3 lg:grid-cols-4">
         <Stat label="Availability calls" value={calls} hint={`to ${hospitals.filter((h) => h.calls > 0).length} hospitals`} />
-        <Stat label="Answer rate" value={answerRate === null ? "—" : `${Math.round(answerRate)}%`} hint={`${answered} answered`} accent="brand" />
-        <Stat label="Acceptance rate" value={acceptRate === null ? "—" : `${Math.round(acceptRate)}%`} hint={`${accepted} of ${answered} answered calls`} accent="green" />
-        <Stat label="Portal vs desk mismatches" value={mismatches} hint={medians.length ? `median answer in ${mmss(medians[Math.floor(medians.length / 2)])}` : "no answers yet"} />
+        <Stat
+          label="Answer rate"
+          value={answerRate === null ? "—" : `${Math.round(answerRate)}%`}
+          hint={`${answered} answered`}
+          accent="brand"
+        />
+        <Stat
+          label="Acceptance rate"
+          value={acceptRate === null ? "—" : `${Math.round(acceptRate)}%`}
+          hint={`${accepted} of ${answered} answered calls`}
+          accent="green"
+        />
+        <Stat
+          label="Portal vs desk mismatches"
+          value={mismatches}
+          hint={medians.length ? `median answer in ${mmss(medians[Math.floor(medians.length / 2)])}` : "no answers yet"}
+        />
       </div>
 
       <div className="mb-6 grid gap-4 lg:grid-cols-2">

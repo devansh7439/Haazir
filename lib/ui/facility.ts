@@ -3,6 +3,7 @@ import type { FacilityListItem } from "@/lib/modules/facility/facility.type";
 
 // Client-safe helpers for the Hospitals page: what a hospital offers, how to find it and how to reach it.
 
+/** How each kind of hospital reads. */
 export const KIND_LABEL: Record<string, string> = {
   phc: "Primary health centre",
   chc: "Community health centre",
@@ -13,8 +14,10 @@ export const KIND_LABEL: Record<string, string> = {
   other: "Other",
 };
 
+/** How each kind of ownership reads. */
 export const OWNERSHIP_LABEL: Record<string, string> = { public: "Public", private: "Private", trust: "Trust", unknown: "Not stated" };
 
+/** How each role of a hospital contact reads. */
 export const CONTACT_ROLE_LABEL: Record<string, string> = {
   casualty_desk: "Casualty desk",
   referral_desk: "Referral desk",

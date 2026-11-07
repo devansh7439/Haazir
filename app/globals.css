@@ -202,12 +202,24 @@ body {
 .haazir-map-btn:hover {
   background: var(--color-zinc-50);
 }
+/* The pulse ring is a pseudo-element animated with transform and opacity only, so it runs on the compositor
+   instead of repainting a growing box-shadow on every frame. */
 .haazir-pin-live {
+  position: relative;
+}
+.haazir-pin-live::after {
+  content: "";
+  position: absolute;
+  inset: -2.5px;
+  border-radius: 9999px;
+  border: 2px solid rgb(24 24 27 / 0.45);
+  pointer-events: none;
+  will-change: transform, opacity;
   animation: haazir-pulse 1.6s ease-out infinite;
 }
 @keyframes haazir-pulse {
-  0% { box-shadow: 0 0 0 0 rgb(24 24 27 / 0.4), 0 2px 6px rgb(16 24 40 / 0.25); }
-  100% { box-shadow: 0 0 0 12px rgb(24 24 27 / 0), 0 2px 6px rgb(16 24 40 / 0.25); }
+  0% { transform: scale(1); opacity: 1; }
+  100% { transform: scale(1.8); opacity: 0; }
 }
 @keyframes haazir-ping {
   75%, 100% { transform: scale(2.2); opacity: 0; }
@@ -221,11 +233,12 @@ body {
   animation: haazir-ping 1.4s cubic-bezier(0, 0, 0.2, 1) infinite;
 }
 @media (prefers-reduced-motion: reduce) {
-  .haazir-pin-live, .live-dot::after { animation: none; }
+  .haazir-pin-live::after, .live-dot::after { animation: none; }
 }
 /* Greyscale basemap to match the monochrome console. */
 .haazir-tiles {
   filter: grayscale(1) contrast(0.95) brightness(1.03);
+  will-change: filter;
 }
 
 @keyframes dialog-in {

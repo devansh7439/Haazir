@@ -5,7 +5,7 @@ import { TreatmentPanel } from "@/components/board/TreatmentPanel";
 import { AmbulancePanel } from "@/components/board/AmbulancePanel";
 import { SlipPanel } from "@/components/board/SlipPanel";
 import { AttachmentService } from "@/lib/modules/attachment/attachment.service";
-import { pageSession } from "@/lib/modules/auth/session.service";
+import { SessionService } from "@/lib/modules/auth/session.service";
 import { ViewService } from "@/lib/modules/referral/view.service";
 import { ReferralRepository } from "@/lib/modules/referral/referral.repository";
 
@@ -16,7 +16,7 @@ const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 export default async function ReferralBoardPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   if (!UUID.test(id)) notFound();
-  const s = await pageSession();
+  const s = await SessionService.page();
   const r = await ReferralRepository.get(id);
   if (!r || r.org_id !== s.org) notFound();
   const [view, attachments] = await Promise.all([ViewService.get(id), AttachmentService.list(id)]);

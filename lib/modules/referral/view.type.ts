@@ -55,12 +55,35 @@ export interface ReferralView {
   messages: MessageView[];
   alerts: Alert[];
   portal_flags: Record<string, PortalFlag>;
-  /** When no hospital accepted, or the patient is critical and the search is running: the closest emergency departments to stabilise at. Empty otherwise. */
+  /**
+   * When no hospital accepted, or the patient is critical and the search is running: the closest emergency departments to
+   * stabilise at. Empty otherwise.
+   */
   nearest_ed: NearestEmergency[];
   /** Only when no hospital accepted: the numbers an admin listed to call beyond 108 and 112. Empty otherwise. */
   escalation: Array<{ label: string; phone: string }>;
   tick_interval_ms: number;
   server_time: string;
+}
+
+/** One live referral on the coordinator's queue, with how its calls stand. No patient identifiers. */
+export interface QueueItem {
+  id: string;
+  code: string;
+  status: ReferralStatus;
+  case_label: string;
+  acuity: Acuity;
+  created_at: string;
+  referrer_name: string;
+  /** The console user who keyed it in, when that is not the referring doctor themselves; null otherwise. */
+  entered_by_name: string | null;
+  calls_open: number;
+  calls_answered: number;
+  calls_accepted: number;
+  /** Desks that asked to talk to the doctor / answers the doctor must check against the recording. */
+  needs_doctor: number;
+  needs_review: number;
+  ttfa_seconds: number | null;
 }
 
 /** One row of the Referrals list. */

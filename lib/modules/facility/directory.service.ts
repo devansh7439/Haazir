@@ -48,7 +48,12 @@ export const DirectoryService = {
    */
   create: async (orgId: string, b: NewListing): Promise<Facility> => {
     const whatsapp = b.whatsapp_number ? requirePhone(b.whatsapp_number, "WhatsApp number") : null;
-    const contacts = b.contacts.map((c) => ({ role: c.role, phone_e164: requirePhone(c.phone, "Phone"), priority: c.priority, is_ivr: c.is_ivr }));
+    const contacts = b.contacts.map((c) => ({
+      role: c.role,
+      phone_e164: requirePhone(c.phone, "Phone"),
+      priority: c.priority,
+      is_ivr: c.is_ivr,
+    }));
     if (new Set(contacts.map((c) => c.phone_e164)).size !== contacts.length) {
       throw ApiError.unprocessable("DUPLICATE_NUMBER", "The same number is listed twice");
     }
@@ -84,6 +89,7 @@ export const DirectoryService = {
     return unique;
   },
 
+  /** Adds a phone number to a hospital. 422 for an invalid number. */
   addContact: async (facilityId: string, b: { role: string; phone: string; priority: number; is_ivr: boolean }): Promise<Contact> =>
     FacilityRepository.upsertContact(facilityId, {
       role: b.role,

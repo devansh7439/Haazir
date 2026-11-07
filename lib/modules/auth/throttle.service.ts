@@ -14,13 +14,16 @@ const KEEP_MS = 24 * 3600_000;
  * refused (even correct ones) until the window passes. Stops passcode and password guessing.
  */
 export const ThrottleService = {
+  /** Whether any of these keys has had LIMIT failures within the window. */
   isThrottled: async (keys: string[]): Promise<boolean> =>
     (await ThrottleRepository.maxFailuresSince(keys, new Date(now().getTime() - WINDOW_MIN * 60_000))) >= LIMIT,
 
+  /** Counts a failed sign-in against each key and drops failures too old to matter. */
   recordFailure: async (keys: string[]): Promise<void> => {
     await ThrottleRepository.record(keys, now());
     await ThrottleRepository.deleteBefore(new Date(now().getTime() - KEEP_MS));
   },
 
+  /** Forgets the failures for these keys after a successful sign-in. */
   clearFailures: (keys: string[]): Promise<void> => ThrottleRepository.clear(keys),
 };

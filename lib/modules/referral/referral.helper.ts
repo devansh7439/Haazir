@@ -47,7 +47,11 @@ const MECHANISM_LABEL: Record<string, string> = {
   penetrating: "Penetrating injury",
   other: "Other trauma",
 };
-const INFECTIOUS_LABEL: Record<string, string> = { airborne: "Airborne infection risk", contact: "Contact infection risk", bloodborne: "Blood-borne infection risk" };
+const INFECTIOUS_LABEL: Record<string, string> = {
+  airborne: "Airborne infection risk",
+  contact: "Contact infection risk",
+  bloodborne: "Blood-borne infection risk",
+};
 
 /** The facts line for the pre-arrival note; null when the doctor gave none. Handover facts are optional. */
 export const clinicalLine = (f: ClinicalFacts & Partial<HandoverFacts>): string | null => {
@@ -67,6 +71,7 @@ export const clinicalLine = (f: ClinicalFacts & Partial<HandoverFacts>): string 
   return parts.length ? parts.join(" · ") : null;
 };
 
+/** How each payer reads in a handover line. */
 export const PAYER_LABEL: Record<Payer, string> = { free_govt: "free government", pmjay: "Ayushman Bharat", insurance: "insurance", cash: "cash", unknown: "" };
 
 /** The case in one short spoken sentence ("Man aged 34, suspected snakebite, critical"), for hold and release calls. */

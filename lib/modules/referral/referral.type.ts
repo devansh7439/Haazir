@@ -1,6 +1,7 @@
 import type {
-  Acuity, AgeUnit, Airway, Attempt, BloodGroup, Capability, CaseTemplate, ClinicalFacts, Contact, Facility, HandoverFacts, InfectiousRisk, Payer,
-  Referral, Referrer, Sex, TransferConsent, TransferReason, TraumaMechanism,
+  Acuity, AgeUnit, Airway, Attempt, BedType, BloodGroup, Capability, CaseTemplate, ClinicalFacts, Contact, Facility, HandoverFacts,
+  InfectiousRisk, Payer,
+  Referral, Referrer, Sex, TransferConsent, TransferReason, Transport, TraumaMechanism,
 } from "@/lib/core/types";
 import type { MatchParams } from "@/lib/modules/facility/facility.type";
 import type { RankedFacility } from "@/lib/modules/facility/matching.helper";
@@ -31,7 +32,7 @@ export interface ReferralInput {
   /** Who agreed to the transfer; recorded with the time it was created. Null when not asked. */
   transfer_consent?: TransferConsent | null;
   transfer_reason?: TransferReason | null;
-  transport?: "ambulance" | "private_vehicle" | "unknown";
+  transport?: Transport;
   search_radius_km?: number;
   origin_lat?: number;
   origin_lng?: number;
@@ -75,6 +76,7 @@ export interface NewReferral extends ClinicalFacts, HandoverFacts {
   transfer_consent_at: Date | null;
   transfer_reason: TransferReason | null;
   referrer_id: string;
+  entered_by: string | null;
   origin_facility_id: string | null;
   origin_lat: number;
   origin_lng: number;
@@ -86,7 +88,7 @@ export interface NewReferral extends ClinicalFacts, HandoverFacts {
   note: string | null;
   required_capabilities: string[];
   spoken_summary: string;
-  transport: string;
+  transport: Transport;
   search_radius_km: number;
   is_demo: boolean;
   client_request_id: string | null;
@@ -105,7 +107,7 @@ export interface PatientDetails {
 /** An outcome the doctor records after talking to the desk themselves. */
 export interface ManualOutcome {
   outcome: Attempt["outcome"] & string;
-  bed_type?: string | null;
+  bed_type?: BedType | null;
   ready_in_minutes?: number | null;
   contact_person?: string | null;
   conditions?: string | null;

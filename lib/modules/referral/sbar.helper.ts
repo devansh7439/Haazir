@@ -32,7 +32,9 @@ export function buildSbar(input: SbarInput, c: { case_label: string; needs_label
   const who = buildShortSummary({ ...input, case_spoken: c.case_label });
   const history = [
     input.note,
-    input.trauma_mechanism !== "unknown" && input.trauma_mechanism !== "not_trauma" ? `Mechanism: ${input.trauma_mechanism.replace("_", " ")}` : null,
+    input.trauma_mechanism !== "unknown" && input.trauma_mechanism !== "not_trauma"
+      ? `Mechanism: ${input.trauma_mechanism.replace("_", " ")}`
+      : null,
     input.pregnancy_weeks ? `Pregnant, ${input.pregnancy_weeks} weeks` : null,
     input.infectious_risk !== "unknown" && input.infectious_risk !== "none" ? `Infection risk: ${input.infectious_risk}` : null,
     input.treatment_given ? `Treatment given: ${input.treatment_given}` : null,
@@ -41,17 +43,33 @@ export function buildSbar(input: SbarInput, c: { case_label: string; needs_label
   ].filter((p): p is string => !!p);
   const blood = input.blood_needed === true ? `Needs blood${input.blood_group !== "unknown" ? `, group ${input.blood_group}` : ""}` : null;
   const eta = c.eta_minutes !== null ? `Expected in about ${c.eta_minutes} min by ${TRANSPORT[input.transport] ?? "road"}` : null;
+  // The payer and medico-legal facts are already in Background, so the Assessment line leaves them out.
+  const vitals: ClinicalFacts = {
+    airway: input.airway,
+    spo2: input.spo2,
+    gcs: input.gcs,
+    on_oxygen: input.on_oxygen,
+    payer: "unknown",
+    medico_legal: null,
+  };
+  const recommendation = [c.needs_labels.length ? `Needs ${c.needs_labels.join(", ")}` : null, blood, eta].filter((p): p is string => !!p);
   return {
     situation: who.charAt(0).toUpperCase() + who.slice(1),
     background: history.join(". ") || "Not stated",
-    assessment: clinicalLine({ airway: input.airway, spo2: input.spo2, gcs: input.gcs, on_oxygen: input.on_oxygen, payer: "unknown", medico_legal: null }) ?? "Not stated",
-    recommendation: [c.needs_labels.length ? `Needs ${c.needs_labels.join(", ")}` : null, blood, eta].filter((p): p is string => !!p).join(". ") || "Not stated",
+    assessment: clinicalLine(vitals) ?? "Not stated",
+    recommendation: recommendation.join(". ") || "Not stated",
   };
 }
 
 /** The SBAR of a referral that has a chosen hospital, as the lines the pre-arrival note and the slip print. */
 export const sbarFor = (ctx: ReferralCtx, selected: Pick<Attempt, "eta_minutes">): string[] =>
-  sbarLines(buildSbar(ctx.referral, { case_label: ctx.template.label, needs_labels: ctx.needs.map((n) => n.label), eta_minutes: selected.eta_minutes }));
+  sbarLines(
+    buildSbar(ctx.referral, {
+      case_label: ctx.template.label,
+      needs_labels: ctx.needs.map((n) => n.label),
+      eta_minutes: selected.eta_minutes,
+    }),
+  );
 
 /** The four letters as plain text lines, for the slip and the pre-arrival note. */
 export const sbarLines = (s: Sbar): string[] => [`S: ${s.situation}`, `B: ${s.background}`, `A: ${s.assessment}`, `R: ${s.recommendation}`];

@@ -70,7 +70,8 @@ export const FunctionService = {
     const attempt = await resolveAttempt(p.attempt_id, p.to_number, ["availability"]);
     if (!attempt) return notFound;
 
-    const { outcome, conditions } = withNeedsCheck(normalizeOutcome(p.outcome), normalizeYesNo(p.needs_ready), p.unavailable_needs, p.conditions);
+    const checked = withNeedsCheck(normalizeOutcome(p.outcome), normalizeYesNo(p.needs_ready), p.unavailable_needs, p.conditions);
+    const { outcome, conditions } = checked;
     // "none" is a real bed_type answer ("no bed"), unlike Python's "None" for a missing value, which clean() drops.
     const bedType = String(raw.bed_type ?? "").trim() === "none" ? "none" : normalizeBedType(p.bed_type);
     const contradictory = isContradictoryYes(outcome, bedType);
@@ -210,7 +211,12 @@ export const FunctionService = {
 
   /** record_arrival: the chosen hospital says whether the patient has reached it. Nothing is recorded from an unclear answer. */
   recordArrival: async (raw: Params, source: Source = "function"): Promise<FunctionResult> => {
-    const p = cleanParams({ attempt_id: raw.attempt_id, arrived: raw.arrived, contact_person: raw.contact_person, to_number: raw.to_number });
+    const p = cleanParams({
+      attempt_id: raw.attempt_id,
+      arrived: raw.arrived,
+      contact_person: raw.contact_person,
+      to_number: raw.to_number,
+    });
     const check = await resolveAttempt(p.attempt_id, p.to_number, ["arrival_check"]);
     if (!check) return notFound;
     const arrived = normalizeYesNo(p.arrived);
@@ -222,7 +228,9 @@ export const FunctionService = {
         await EventRepository.add(check.referral_id, "alert", {
           kind: "not_arrived",
           facility_id: check.facility_id,
-          message: "The hospital says the patient hasn't arrived. Check where the ambulance is, or call the desk. If the bed is gone, cancel and search again.",
+          message:
+            "The hospital says the patient hasn't arrived. Check where the ambulance is, or call the desk. " +
+            "If the bed is gone, cancel and search again.",
         }, check.id);
         await PushService.notify(check.referral_id, "not_arrived", check.facility_id);
       }

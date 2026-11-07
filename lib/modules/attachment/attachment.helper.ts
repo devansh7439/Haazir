@@ -4,7 +4,9 @@
 import { createHmac, timingSafeEqual } from "node:crypto";
 import type { AttachmentKind, AttachmentMeta, AttachmentType } from "@/lib/modules/attachment/attachment.type";
 
+/** The largest file one attachment may be. */
 export const MAX_ATTACHMENT_BYTES = 4 * 1024 * 1024;
+/** The most files one referral may carry. */
 export const MAX_ATTACHMENTS_PER_REFERRAL = 6;
 /** How long a link given to the receiving hospital works. */
 export const LINK_TTL_H = 24;
@@ -28,11 +30,13 @@ export function sniffContentType(b: Uint8Array): AttachmentType | null {
 /** Whether a file may be added to a referral that already has `existing` attachments. */
 export function checkUpload(bytes: Uint8Array, existing: number): UploadCheck {
   if (existing >= MAX_ATTACHMENTS_PER_REFERRAL) {
-    return { ok: false, code: "TOO_MANY_ATTACHMENTS", message: `A referral can have ${MAX_ATTACHMENTS_PER_REFERRAL} files. Remove one first.` };
+    const message = `A referral can have ${MAX_ATTACHMENTS_PER_REFERRAL} files. Remove one first.`;
+    return { ok: false, code: "TOO_MANY_ATTACHMENTS", message };
   }
   if (bytes.byteLength === 0) return { ok: false, code: "EMPTY_FILE", message: "The file is empty." };
   if (bytes.byteLength > MAX_ATTACHMENT_BYTES) {
-    return { ok: false, code: "FILE_TOO_LARGE", message: `Files can be up to ${MAX_ATTACHMENT_BYTES / 1024 / 1024} MB. Take a smaller photo or a lower-resolution scan.` };
+    const message = `Files can be up to ${MAX_ATTACHMENT_BYTES / 1024 / 1024} MB. Take a smaller photo or a lower-resolution scan.`;
+    return { ok: false, code: "FILE_TOO_LARGE", message };
   }
   const type = sniffContentType(bytes);
   if (!type) return { ok: false, code: "UNSUPPORTED_FILE", message: "Send a JPEG, PNG or WebP photo, or a PDF." };
@@ -55,7 +59,8 @@ export function labelsFor(files: Array<Pick<AttachmentMeta, "id" | "kind">>): Ma
   return labels;
 }
 
-const mac = (id: string, exp: number, secret: string): string => createHmac("sha256", secret).update(`attachment:${id}:${exp}`).digest("hex");
+const mac = (id: string, exp: number, secret: string): string =>
+  createHmac("sha256", secret).update(`attachment:${id}:${exp}`).digest("hex");
 
 /** The signature for a link to one attachment that stops working at `exp` (seconds since the epoch). */
 export const signLink = (id: string, exp: number, secret: string): string => mac(id, exp, secret);

@@ -1,4 +1,4 @@
-import { clean, normalizeBedType, normalizeOutcome, parseMinutes } from "@/lib/core/normalize";
+import { clean, isRecord, normalizeBedType, normalizeOutcome, parseMinutes, toBolnaStatus } from "@/lib/core/normalize";
 import type { Attempt, AvailabilityOutcome } from "@/lib/core/types";
 import { isTerminal, type MappedStatus } from "@/lib/modules/call/status.helper";
 
@@ -7,14 +7,13 @@ type Json = unknown;
 
 /** Case-insensitive key lookup, since a category renamed in Bolna's dashboard silently breaks exact matches. */
 export const pick = (obj: Json, name: string): Json => {
-  if (!obj || typeof obj !== "object") return undefined;
+  if (!isRecord(obj)) return undefined;
   const key = Object.keys(obj).find((k) => k.trim().toLowerCase() === name.toLowerCase());
-  return key ? (obj as Record<string, Json>)[key] : undefined;
+  return key ? obj[key] : undefined;
 };
 
 /** The value under exactly `key`, or undefined when `obj` is not an object or has no such key. */
-export const prop = (obj: Json, key: string): Json =>
-  obj && typeof obj === "object" && key in obj ? (obj as Record<string, Json>)[key] : undefined;
+export const prop = (obj: Json, key: string): Json => (isRecord(obj) && key in obj ? obj[key] : undefined);
 
 /** One extracted value and whether Bolna was confident about it (high or medium). A bare string is never confident. */
 export const extraction = (data: Json, category: string, name: string): { value: string | null; confident: boolean } => {
@@ -65,7 +64,7 @@ export const statusFields = (
   now: Date,
 ): Partial<Attempt> => {
   const executionId = executionIdOf(b);
-  const fields: Partial<Attempt> = { bolna_status: rawStatus };
+  const fields: Partial<Attempt> = { bolna_status: toBolnaStatus(rawStatus) };
   if (executionId && !attempt.bolna_execution_id) fields.bolna_execution_id = executionId;
   const termination = clean(b.termination_reason);
   if (termination) fields.termination_reason = termination;

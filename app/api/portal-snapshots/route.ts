@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { handle, parseBody } from "@/lib/core/route";
 import { PortalService } from "@/lib/modules/portal/portal.service";
-import { requireSession } from "@/lib/modules/auth/session.service";
+import { SessionService } from "@/lib/modules/auth/session.service";
 
 // C4: readings from public bed portals (Aapat Setu, ICU Beds Saarthi, CHBMS …), entered by an admin or posted by a scraper.
 const Body = z.object({
@@ -22,14 +22,14 @@ const Body = z.object({
 
 export async function GET() {
   return handle(async () => {
-    const s = await requireSession();
+    const s = await SessionService.require();
     return NextResponse.json({ snapshots: await PortalService.latestSnapshots(s.org) });
   });
 }
 
 export async function POST(req: Request) {
   return handle(async () => {
-    const s = await requireSession({ admin: true });
+    const s = await SessionService.require({ admin: true });
     const { snapshots } = await parseBody(req, Body);
     return NextResponse.json({ inserted: await PortalService.addSnapshots(s.org, snapshots) }, { status: 201 });
   });

@@ -6,6 +6,7 @@ const COLUMNS = "id, label, phone_e164, sort_order";
 
 /** The organisation's escalation numbers (`escalation_contacts`). */
 export const EscalationRepository = {
+  /** The organisation's escalation numbers, in the order the admin set. */
   list: (orgId: string): Promise<EscalationContact[]> =>
     q<EscalationContact>(`select ${COLUMNS} from escalation_contacts where org_id = $1 order by sort_order, created_at`, [orgId]),
 

@@ -2,6 +2,7 @@
 
 type Details = Record<string, unknown>;
 
+/** An error a route turns into a JSON answer with this status and code. Build it with the static constructors. */
 export class ApiError extends Error {
   constructor(
     readonly status: number,

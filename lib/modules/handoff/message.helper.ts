@@ -93,7 +93,11 @@ export function preArrivalNote(f: HandoffFacts): Rendered {
   return {
     body: render(f.patient_name, f.doctor_phone, f.attachment_links ?? []),
     // The links hold a signature that opens the files, so the console preview only says how many there are.
-    preview_redacted: render(f.patient_name ? REDACTED_NAME : null, maskPhone(f.doctor_phone), f.attachment_links?.length ? [`Attachments: ${f.attachment_links.length} file(s), link in the message`] : []),
+    preview_redacted: render(
+      f.patient_name ? REDACTED_NAME : null,
+      maskPhone(f.doctor_phone),
+      f.attachment_links?.length ? [`Attachments: ${f.attachment_links.length} file(s), link in the message`] : [],
+    ),
     template: {
       key: "prearrival",
       language: "en",

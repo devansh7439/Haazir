@@ -2,6 +2,7 @@ import "server-only";
 import { NextResponse, after } from "next/server";
 import { functionAuthorized } from "@/lib/integrations/bolna/bolna.auth";
 import { createLogger } from "@/lib/core/logger";
+import { isRecord } from "@/lib/core/normalize";
 import { WebhookLogRepository } from "@/lib/modules/call/webhook.repository";
 import type { FunctionResult } from "@/lib/modules/call/call.type";
 
@@ -26,12 +27,15 @@ export async function functionRoute(
   let params: Record<string, unknown> = {};
   try {
     const body = await req.json();
-    if (body && typeof body === "object") params = body as Record<string, unknown>;
+    if (isRecord(body)) params = body;
   } catch {
     // Treat an unreadable body as empty; the handler falls back to a safe instruction.
   }
+  // The raw log is an audit trail: if it cannot be written, the hospital's answer must still be recorded.
+  await WebhookLogRepository.log(null, `function:${name}`, params).catch((err) =>
+    log.error({ err, function: name }, "Could not log the payload"),
+  );
   try {
-    await WebhookLogRepository.log(null, `function:${name}`, params);
     const res = await handler(params);
     after(async () => {
       try {

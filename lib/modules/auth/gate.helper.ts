@@ -1,5 +1,6 @@
 import { SignJWT, jwtVerify } from "jose";
 import { z } from "zod";
+import { ROLES, type Role } from "@/lib/core/types";
 
 // Console access tokens. Edge-safe (used by middleware and Node routes).
 //   AUTH_MODE=passcode: one shared passcode (hackathon). Cookie holds a hash of it.
@@ -28,7 +29,7 @@ export async function gateToken(passcode: string): Promise<string> {
 export interface SessionClaims {
   uid: string;
   org: string;
-  role: "admin" | "doctor";
+  role: Role;
   rid: string | null;
   name: string;
   email: string;
@@ -53,7 +54,7 @@ export async function signSession(claims: SessionClaims, secret: string, ttlS = 
 const ClaimsSchema = z.object({
   uid: z.string().min(1),
   org: z.string().min(1),
-  role: z.enum(["admin", "doctor"]),
+  role: z.enum(ROLES),
   rid: z.string().nullish().transform((v) => v ?? null),
   name: z.string().default(""),
   email: z.string().default(""),

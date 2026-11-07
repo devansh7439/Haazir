@@ -1,5 +1,6 @@
 import "server-only";
 import { env } from "@/lib/core/config";
+import { readField, readText, redactNumbers } from "@/lib/core/normalize";
 
 // Meta Cloud API and Twilio senders. Written without access to either account: test before relying on them (CLAUDE.md).
 
@@ -12,16 +13,13 @@ export interface OutboundMessage {
   template?: { key: "prearrival" | "doctor" | "family" | "bed_request"; language: string; params: string[] };
 }
 
+/** `error` has any phone number in the provider's text masked, so it is safe to log and to store (CLAUDE.md rule 1). */
 export interface SendResult {
   status: "sent" | "simulated" | "failed";
   provider: string;
   provider_message_id: string | null;
   error: string | null;
 }
-
-/** The value under `key` when `obj` is an object; undefined otherwise. */
-const field = (obj: unknown, key: string): unknown => (obj && typeof obj === "object" ? (obj as Record<string, unknown>)[key] : undefined);
-const textOf = (v: unknown): string | null => (typeof v === "string" ? v : null);
 
 /**
  * Meta's request body. With META_WA_TEMPLATE_<KEY> naming an approved template, the template is sent (required for
@@ -55,12 +53,12 @@ const sendMeta = async (to: string, m: OutboundMessage): Promise<SendResult> => 
   });
   const data: unknown = await res.json().catch(() => ({}));
   if (!res.ok) {
-    const error = textOf(field(field(data, "error"), "message")) ?? `HTTP ${res.status}`;
+    const error = redactNumbers(readText(readField(data, "error"), "message") ?? `HTTP ${res.status}`);
     return { status: "failed", provider: "meta", provider_message_id: null, error };
   }
-  const messages = field(data, "messages");
+  const messages = readField(data, "messages");
   const first = Array.isArray(messages) ? messages[0] : undefined;
-  return { status: "sent", provider: "meta", provider_message_id: textOf(field(first, "id")), error: null };
+  return { status: "sent", provider: "meta", provider_message_id: readText(first, "id"), error: null };
 };
 
 const sendTwilio = async (to: string, body: string): Promise<SendResult> => {
@@ -74,19 +72,20 @@ const sendTwilio = async (to: string, body: string): Promise<SendResult> => {
   });
   const data: unknown = await res.json().catch(() => ({}));
   if (!res.ok) {
-    const error = textOf(field(data, "message")) ?? `HTTP ${res.status}`;
+    const error = redactNumbers(readText(data, "message") ?? `HTTP ${res.status}`);
     return { status: "failed", provider: "twilio", provider_message_id: null, error };
   }
-  return { status: "sent", provider: "twilio", provider_message_id: textOf(field(data, "sid")), error: null };
+  return { status: "sent", provider: "twilio", provider_message_id: readText(data, "sid"), error: null };
 };
 
 /** Sending through the configured provider (WHATSAPP_PROVIDER). Never throws: a failure comes back as `failed`. */
 export const WhatsAppClient = {
+  /** Sends one message to a number in E.164, as a template when the message has one and its name is set. */
   deliver: async (to: string, m: OutboundMessage): Promise<SendResult> => {
     try {
       return env.whatsappProvider === "meta" ? await sendMeta(to, m) : await sendTwilio(to, m.body);
     } catch (err) {
-      const error = err instanceof Error ? err.message : String(err);
+      const error = redactNumbers(err instanceof Error ? err.message : String(err));
       return { status: "failed", provider: env.whatsappProvider, provider_message_id: null, error };
     }
   },

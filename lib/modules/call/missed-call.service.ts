@@ -1,6 +1,6 @@
 import "server-only";
 import { addMinutes, now } from "@/lib/core/clock";
-import { normalizePhone } from "@/lib/core/normalize";
+import { normalizePhone, readText } from "@/lib/core/normalize";
 import { CallService } from "@/lib/modules/call/call.service";
 import { ReferralRepository } from "@/lib/modules/referral/referral.repository";
 
@@ -15,9 +15,7 @@ export type MissedCallAction = "ignored" | "no_referral" | "family_call";
  */
 export function parseMissedCallFrom(raw: string): string | null {
   try {
-    const body: unknown = JSON.parse(raw);
-    const from = body && typeof body === "object" ? (body as Record<string, unknown>).from : undefined;
-    return typeof from === "string" ? from : null;
+    return readText(JSON.parse(raw), "from");
   } catch {
     const p = new URLSearchParams(raw);
     return p.get("From") ?? p.get("CallFrom") ?? p.get("from");

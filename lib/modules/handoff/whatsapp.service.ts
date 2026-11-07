@@ -1,6 +1,7 @@
 import "server-only";
 import { env } from "@/lib/core/config";
 import { isE164, maskPhone } from "@/lib/core/normalize";
+import type { EventType } from "@/lib/core/types";
 import { WhatsAppClient, type SendResult } from "@/lib/integrations/whatsapp/whatsapp.client";
 import { EventRepository } from "@/lib/modules/event/event.repository";
 import type { Rendered } from "@/lib/modules/handoff/message.helper";
@@ -17,7 +18,7 @@ export const WhatsAppService = {
     audience: Audience;
     to: string | null;
     rendered: Rendered;
-    eventType?: string;
+    eventType?: EventType;
     facilityId?: string | null;
   }): Promise<void> => {
     const to = opts.to && isE164(opts.to) ? opts.to : null;

@@ -1,10 +1,10 @@
 import { ChevronDown } from "lucide-react";
-import { useState } from "react";
+import { memo, useState } from "react";
 import { eventText, mmss } from "@/lib/ui/display";
 import type { ReferralView } from "@/lib/modules/referral/view.type";
 import { cx } from "@/components/ui";
 
-export function Timeline({ view, facilityName }: { view: ReferralView; facilityName: (id: unknown) => string }) {
+export const Timeline = memo(function Timeline({ view, facilityName }: { view: ReferralView; facilityName: (id: unknown) => string }) {
   const [expanded, setExpanded] = useState(false);
   const start = new Date(view.referral.created_at).getTime();
   const items = view.events
@@ -40,4 +40,4 @@ export function Timeline({ view, facilityName }: { view: ReferralView; facilityN
       )}
     </section>
   );
-}
+});

@@ -2,15 +2,25 @@
 
 /** Parallel availability calls per wave. Only a critical patient justifies ringing six desks at once; less urgent cases ring fewer. */
 export const WAVE_SIZE_BY_ACUITY: Record<string, number> = { critical: 6, serious: 4, stable: 3 };
+/** How many hospitals a wave rings for this acuity; an unknown acuity gets the critical size. */
 export const waveSizeFor = (acuity: string): number => WAVE_SIZE_BY_ACUITY[acuity] ?? WAVE_SIZE_BY_ACUITY.critical;
+/** How long a wave may run before it counts as timed out, in seconds. */
 export const WAVE_TIMEOUT_S = 150;
+/** The most waves of availability calls one referral gets. */
 export const MAX_WAVES = 2;
+/** Minutes a bed is held beyond the patient's ETA. */
 export const HOLD_BUFFER_MIN = 30;
+/** The longest a "call me back later" can be put off, in minutes. */
 export const CALLBACK_MAX_MIN = 10;
+/** A busy line is dialled again after this many seconds. */
 export const BUSY_REDIAL_AFTER_S = 45;
+/** At most this many redials or callbacks per hospital, then the doctor is asked to call. */
 export const MAX_REDIALS_PER_FACILITY = 2;
+/** The search distance when the doctor picks none, in kilometres. */
 export const DEFAULT_RADIUS_KM = 40;
+/** How often an open console ticks, in milliseconds. */
 export const TICK_INTERVAL_MS = 5000;
+/** The timezone the agents say times in and "night" is read in. */
 export const TIMEZONE = "Asia/Kolkata";
 /** Longest a hold call waits for the accepting call to end before dialling anyway. */
 export const HOLD_WAIT_MAX_S = 90;
@@ -26,10 +36,13 @@ export const BRIDGE_MATCH_WINDOW_MIN = 10;
 export const ACTIVE_LIVE_WINDOW_H = 2;
 /** "We're full" from a hospital's desk screen skips it in new searches this long, unless the desk picks another time (max 12 h). */
 export const HOSPITAL_FULL_HOURS = 4;
+/** The longest a desk can mark its hospital full, in hours. */
 export const HOSPITAL_FULL_MAX_HOURS = 12;
 /** Night, India time: from this hour to the morning hour. A hospital whose needed service is day-only ranks lower then. */
 export const NIGHT_FROM_HOUR = 20;
+/** The hour night ends, India time. */
 export const NIGHT_TO_HOUR = 8;
+/** How much a needed service that a hospital has only in the daytime lowers its rank at night. */
 export const NIGHT_DAY_ONLY_PENALTY = 0.15;
 /** The desk screen lists the calls the hospital took in the last this many hours. */
 export const DESK_WINDOW_H = 12;
@@ -38,8 +51,11 @@ export const INBOUND_MATCH_WINDOW_MIN = 120;
 
 // Missed-webhook recovery: an attempt is stale when its status hasn't moved for this long; poll at most every POLL_EVERY_S.
 export const STALE_AFTER_S: Record<string, number> = { queued: 60, dialing: 60, ringing: 90, in_progress: 240, wrapping_up: 45 };
+/** A stale call is re-read from Bolna at most this often, in seconds. */
 export const POLL_EVERY_S = 30;
+/** A call with no news this long after it was placed is marked failed, in seconds. */
 export const LOST_TRACK_AFTER_S = 15 * 60;
+/** Days identifying data is kept after a referral is closed or cancelled. */
 export const DEFAULT_RETENTION_DAYS = 30;
 /** Bolna's documented source IPs for webhooks and function calls. */
 export const BOLNA_IPS = ["13.203.39.153", "13.126.9.249", "13.202.133.53"];
@@ -48,6 +64,7 @@ function str(name: string): string {
   return (process.env[name] ?? "").trim();
 }
 
+/** Server settings, read from the environment on every access so tests can change them. */
 export const env = {
   get appBaseUrl() { return str("APP_BASE_URL"); },
   get demoPasscode() { return str("DEMO_PASSCODE"); },
@@ -80,6 +97,7 @@ export const env = {
   get bolnaExtraIps() { return str("BOLNA_EXTRA_IPS").split(",").map((x) => x.trim()).filter(Boolean); },
   get metaAppSecret() { return str("META_APP_SECRET"); },
   get metaVerifyToken() { return str("META_WA_VERIFY_TOKEN"); },
+  /** The approved Meta template name for a kind of message; empty means plain text is sent. */
   metaTemplate(key: "prearrival" | "doctor" | "family" | "bed_request"): string {
     return str(`META_WA_TEMPLATE_${key.toUpperCase()}`);
   },
@@ -89,6 +107,7 @@ export const env = {
   get sarvamApiKey() { return str("SARVAM_API_KEY"); },
   get sarvamSttModel() { return str("SARVAM_STT_MODEL") || "saarika:v2.5"; },
   get aapatSetuUrl() { return str("AAPAT_SETU_URL"); },
+  /** The farthest ETA a hospital may have for this acuity, in minutes; 0 means no limit. */
   maxEtaMinutes(acuity: string): number {
     const name = acuity === "critical" ? "MAX_ETA_CRITICAL_MIN" : acuity === "serious" ? "MAX_ETA_SERIOUS_MIN" : "MAX_ETA_STABLE_MIN";
     return Number(str(name)) || 0;
@@ -105,6 +124,7 @@ export const env = {
   get familyCalls() { return str("FAMILY_CALLS").toLowerCase() !== "off"; },
   /** Live referrals placing calls at once per organisation, so a runaway client can't phone every hospital in town. */
   get maxActiveLiveReferrals() { return Number(str("MAX_ACTIVE_LIVE_REFERRALS")) || 10; },
+  /** The Bolna agent that places calls of this purpose; empty when it isn't configured. */
   agentId(purpose: "availability" | "hold_confirm" | "release" | "family_update" | "arrival_check"): string {
     const key = {
       availability: "BOLNA_AGENT_ID_AVAILABILITY",

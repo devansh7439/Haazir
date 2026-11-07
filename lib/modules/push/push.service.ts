@@ -1,11 +1,12 @@
 import "server-only";
 import { env } from "@/lib/core/config";
 import { createLogger } from "@/lib/core/logger";
+import { readField, readText } from "@/lib/core/normalize";
 import type { Referral } from "@/lib/core/types";
 import { SmsClient } from "@/lib/integrations/sms/sms.client";
 import { FacilityRepository } from "@/lib/modules/facility/facility.repository";
 import { PushRepository } from "@/lib/modules/push/push.repository";
-import type { PushKind } from "@/lib/modules/push/push.type";
+import type { PushKind, PushPlatform } from "@/lib/modules/push/push.type";
 import { ReferralRepository } from "@/lib/modules/referral/referral.repository";
 import { spokenName } from "@/lib/modules/referral/summary.helper";
 
@@ -31,16 +32,16 @@ const textFor = (kind: PushKind, code: string, hospital: string | null): Message
     case "doctor_wanted": return { title: `A desk wants you · ${code}`, body: `${who} wants to talk to you. Call them back.` };
     case "hospital_called_back": return { title: `A hospital called back · ${code}`, body: `${who} called the line. Open Haazir.` };
     case "bed_held": return { title: `Bed held · ${code}`, body: `${who} confirmed the bed.` };
-    case "bed_declined": return { title: `Bed no longer available · ${code}`, body: `${who} can't take the patient now. Choose another hospital.` };
+    case "bed_declined":
+      return { title: `Bed no longer available · ${code}`, body: `${who} can't take the patient now. Choose another hospital.` };
     case "not_arrived": return { title: `Patient not arrived · ${code}`, body: `${who} says the patient hasn't arrived. Open Haazir.` };
     case "exhausted": return { title: `No hospital accepted · ${code}`, body: "Open Haazir to call the desks or widen the search." };
   }
 };
 
-interface Ticket {
-  status: "ok" | "error";
-  details?: { error?: string };
-}
+/** Whether Expo's ticket says the device no longer has the app. */
+const isDeadDevice = (ticket: unknown): boolean =>
+  readText(ticket, "status") === "error" && readText(readField(ticket, "details"), "error") === "DeviceNotRegistered";
 
 const send = async (tokens: string[], message: Message, referralId: string): Promise<void> => {
   const res = await fetch(env.expoPushUrl, {
@@ -51,14 +52,22 @@ const send = async (tokens: string[], message: Message, referralId: string): Pro
       ...(env.expoAccessToken ? { Authorization: `Bearer ${env.expoAccessToken}` } : {}),
     },
     body: JSON.stringify(
-      tokens.map((to) => ({ to, title: message.title, body: message.body, sound: "default", priority: "high", channelId: "referrals", data: { referralId } })),
+      tokens.map((to) => ({
+        to,
+        title: message.title,
+        body: message.body,
+        sound: "default",
+        priority: "high",
+        channelId: "referrals",
+        data: { referralId },
+      })),
     ),
     signal: AbortSignal.timeout(TIMEOUT_MS),
   });
   if (!res.ok) throw new Error(`Expo push answered ${res.status}`);
-  const body = (await res.json().catch(() => null)) as { data?: Ticket[] } | null;
+  const tickets = readField(await res.json().catch(() => null), "data");
   // A device that uninstalled the app is reported once; stop sending to it.
-  const dead = (body?.data ?? []).flatMap((t, i) => (t.status === "error" && t.details?.error === "DeviceNotRegistered" ? [tokens[i]] : []));
+  const dead = (Array.isArray(tickets) ? tickets : []).flatMap((t, i) => (isDeadDevice(t) ? [tokens[i]] : []));
   await PushRepository.removeAny(dead);
   if (dead.length > 0) log.info({ removed: dead.length }, "removed tokens Expo no longer accepts");
 };
@@ -78,7 +87,9 @@ const sendSms = async (r: Referral, message: Message): Promise<void> => {
 /** Push notifications to the doctor's phone (the mobile app). Best effort: a failure is logged and nothing else. */
 export const PushService = {
   /** Saves this device's token for the signed-in person. */
-  register: (orgId: string, userId: string | null, token: string, platform: string): Promise<void> => PushRepository.upsert(orgId, userId, token, platform),
+  register: (orgId: string, userId: string | null, token: string, platform: PushPlatform): Promise<void> => {
+    return PushRepository.upsert(orgId, userId, token, platform);
+  },
 
   /** Forgets this device's token (sign out). */
   unregister: (orgId: string, token: string): Promise<boolean> => PushRepository.remove(orgId, token),

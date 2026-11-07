@@ -8,10 +8,12 @@ const log = createLogger("route");
 
 // Helpers for thin route handlers: parse with zod, map errors to { error: { code, message, details } }.
 
+/** The JSON error answer: `{ error: { code, message, details } }`. */
 export function errorResponse(status: number, code: string, message: string, details: Record<string, unknown> = {}) {
   return NextResponse.json({ error: { code, message, details } }, { status });
 }
 
+/** The request's JSON body, checked by `schema`. Throws 415 for other content types, 400 for bad JSON and 422 for a failed check. */
 export async function parseBody<T>(req: Request, schema: ZodType<T, ZodTypeDef, unknown>): Promise<T> {
   // Only JSON: a cross-site <form> can't send application/json, so this blocks form-based CSRF on top of SameSite cookies.
   if (!(req.headers.get("content-type") ?? "").toLowerCase().includes("application/json")) {
@@ -35,6 +37,7 @@ export async function parseBody<T>(req: Request, schema: ZodType<T, ZodTypeDef, 
   return parsed.data;
 }
 
+/** Runs a route body and turns a thrown `ApiError` into its JSON answer; anything else becomes 500 INTERNAL. */
 export async function handle(fn: () => Promise<Response>): Promise<Response> {
   try {
     return await fn();

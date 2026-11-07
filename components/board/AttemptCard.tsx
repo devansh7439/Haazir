@@ -1,5 +1,5 @@
 import { BedDouble, ChevronDown, Clock, FileText, PenLine, Phone, RotateCw, TriangleAlert, User } from "lucide-react";
-import { useState } from "react";
+import { memo, useState } from "react";
 import { BED_LABEL, TONE, attemptDisplay, clock, shortName } from "@/lib/ui/display";
 import type { AttemptView, ReferralView } from "@/lib/modules/referral/view.type";
 import { callEnded } from "@/lib/ui/board";
@@ -7,14 +7,19 @@ import { StatusPill, cx } from "@/components/ui";
 import { ManualOutcomeForm } from "./ManualOutcomeForm";
 import type { Post } from "./types";
 
-export function AttemptCard(props: {
+/** Whether the card shows the running "On call · 1:05" timer, the only thing that reads the clock. */
+export const showsTimer = (a: AttemptView): boolean =>
+  !a.needs_review && !a.outcome && (a.status === "in_progress" || a.status === "wrapping_up");
+
+/** Memoised: the board's clock ticks every second, so the parent passes `nowMs` only to a card that shows the timer. */
+export const AttemptCard = memo(function AttemptCard(props: {
   a: AttemptView;
   calls: number;
   nowMs: number;
   referralStatus: string;
   isSelected: boolean;
   portalFlag: ReferralView["portal_flags"][string] | null;
-  onSelect: () => void;
+  onSelect: (a: AttemptView) => void;
   post: Post;
 }) {
   const { a, nowMs } = props;
@@ -93,10 +98,10 @@ export function AttemptCard(props: {
 
         <div className="mt-3 flex flex-wrap items-center gap-1.5">
           {canSelect && !a.needs_review && (
-            <button className="btn btn-primary" onClick={props.onSelect}>Select hospital</button>
+            <button className="btn btn-primary" onClick={() => props.onSelect(a)}>Select hospital</button>
           )}
           {canSelect && a.needs_review && (
-            <button className="btn btn-secondary" onClick={props.onSelect}>Select anyway</button>
+            <button className="btn btn-secondary" onClick={() => props.onSelect(a)}>Select anyway</button>
           )}
           <a className="btn btn-secondary" href={`tel:${a.to_number}`}><Phone aria-hidden className="size-4" /> Call desk</a>
           {canRedial && (
@@ -132,4 +137,4 @@ export function AttemptCard(props: {
       </div>
     </li>
   );
-}
+});

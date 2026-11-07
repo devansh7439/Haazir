@@ -8,6 +8,7 @@ export type Audience = "receiving_facility" | "referrer" | "family" | "availabil
 
 /** Sent messages (`messages`): server-only, since bodies hold identifiers (CLAUDE.md rule 1). Purged with the retention job. */
 export const MessageRepository = {
+  /** Stores one message with its send result and the redacted preview the browser may see. */
   insert: async (m: { referral_id: string; audience: Audience; to: string | null; body: string; result: SendResult }): Promise<void> => {
     await q(
       `insert into messages (referral_id, channel, audience, to_number, body, provider, provider_message_id, status, error, created_at)

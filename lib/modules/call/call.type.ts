@@ -31,6 +31,7 @@ export interface RedialPlan {
 /** Work that runs after the HTTP response (routes use `after()`; tests await it). */
 export type FollowUp = () => Promise<void>;
 
+/** A follow-up that does nothing. */
 export const noFollowUp: FollowUp = async () => {};
 
 /** A Bolna function's answer: `instruction` is read by the agent's LLM, so it is always a plain sentence. */

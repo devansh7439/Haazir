@@ -99,11 +99,35 @@ describe("Bolna routes", () => {
     const junk = await recordResponseRoute.POST(req("/api/bolna/functions/record-response", { raw: "garbage", headers: auth }));
     expect(junk.status).toBe(200);
     expect(typeof (await junk.json()).instruction).toBe("string");
+    const { referral } = await ReferralService.create(KRAIT);
+    const [a] = await CallRepository.listForReferral(referral.id);
     setDb({ query: async () => { throw new Error("db down"); }, exec: async () => {}, close: async () => {} });
-    const down = await recordResponseRoute.POST(req("/api/bolna/functions/record-response", { body: { outcome: "accepted" }, headers: auth }));
+    const down = await recordResponseRoute.POST(req("/api/bolna/functions/record-response", { body: { attempt_id: a.id, outcome: "accepted" }, headers: auth }));
     expect(down.status).toBe(200);
     expect(await down.json()).toEqual({ result: "error", instruction: "Thank them for their help and end the call." });
     setDb(db);
+  });
+
+  it("functions: the answer is recorded even when the audit-log write fails", async () => {
+    const auth = { authorization: "Bearer fnsec" };
+    const { referral } = await ReferralService.create(KRAIT);
+    const [a] = await CallRepository.listForReferral(referral.id);
+    const answer = { attempt_id: a.id, outcome: "accepted", bed_type: "icu" };
+
+    setDb({
+      query: async (sql: string, p?: unknown[]) => {
+        if (/bolna_webhook_log/.test(sql)) throw new Error("log insert failed");
+        return db.query(sql, p);
+      },
+      exec: async () => {},
+      close: async () => {},
+    } as Db);
+    const res = await recordResponseRoute.POST(req("/api/bolna/functions/record-response", { body: answer, headers: auth }));
+    setDb(db);
+
+    expect(res.status).toBe(200);
+    expect((await res.json()).result).not.toBe("error");
+    expect((await CallRepository.listForReferral(referral.id)).find((x) => x.id === a.id)!.outcome).toBe("accepted");
   });
 
   it("optional IP allowlist only admits Bolna's addresses", async () => {
