@@ -3,6 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
+    "predev": "node scripts/ensure-port-free.mjs",
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
@@ -15,6 +16,7 @@
     "bolna:kb": "bun scripts/bolna-kb.ts",
     "bolna:extractions": "bun --conditions=react-server scripts/bolna-extractions.ts",
     "bolna:test-call": "bun --conditions=react-server scripts/bolna-test-call.ts",
+    "preserve": "node scripts/ensure-port-free.mjs",
     "serve": "next build && next start"
   },
   "dependencies": {
