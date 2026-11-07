@@ -9,7 +9,7 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
   return handle(async () => {
     const s = await requireSession({ admin: true });
     const f = await ScopeService.facility(s, (await params).id);
-    const { codes } = await parseBody(req, CapabilitiesBody);
-    return NextResponse.json({ codes: await DirectoryService.setCapabilities(f.id, codes) });
+    const { codes, day_only } = await parseBody(req, CapabilitiesBody);
+    return NextResponse.json({ codes: await DirectoryService.setCapabilities(f.id, codes, day_only) });
   });
 }

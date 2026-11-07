@@ -1,6 +1,6 @@
 import "server-only";
 import { AnalyticsRepository } from "@/lib/modules/analytics/analytics.repository";
-import type { HospitalStat, HourStat } from "@/lib/modules/analytics/analytics.type";
+import type { HospitalStat, HourStat, ProofStats } from "@/lib/modules/analytics/analytics.type";
 
 /** Acceptance analytics per hospital and per hour of day (C5). */
 export const AnalyticsService = {
@@ -9,6 +9,12 @@ export const AnalyticsService = {
       ...r,
       last_called_at: r.last_called_at ? new Date(r.last_called_at).toISOString() : null,
     })),
+
+  /** The proof slide's figures; sums that Postgres returns as text become numbers. */
+  proofStats: async (orgId: string, realOnly: boolean): Promise<ProofStats> => {
+    const p = await AnalyticsRepository.proof(orgId, realOnly);
+    return { ...p, total_cost: p.total_cost === null ? null : Number(p.total_cost) };
+  },
 
   /** All 24 hours, India time; an hour with no calls has zeros. */
   hourStats: async (orgId: string): Promise<HourStat[]> => {

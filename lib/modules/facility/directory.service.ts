@@ -32,6 +32,7 @@ export const DirectoryService = {
       return {
         ...f,
         capabilities: caps.filter((c) => c.facility_id === f.id).map((c) => c.capability_code),
+        day_only: caps.filter((c) => c.facility_id === f.id && !c.night_available).map((c) => c.capability_code),
         contacts: contacts.filter((c) => c.facility_id === f.id),
         availability_calls: s?.availability_calls ?? 0,
         answered: s?.answered ?? 0,
@@ -74,12 +75,12 @@ export const DirectoryService = {
   },
 
   /** Replaces the hospital's declared capabilities. Returns the codes now declared. */
-  setCapabilities: async (id: string, codes: string[]): Promise<string[]> => {
+  setCapabilities: async (id: string, codes: string[], dayOnly?: string[]): Promise<string[]> => {
     const unique = [...new Set(codes)];
     const known = await FacilityRepository.capabilities(unique);
     if (known.length !== unique.length) throw ApiError.unprocessable("UNKNOWN_CAPABILITY", "Unknown capability code");
     if (!(await FacilityRepository.exists(id))) throw ApiError.notFound("Facility not found");
-    await FacilityRepository.replaceCapabilities(id, unique);
+    await FacilityRepository.replaceCapabilities(id, unique, dayOnly?.filter((c) => unique.includes(c)));
     return unique;
   },
 

@@ -37,6 +37,12 @@ export const saysNoBed = (data: Json): boolean => {
 
 const isYes = (o: string | null): boolean => o === "accepted" || o === "conditional";
 
+/** A number from a payload that may send it as a number or a numeric string; null otherwise. */
+const finiteNumber = (v: Json): number | null => {
+  const n = typeof v === "number" ? v : typeof v === "string" && v.trim() !== "" ? Number(v) : NaN;
+  return Number.isFinite(n) && n >= 0 ? n : null;
+};
+
 /** The execution id a webhook is about: `id`, else `execution_id`. */
 export const executionIdOf = (b: Record<string, Json>): string | null =>
   typeof b.id === "string" ? b.id : typeof b.execution_id === "string" ? b.execution_id : null;
@@ -71,6 +77,8 @@ export const statusFields = (
     fields.transcript = typeof b.transcript === "string" ? b.transcript : null;
     fields.recording_url = clean(prop(b.telephony_data, "recording_url"));
     fields.extracted_data = b.extracted_data ?? null;
+    fields.cost = finiteNumber(b.total_cost);
+    fields.duration_s = finiteNumber(b.conversation_duration ?? b.conversation_time);
   }
   return fields;
 };

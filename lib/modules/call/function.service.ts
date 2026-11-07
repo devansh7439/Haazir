@@ -10,7 +10,7 @@ import { isAcceptance } from "@/lib/modules/call/call.helper";
 import { CallRepository } from "@/lib/modules/call/call.repository";
 import { CallService } from "@/lib/modules/call/call.service";
 import { noFollowUp, type FollowUp, type FunctionResult, type Source } from "@/lib/modules/call/call.type";
-import { SAFE_END, callbackInstruction, isContradictoryYes, isUuid, lateYesReason, responsePlan } from "@/lib/modules/call/function.helper";
+import { SAFE_END, callbackInstruction, isContradictoryYes, isUuid, lateYesReason, responsePlan, withNeedsCheck } from "@/lib/modules/call/function.helper";
 import { WebhookLogRepository } from "@/lib/modules/call/webhook.repository";
 import { EventRepository } from "@/lib/modules/event/event.repository";
 import { FacilityRepository } from "@/lib/modules/facility/facility.repository";
@@ -58,6 +58,8 @@ export const FunctionService = {
       outcome: raw.outcome,
       bed_type: raw.bed_type,
       specialist_available: raw.specialist_available,
+      needs_ready: raw.needs_ready,
+      unavailable_needs: raw.unavailable_needs,
       ready_in_minutes: raw.ready_in_minutes,
       contact_person: raw.contact_person,
       conditions: raw.conditions,
@@ -68,7 +70,7 @@ export const FunctionService = {
     const attempt = await resolveAttempt(p.attempt_id, p.to_number, ["availability"]);
     if (!attempt) return notFound;
 
-    const outcome = normalizeOutcome(p.outcome);
+    const { outcome, conditions } = withNeedsCheck(normalizeOutcome(p.outcome), normalizeYesNo(p.needs_ready), p.unavailable_needs, p.conditions);
     // "none" is a real bed_type answer ("no bed"), unlike Python's "None" for a missing value, which clean() drops.
     const bedType = String(raw.bed_type ?? "").trim() === "none" ? "none" : normalizeBedType(p.bed_type);
     const contradictory = isContradictoryYes(outcome, bedType);
@@ -80,7 +82,7 @@ export const FunctionService = {
       specialist_available: p.specialist_available,
       ready_in_minutes: parseMinutes(p.ready_in_minutes),
       contact_person: p.contact_person,
-      conditions: p.conditions,
+      conditions,
       decline_reason: p.decline_reason,
       alternate_number: alternate ?? p.alternate_number,
       needs_review: contradictory,
@@ -203,6 +205,34 @@ export const FunctionService = {
         ? "Thank them, say the pre-arrival note is coming on WhatsApp, and end the call."
         : "Thank them for letting us know, and end the call.",
       followUp,
+    };
+  },
+
+  /** record_arrival: the chosen hospital says whether the patient has reached it. Nothing is recorded from an unclear answer. */
+  recordArrival: async (raw: Params, source: Source = "function"): Promise<FunctionResult> => {
+    const p = cleanParams({ attempt_id: raw.attempt_id, arrived: raw.arrived, contact_person: raw.contact_person, to_number: raw.to_number });
+    const check = await resolveAttempt(p.attempt_id, p.to_number, ["arrival_check"]);
+    if (!check) return notFound;
+    const arrived = normalizeYesNo(p.arrived);
+    if (!arrived) return { result: "unclear", instruction: "Thank them and end the call.", followUp: noFollowUp };
+    const outcome = arrived === "yes" ? "arrival_confirmed" : "not_arrived";
+    if (await CallRepository.recordArrival(check.id, outcome, source, p.contact_person)) {
+      await EventRepository.add(check.referral_id, outcome, { facility_id: check.facility_id }, check.id);
+      if (outcome === "not_arrived") {
+        await EventRepository.add(check.referral_id, "alert", {
+          kind: "not_arrived",
+          facility_id: check.facility_id,
+          message: "The hospital says the patient hasn't arrived. Check where the ambulance is, or call the desk. If the bed is gone, cancel and search again.",
+        }, check.id);
+        await PushService.notify(check.referral_id, "not_arrived", check.facility_id);
+      }
+    }
+    return {
+      result: "recorded",
+      instruction: arrived === "yes"
+        ? "Thank them and end the call."
+        : "Thank them, say the doctor will be told the patient has not arrived yet, and end the call.",
+      followUp: noFollowUp,
     };
   },
 

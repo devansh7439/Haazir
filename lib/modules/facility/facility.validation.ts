@@ -38,7 +38,11 @@ export const FacilityPatchBody = z.object({
   notes: optionalText(400),
 });
 
-export const CapabilitiesBody = z.object({ codes: z.array(z.string().min(1).max(64)).max(40) });
+export const CapabilitiesBody = z.object({
+  codes: z.array(z.string().min(1).max(64)).max(40),
+  /** The services only there in the daytime (a subset of `codes`); left out, the flags stay as they are. */
+  day_only: z.array(z.string().min(1).max(64)).max(40).optional(),
+});
 
 export const ContactPatchBody = z.object({
   role: CONTACT_ROLE.optional(),

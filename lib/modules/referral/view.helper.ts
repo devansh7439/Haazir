@@ -1,8 +1,15 @@
-import type { EventRow } from "@/lib/core/types";
+import type { EventRow, Referral } from "@/lib/core/types";
 import type { Audience } from "@/lib/modules/handoff/message.repository";
 import type { Alert, AttemptView, MessageView, PortalFlag } from "@/lib/modules/referral/view.type";
 
 const ALERT_TYPES = new Set<string>(["doctor_callback_requested", "inbound_callback", "alert"]);
+
+/**
+ * Whether the board lists the nearest emergency departments: once nobody accepted, and for a critical patient while the
+ * search is still running, since stabilising nearby can beat waiting for a yes from further away.
+ */
+export const showsNearestEd = (r: Pick<Referral, "status" | "acuity">): boolean =>
+  r.status === "exhausted" || (r.acuity === "critical" && (r.status === "searching" || r.status === "options_ready"));
 
 /** A text field of an event payload, or null when it is missing or not text. */
 const text = (payload: unknown, key: string): string | null => {

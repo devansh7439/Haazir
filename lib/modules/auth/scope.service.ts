@@ -1,6 +1,7 @@
 import "server-only";
 import { ApiError } from "@/lib/core/error";
-import type { Attempt, Contact, Facility, Referral } from "@/lib/core/types";
+import type { Attempt, Contact, Facility, Referral, Referrer } from "@/lib/core/types";
+import { AuthRepository } from "@/lib/modules/auth/auth.repository";
 import type { Session } from "@/lib/modules/auth/session.service";
 import { CallRepository } from "@/lib/modules/call/call.repository";
 import { FacilityRepository } from "@/lib/modules/facility/facility.repository";
@@ -14,6 +15,12 @@ export const ScopeService = {
   referral: async (s: Session, id: string): Promise<Referral> => {
     const r = await ReferralRepository.get(id);
     if (!r || r.org_id !== s.org) throw ApiError.notFound("Referral not found");
+    return r;
+  },
+
+  referrer: async (s: Session, id: string): Promise<Referrer> => {
+    const r = await AuthRepository.referrer(id);
+    if (!r || r.org_id !== s.org) throw ApiError.notFound("Doctor not found");
     return r;
   },
 

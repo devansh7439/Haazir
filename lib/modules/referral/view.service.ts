@@ -1,7 +1,9 @@
 import "server-only";
 import { TICK_INTERVAL_MS } from "@/lib/core/config";
+import { EscalationService } from "@/lib/modules/escalation/escalation.service";
+import { FacilityRepository } from "@/lib/modules/facility/facility.repository";
 import { ReferralRepository } from "@/lib/modules/referral/referral.repository";
-import { alertsOf, messagesOf, portalFlagsOf, withoutFamilyContent } from "@/lib/modules/referral/view.helper";
+import { alertsOf, messagesOf, portalFlagsOf, showsNearestEd, withoutFamilyContent } from "@/lib/modules/referral/view.helper";
 import { ViewRepository } from "@/lib/modules/referral/view.repository";
 import type { ReferralListItem, ReferralView } from "@/lib/modules/referral/view.type";
 
@@ -15,9 +17,16 @@ export const ViewService = {
     const [rawAttempts, eventsDesc] = await Promise.all([ViewRepository.attempts(id), ViewRepository.recentEvents(id)]);
     const attempts = withoutFamilyContent(rawAttempts);
     const events = [...eventsDesc].reverse();
+    const nearestEd = showsNearestEd(referral)
+      ? await FacilityRepository.nearestEmergency({ lat: referral.origin_lat, lng: referral.origin_lng, org_id: referral.org_id, origin_id: referral.origin_facility_id })
+      : [];
     return {
       referral,
       portal_flags: portalFlagsOf(events),
+      nearest_ed: nearestEd,
+      escalation: referral.status === "exhausted"
+        ? (await EscalationService.list(referral.org_id)).map((c) => ({ label: c.label, phone: c.phone_e164 }))
+        : [],
       case_label: ctx.template.label,
       needs: ctx.needs.map((n) => ({ code: n.code, label: n.label })),
       referrer: { name: ctx.referrer.name, facility_name: ctx.origin?.name ?? null },

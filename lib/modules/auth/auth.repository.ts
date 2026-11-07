@@ -1,5 +1,6 @@
 import "server-only";
 import { one, q } from "@/lib/core/db";
+import type { Referrer } from "@/lib/core/types";
 
 export type Role = "admin" | "doctor";
 
@@ -54,6 +55,32 @@ export const AuthRepository = {
     );
     return row!.id;
   },
+
+  /** A referring doctor, or null. */
+  referrer: (id: string): Promise<Referrer | null> => one<Referrer>(`select * from referrers where id = $1`, [id]),
+
+  /** The organisation's referring doctors, oldest first, for the admin who verifies them. */
+  referrers: (orgId: string): Promise<Referrer[]> =>
+    q<Referrer>(`select * from referrers where org_id = $1 order by created_at, id`, [orgId]),
+
+  /** Stores a registration and puts the doctor back to "pending" (a changed number is checked again). */
+  setRegistration: (id: string, no: string, council: string): Promise<Referrer | null> =>
+    one<Referrer>(
+      `update referrers set registration_no = $2, registration_council = $3, verification_status = 'pending',
+         verified_at = null, verified_by = null where id = $1 returning *`,
+      [id, no, council],
+    ),
+
+  /**
+   * The admin's decision. Only a doctor with a registration on file can be decided on, so "verified" always refers to a
+   * number somebody looked at. Null when there is none.
+   */
+  setVerification: (id: string, status: "verified" | "rejected", by: string | null, at: Date): Promise<Referrer | null> =>
+    one<Referrer>(
+      `update referrers set verification_status = $2, verified_at = $3, verified_by = $4
+       where id = $1 and registration_no is not null returning *`,
+      [id, status, at, by],
+    ),
 
   /** Creates the user, or updates the one with this email (new password and role, reactivated). Returns the id. */
   upsertUser: async (u: NewUserRow): Promise<string> => {

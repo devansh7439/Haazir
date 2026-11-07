@@ -39,7 +39,7 @@ const CASES: Array<{ case_type: string; label: string; re: RegExp }> = [
 ];
 
 const ACUITY: Array<[Acuity, RegExp]> = [
-  ["critical", /\b(critical|very serious|unstable|crashing|gasping|intubat|sinking|gambhir)\b/i],
+  ["critical", /\b(crit|critical|very serious|unstable|crashing|gasping|intubat|sinking|gambhir)\b/i],
   ["serious", /\b(serious|sick|deteriorat)\b/i],
   ["stable", /\b(stable|stabili[sz]ed)\b/i],
 ];
@@ -61,7 +61,8 @@ export function parseIntake(text: string, templates: Array<{ case_type: string; 
   const ageM =
     t.match(/\b(\d{1,3})\s*(?:-|\s)?\s*(days?|d|months?|mo|years?|yrs?|y|yo)\b(?:\s*old)?/i) ??
     t.match(/\bage[d:]?\s*(\d{1,3})\b/i) ??
-    t.match(/\b(\d{1,3})\s*(?:\/|,)\s*[mf]\b/i);
+    t.match(/\b(\d{1,3})\s*(?:\/|,)\s*[mf]\b/i) ??
+    t.match(/\b(\d{1,3})\s?[mf]\b/i);
   if (ageM) {
     const v = parseInt(ageM[1], 10);
     const unit = (ageM[2] ?? "y").toLowerCase();
@@ -94,3 +95,6 @@ export function parseIntake(text: string, templates: Array<{ case_type: string; 
     matched,
   };
 }
+
+/** The keyword rules, for a form that wants to take the recognised words out of the text and keep the rest as the clinical note. */
+export const INTAKE_PATTERNS = { cases: CASES.map((c) => c.re), acuity: ACUITY.map(([, re]) => re) };

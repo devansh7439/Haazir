@@ -27,8 +27,9 @@ export const MaintenanceRepository = {
   purgeBefore: async (cutoff: Date): Promise<PurgeResult> => {
     const pd = await q(`delete from patient_details where referral_id in (${ENDED_BEFORE}) returning referral_id`, [cutoff]);
     const msg = await q(`delete from messages where referral_id in (${ENDED_BEFORE}) returning id`, [cutoff]);
+    const files = await q(`delete from referral_attachments where referral_id in (${ENDED_BEFORE}) returning id`, [cutoff]);
     const drafts = await q(`delete from intake_drafts where created_at < $1 returning id`, [cutoff]);
     const webhookLog = await q(`delete from bolna_webhook_log where received_at < $1 returning id`, [cutoff]);
-    return { patient_details: pd.length, messages: msg.length, intake_drafts: drafts.length, webhook_log: webhookLog.length };
+    return { patient_details: pd.length, messages: msg.length, attachments: files.length, intake_drafts: drafts.length, webhook_log: webhookLog.length };
   },
 };

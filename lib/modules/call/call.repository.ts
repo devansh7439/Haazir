@@ -114,6 +114,21 @@ export const CallRepository = {
       ],
     ),
 
+  /** The hospital's answer to the arrival check. Null when the call already has this outcome. */
+  recordArrival: (
+    id: string,
+    outcome: "arrival_confirmed" | "not_arrived",
+    source: OutcomeSource,
+    contactPerson: string | null,
+  ): Promise<Attempt | null> =>
+    one<Attempt>(
+      `update call_attempts set outcome = $2, outcome_source = $3, contact_person = coalesce($4, contact_person),
+         outcome_at = $5, answered_at = coalesce(answered_at, $5), updated_at = $5
+       where id = $1 and outcome is distinct from $2
+       returning *`,
+      [id, outcome, source, contactPerson, now()],
+    ),
+
   /** The desk asked for the doctor. Null when already recorded. */
   recordNeedsDoctor: (id: string, source: OutcomeSource, contactPerson: string | null, reason: string | null): Promise<Attempt | null> =>
     one<Attempt>(
@@ -158,9 +173,9 @@ export const CallRepository = {
   },
 
   /** The latest call to a number since `since`, with the hospital's name: who a missed inbound call is about. */
-  latestToNumber: (toNumber: string, since: Date): Promise<{ referral_id: string; name: string | null } | null> =>
-    one<{ referral_id: string; name: string | null }>(
-      `select a.referral_id, f.name from call_attempts a left join facilities f on f.id = a.facility_id
+  latestToNumber: (toNumber: string, since: Date): Promise<{ referral_id: string; facility_id: string | null; name: string | null } | null> =>
+    one<{ referral_id: string; facility_id: string | null; name: string | null }>(
+      `select a.referral_id, a.facility_id, f.name from call_attempts a left join facilities f on f.id = a.facility_id
        where a.to_number = $1 and a.created_at > $2 order by a.created_at desc limit 1`,
       [toNumber, since],
     ),
@@ -199,16 +214,20 @@ export const CallRepository = {
       [attempt.id, at, attempt.last_polled_at],
     )),
 
-  /** Counts a finished call toward the desk's answer rate, which feeds the ranking. */
+  /**
+   * Counts a finished call toward the desk's answer rate, which feeds the ranking. A call someone answered also re-verifies
+   * the number, except a phone-menu line, which a person has not necessarily picked up.
+   */
   bumpContactStats: async (contactId: string | null, answered: boolean, lastOutcome: string | null): Promise<void> => {
     if (!contactId) return;
     await q(
       `update facility_contacts
        set calls_made = calls_made + 1,
            calls_answered = calls_answered + $2::int,
-           last_outcome = coalesce($3, last_outcome)
+           last_outcome = coalesce($3, last_outcome),
+           verified_at = case when $2::int = 1 and not is_ivr then $4 else verified_at end
        where id = $1`,
-      [contactId, answered ? 1 : 0, lastOutcome],
+      [contactId, answered ? 1 : 0, lastOutcome, now()],
     );
   },
 };

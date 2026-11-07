@@ -71,7 +71,7 @@ const reconcileOnTerminal = async (a: Attempt, body: Body): Promise<FollowUp> =>
     }
     const fresh = await CallRepository.get(a.id);
     if (fresh && !fresh.outcome) await HoldService.holdUnconfirmed(fresh);
-  } else if (a.status === "completed") {
+  } else if (a.status === "completed" && (a.purpose === "release" || a.purpose === "family_update")) {
     const outcome = a.purpose === "release" ? "release_ack" : "family_informed";
     await CallRepository.update(a.id, { outcome, outcome_source: "extraction", outcome_at: now() }, { outcome: null });
   }

@@ -40,6 +40,10 @@ export interface HandoffFacts {
   conditions: string | null;
   hold_until_time: string;
   aapat_setu_url?: string | null;
+  /** SBAR lines (Situation, Background, Assessment, Recommendation). When given, they replace the Note, Needs and ETA lines. */
+  sbar?: string[];
+  /** One "ECG: https://…" line per attachment, each an expiring signed link. Real body only: the preview shows a count. */
+  attachment_links?: string[];
 }
 
 export type TemplateKey = "prearrival" | "doctor" | "family" | "bed_request";
@@ -69,21 +73,27 @@ function transportLabel(t: string): string {
 
 /** The note for the hospital that accepted. It holds the patient's identifiers, so it is stored server-side only. */
 export function preArrivalNote(f: HandoffFacts): Rendered {
-  const render = (name: string | null, phone: string) =>
+  const render = (name: string | null, phone: string, links: string[]) =>
     lines([
       `Haazir · Incoming referral ${f.code}`,
       `From: ${f.doctor_name}, ${f.referring_facility} · ${phone}`,
-      `Patient: ${name ? `${name} · ` : ""}${f.who}, ${f.case_label}, ${f.acuity}`,
-      f.note && `Note: ${f.note}`,
-      f.needs_labels.length > 0 && `Needs: ${f.needs_labels.join(", ")}`,
-      f.eta_minutes !== null && `ETA: about ${f.eta_minutes} min by ${transportLabel(f.transport)}`,
+      f.sbar?.length ? name && `Patient: ${name}` : `Patient: ${name ? `${name} · ` : ""}${f.who}, ${f.case_label}, ${f.acuity}`,
+      ...(f.sbar?.length
+        ? f.sbar
+        : [
+            f.note && `Note: ${f.note}`,
+            f.needs_labels.length > 0 && `Needs: ${f.needs_labels.join(", ")}`,
+            f.eta_minutes !== null && `ETA: about ${f.eta_minutes} min by ${transportLabel(f.transport)}`,
+          ]),
       f.contact_person && `Confirmed by: ${f.contact_person} at ${f.confirmed_time}`,
+      ...links,
       `Questions: call ${phone}`,
       f.aapat_setu_url && `Aapat Setu: ${f.aapat_setu_url}`,
     ]);
   return {
-    body: render(f.patient_name, f.doctor_phone),
-    preview_redacted: render(f.patient_name ? REDACTED_NAME : null, maskPhone(f.doctor_phone)),
+    body: render(f.patient_name, f.doctor_phone, f.attachment_links ?? []),
+    // The links hold a signature that opens the files, so the console preview only says how many there are.
+    preview_redacted: render(f.patient_name ? REDACTED_NAME : null, maskPhone(f.doctor_phone), f.attachment_links?.length ? [`Attachments: ${f.attachment_links.length} file(s), link in the message`] : []),
     template: {
       key: "prearrival",
       language: "en",
@@ -147,6 +157,25 @@ const FAMILY: Record<string, (v: Record<string, string>) => string> = {
     `पता: ${v.hospital_address}। ` +
     `नक्शा: ${v.map_link}। ` +
     `कैज़ुअल्टी डेस्क पर यह संदेश दिखाएँ और ${v.contact_person} से मिलें।`,
+  ta: (v) =>
+    `ஹாஜிர் பரிந்துரை ${v.code}: டாக்டர் ${v.doctor_name} அவர்கள் நோயாளிக்கு ${v.hospital_name}-இல் சிகிச்சைக்கு ஏற்பாடு செய்துள்ளார். ` +
+    `முகவரி: ${v.hospital_address}. ` +
+    `வரைபடம்: ${v.map_link}. ` +
+    `அவசரப் பிரிவு மேசையில் இந்தச் செய்தியைக் காட்டி ${v.contact_person} என்பவரைக் கேளுங்கள்.`,
+  te: (v) =>
+    `హాజిర్ రెఫరల్ ${v.code}: డా. ${v.doctor_name} గారు రోగికి ${v.hospital_name} లో చికిత్సకు ఏర్పాటు చేశారు. ` +
+    `చిరునామా: ${v.hospital_address}. ` +
+    `మ్యాప్: ${v.map_link}. ` +
+    `క్యాజువాల్టీ డెస్క్ వద్ద ఈ సందేశాన్ని చూపించి ${v.contact_person} గురించి అడగండి.`,
+};
+
+/** What the family is told to ask for when no contact name is known. */
+const FAMILY_DESK: Record<string, string> = {
+  en: "the casualty desk",
+  kn: "ಕ್ಯಾಶುವಾಲ್ಟಿ ಡೆಸ್ಕ್",
+  hi: "कैज़ुअल्टी डेस्क",
+  ta: "அவசரப் பிரிவு மேசை",
+  te: "క్యాజువాల్టీ డెస్క్",
 };
 
 /** The directions message for the family, in their language (English when unsupported). */
@@ -159,7 +188,7 @@ export function familyMessage(f: HandoffFacts, language: string): Rendered {
     hospital_name: f.hospital_name,
     hospital_address: f.hospital_address || f.hospital_name,
     map_link: mapLink(f.hospital_lat, f.hospital_lng),
-    contact_person: f.contact_person || (lang === "kn" ? "ಕ್ಯಾಶುವಾಲ್ಟಿ ಡೆಸ್ಕ್" : lang === "hi" ? "कैज़ुअल्टी डेस्क" : "the casualty desk"),
+    contact_person: f.contact_person || FAMILY_DESK[lang],
   };
   const body = tpl(vars);
   // No patient identifiers in this body; the recipient number is masked in the event instead.

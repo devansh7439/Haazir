@@ -1,6 +1,6 @@
-import { HOLD_BUFFER_MIN, HOLD_WAIT_MAX_S, MAX_WAVES, TIMEZONE, WAVE_TIMEOUT_S, env } from "@/lib/core/config";
+import { ARRIVAL_CHECK_AFTER_MIN, HOLD_BUFFER_MIN, HOLD_WAIT_MAX_S, MAX_WAVES, TIMEZONE, WAVE_TIMEOUT_S, env } from "@/lib/core/config";
 import { addMinutes, secondsBetween } from "@/lib/core/clock";
-import type { Attempt, Facility, Referral, ReferralStatus } from "@/lib/core/types";
+import type { Attempt, ClinicalFacts, Facility, HandoverFacts, Payer, Referral, ReferralStatus } from "@/lib/core/types";
 import { facilityArea, isAcceptance, planRedial, stillOnLine, withoutDemoTag } from "@/lib/modules/call/call.helper";
 import type { RedialPlan } from "@/lib/modules/call/call.type";
 import { isTerminal } from "@/lib/modules/call/status.helper";
@@ -18,6 +18,56 @@ export const ACTIVE: ReferralStatus[] = ["searching", "options_ready", "exhauste
 export const CANCELLABLE: ReferralStatus[] = ["searching", "options_ready", "confirming", "confirmed", "exhausted"];
 /** Referral statuses from which the doctor can close the referral. */
 export const CLOSABLE: ReferralStatus[] = [...CANCELLABLE, "cancelled"];
+
+/** The clinical facts of a form, with "unknown" and null where the doctor gave none. */
+export const clinicalFactsOf = (input: Partial<ClinicalFacts>): ClinicalFacts => ({
+  airway: input.airway ?? "unknown",
+  spo2: input.spo2 ?? null,
+  gcs: input.gcs ?? null,
+  on_oxygen: input.on_oxygen ?? null,
+  payer: input.payer ?? "unknown",
+  medico_legal: input.medico_legal ?? null,
+});
+
+/** The handover facts of a form, with "unknown" and null where the doctor gave none. A blank treatment note is none. */
+export const handoverFactsOf = (input: Partial<HandoverFacts>): HandoverFacts => ({
+  pregnancy_weeks: input.pregnancy_weeks ?? null,
+  trauma_mechanism: input.trauma_mechanism ?? "unknown",
+  infectious_risk: input.infectious_risk ?? "unknown",
+  treatment_given: input.treatment_given?.trim() || null,
+  blood_group: input.blood_group ?? "unknown",
+  blood_needed: input.blood_needed ?? null,
+});
+
+const MECHANISM_LABEL: Record<string, string> = {
+  road_accident: "Road accident",
+  fall: "Fall",
+  assault: "Assault",
+  burn: "Burn",
+  penetrating: "Penetrating injury",
+  other: "Other trauma",
+};
+const INFECTIOUS_LABEL: Record<string, string> = { airborne: "Airborne infection risk", contact: "Contact infection risk", bloodborne: "Blood-borne infection risk" };
+
+/** The facts line for the pre-arrival note; null when the doctor gave none. Handover facts are optional. */
+export const clinicalLine = (f: ClinicalFacts & Partial<HandoverFacts>): string | null => {
+  const parts = [
+    f.airway === "intubated" ? "Intubated" : f.airway === "own" ? "Not intubated" : null,
+    f.spo2 !== null ? `SpO2 ${f.spo2}%${f.on_oxygen === true ? " on oxygen" : f.on_oxygen === false ? " on room air" : ""}` : null,
+    f.gcs !== null ? `GCS ${f.gcs}` : null,
+    f.payer !== "unknown" ? `Payment: ${PAYER_LABEL[f.payer]}` : null,
+    f.medico_legal === true ? "Medico-legal case" : null,
+    f.pregnancy_weeks ? `Pregnant, ${f.pregnancy_weeks} weeks` : null,
+    f.trauma_mechanism ? MECHANISM_LABEL[f.trauma_mechanism] ?? null : null,
+    f.infectious_risk ? INFECTIOUS_LABEL[f.infectious_risk] ?? null : null,
+    f.blood_needed === true ? `Needs blood${f.blood_group && f.blood_group !== "unknown" ? ` (${f.blood_group})` : ""}` : null,
+    f.blood_needed !== true && f.blood_group && f.blood_group !== "unknown" ? `Blood group ${f.blood_group}` : null,
+    f.treatment_given ? `Given: ${f.treatment_given}` : null,
+  ].filter((p): p is string => !!p);
+  return parts.length ? parts.join(" · ") : null;
+};
+
+export const PAYER_LABEL: Record<Payer, string> = { free_govt: "free government", pmjay: "Ayushman Bharat", insurance: "insurance", cash: "cash", unknown: "" };
 
 /** The case in one short spoken sentence ("Man aged 34, suspected snakebite, critical"), for hold and release calls. */
 export const shortSummaryOf = (ctx: ReferralCtx, includeAcuity = true): string => {
@@ -109,6 +159,13 @@ export const planEvaluation = ({ referral: r, attempts, contacts }: EvaluationSn
 
   // 6. The hold has run out.
   if (r.status === "confirmed" && r.hold_expires_at && secondsBetween(r.hold_expires_at, now) > 0) steps.push({ kind: "hold_expired" });
+
+  // 7. Once the patient is due, ask the chosen hospital whether they have arrived. One check per referral.
+  const selected = attempts.find((a) => a.id === r.selected_attempt_id);
+  if (r.status === "confirmed" && selected && r.confirmed_at && !attempts.some((a) => a.purpose === "arrival_check")) {
+    const due = addMinutes(new Date(r.confirmed_at), (selected.eta_minutes ?? 0) + ARRIVAL_CHECK_AFTER_MIN);
+    if (now >= due) steps.push({ kind: "arrival_check", selected });
+  }
   return steps;
 };
 
@@ -132,7 +189,7 @@ export const handoffFacts = (input: {
     who: describeWho(r.age_value, r.age_unit, r.sex),
     case_label: ctx.template.label,
     acuity: r.acuity,
-    note: r.note,
+    note: [r.note, clinicalLine(r)].filter((p): p is string => !!p).join(" · ") || null,
     needs_labels: ctx.needs.map((n) => n.label),
     eta_minutes: selected.eta_minutes,
     transport: r.transport,

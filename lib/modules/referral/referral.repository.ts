@@ -23,8 +23,11 @@ export const ReferralRepository = {
       `insert into referrals
          (status, referrer_id, origin_facility_id, origin_lat, origin_lng, case_type, acuity, age_value, age_unit, sex,
           note, required_capabilities, spoken_summary, transport, search_radius_km, is_demo, created_at, updated_at,
-          client_request_id)
-       values ('searching', $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11::text[], $12, $13, $14, $15, $16, $16, $17)
+          client_request_id, airway, spo2, gcs, on_oxygen, payer, medico_legal,
+          pregnancy_weeks, trauma_mechanism, infectious_risk, treatment_given, blood_group, blood_needed,
+          transfer_consent, transfer_consent_at, transfer_reason)
+       values ('searching', $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11::text[], $12, $13, $14, $15, $16, $16, $17,
+               $18, $19, $20, $21, $22, $23, $24, $25, $26, $27, $28, $29, $30, $31, $32)
        on conflict (org_id, client_request_id) where client_request_id is not null do nothing
        returning *`,
       [
@@ -45,6 +48,21 @@ export const ReferralRepository = {
         r.is_demo,
         at,
         r.client_request_id,
+        r.airway,
+        r.spo2,
+        r.gcs,
+        r.on_oxygen,
+        r.payer,
+        r.medico_legal,
+        r.pregnancy_weeks,
+        r.trauma_mechanism,
+        r.infectious_risk,
+        r.treatment_given,
+        r.blood_group,
+        r.blood_needed,
+        r.transfer_consent,
+        r.transfer_consent_at,
+        r.transfer_reason,
       ],
     );
   },
@@ -60,6 +78,10 @@ export const ReferralRepository = {
     }
     return one<Referral>(`update referrals set ${set.sql} where id = $1${cond} returning *`, values);
   },
+
+  /** Sets treatment_started_at once. Null when it was already set. */
+  markTreatmentStarted: (id: string, at: Date): Promise<Referral | null> =>
+    one<Referral>(`update referrals set treatment_started_at = $2, updated_at = $2 where id = $1 and treatment_started_at is null returning *`, [id, at]),
 
   /** The atomic wave claim (CLAUDE.md rule 5, docs/03-data-model.md §5.4): only one caller can open a given wave. */
   claimWave: (id: string, expectedWave: number): Promise<Referral | null> => {

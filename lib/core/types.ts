@@ -7,13 +7,15 @@ export type AttemptStatus =
   | "queued" | "dialing" | "ringing" | "in_progress" | "wrapping_up"
   | "completed" | "no_answer" | "busy" | "failed" | "canceled";
 
-export type Purpose = "availability" | "hold_confirm" | "release" | "family_update";
+export type Purpose = "availability" | "hold_confirm" | "release" | "family_update" | "arrival_check";
 
 export const AVAILABILITY_OUTCOMES = [
   "accepted", "conditional", "declined", "redirected", "needs_doctor", "callback_later", "ivr_blocked", "unclear",
 ] as const;
 export type AvailabilityOutcome = (typeof AVAILABILITY_OUTCOMES)[number];
-export type Outcome = AvailabilityOutcome | "hold_confirmed" | "hold_declined" | "release_ack" | "family_informed";
+export type Outcome =
+  | AvailabilityOutcome
+  | "hold_confirmed" | "hold_declined" | "release_ack" | "family_informed" | "arrival_confirmed" | "not_arrived";
 
 export const BED_TYPES = ["icu_with_ventilator", "icu", "hdu", "nicu", "emergency_only", "ward", "none", "unknown"] as const;
 export type BedType = (typeof BED_TYPES)[number];
@@ -21,6 +23,70 @@ export type BedType = (typeof BED_TYPES)[number];
 export type Acuity = "critical" | "serious" | "stable";
 export type Sex = "male" | "female" | "other" | "unknown";
 export type AgeUnit = "days" | "months" | "years";
+
+export type Airway = "intubated" | "own" | "unknown";
+export type Payer = "free_govt" | "pmjay" | "insurance" | "cash" | "unknown";
+
+/** What a receiving doctor asks first. None of it identifies the patient (CLAUDE.md rule 1). */
+export interface ClinicalFacts {
+  airway: Airway;
+  spo2: number | null;
+  gcs: number | null;
+  on_oxygen: boolean | null;
+  payer: Payer;
+  medico_legal: boolean | null;
+}
+
+export const TRAUMA_MECHANISMS = ["not_trauma", "road_accident", "fall", "assault", "burn", "penetrating", "other", "unknown"] as const;
+export type TraumaMechanism = (typeof TRAUMA_MECHANISMS)[number];
+export const INFECTIOUS_RISKS = ["none", "airborne", "contact", "bloodborne", "unknown"] as const;
+export type InfectiousRisk = (typeof INFECTIOUS_RISKS)[number];
+export const BLOOD_GROUPS = ["A+", "A-", "B+", "B-", "AB+", "AB-", "O+", "O-", "unknown"] as const;
+export type BloodGroup = (typeof BLOOD_GROUPS)[number];
+
+/** What a receiving doctor asks after the vitals. None of it identifies the patient (CLAUDE.md rule 1). */
+export interface HandoverFacts {
+  pregnancy_weeks: number | null;
+  trauma_mechanism: TraumaMechanism;
+  infectious_risk: InfectiousRisk;
+  treatment_given: string | null;
+  blood_group: BloodGroup;
+  blood_needed: boolean | null;
+}
+
+/** The handover facts of a referral where the doctor gave none. */
+export const NO_HANDOVER_FACTS: HandoverFacts = {
+  pregnancy_weeks: null,
+  trauma_mechanism: "unknown",
+  infectious_risk: "unknown",
+  treatment_given: null,
+  blood_group: "unknown",
+  blood_needed: null,
+};
+
+export const TRANSFER_CONSENTS = ["patient", "attendant", "emergency_waiver"] as const;
+export type TransferConsent = (typeof TRANSFER_CONSENTS)[number];
+export const TRANSFER_REASONS = ["service_not_available", "needs_higher_care", "no_bed", "other"] as const;
+export type TransferReason = (typeof TRANSFER_REASONS)[number];
+
+/** Consent to the transfer itself, kept on the referral so the slip can show it (migration 0015). */
+export interface TransferRecord {
+  transfer_consent: TransferConsent | null;
+  transfer_consent_at: Date | string | null;
+  transfer_reason: TransferReason | null;
+}
+
+export const AMBULANCE_STATUSES = ["not_requested", "requested", "dispatched", "at_patient", "not_available"] as const;
+export type AmbulanceStatus = (typeof AMBULANCE_STATUSES)[number];
+
+/** Where the ambulance is, as the doctor last recorded it (migration 0017). Haazir does not book it. */
+export interface AmbulanceRecord {
+  ambulance_status: AmbulanceStatus;
+  ambulance_updated_at: Date | string | null;
+}
+
+/** The facts of a referral where the doctor gave none. */
+export const NO_CLINICAL_FACTS: ClinicalFacts = { airway: "unknown", spo2: null, gcs: null, on_oxygen: null, payer: "unknown", medico_legal: null };
 
 export interface Facility {
   id: string;
@@ -58,7 +124,7 @@ export interface Contact {
   active: boolean;
 }
 
-export interface Referral {
+export interface Referral extends ClinicalFacts, HandoverFacts, TransferRecord, AmbulanceRecord {
   id: string;
   org_id: string;
   code: string;
@@ -86,6 +152,8 @@ export interface Referral {
   confirmed_at: Date | string | null;
   closed_at: Date | string | null;
   close_reason: string | null;
+  /** When the receiving hospital began treating the patient, as recorded by the doctor; null until then (migration 0018). */
+  treatment_started_at: Date | string | null;
   is_demo: boolean;
   created_at: Date | string;
   updated_at: Date | string;
@@ -126,6 +194,9 @@ export interface Attempt {
   callback_due_at: Date | string | null;
   transcript: string | null;
   recording_url: string | null;
+  /** What Bolna charged for the call, in its own units, and the conversation length; set at `completed`. */
+  cost: number | null;
+  duration_s: number | null;
   extracted_data: unknown;
   dispatched_at: Date | string | null;
   answered_at: Date | string | null;
@@ -160,6 +231,9 @@ export interface CaseTemplate {
   clinician_reviewed: boolean;
 }
 
+export const VERIFICATION_STATUSES = ["unverified", "pending", "verified", "rejected"] as const;
+export type VerificationStatus = (typeof VERIFICATION_STATUSES)[number];
+
 export interface Referrer {
   id: string;
   org_id: string;
@@ -167,6 +241,12 @@ export interface Referrer {
   phone_e164: string;
   facility_id: string | null;
   languages: string[];
+  /** Medical registration number and the council that issued it (NMC or a state council); null until the doctor gives them. */
+  registration_no: string | null;
+  registration_council: string | null;
+  verification_status: VerificationStatus;
+  verified_at: Date | string | null;
+  verified_by: string | null;
 }
 
 export const DEFAULT_ORG_ID = "00000000-0000-4000-8000-000000000001";

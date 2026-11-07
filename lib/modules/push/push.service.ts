@@ -1,6 +1,8 @@
 import "server-only";
 import { env } from "@/lib/core/config";
 import { createLogger } from "@/lib/core/logger";
+import type { Referral } from "@/lib/core/types";
+import { SmsClient } from "@/lib/integrations/sms/sms.client";
 import { FacilityRepository } from "@/lib/modules/facility/facility.repository";
 import { PushRepository } from "@/lib/modules/push/push.repository";
 import type { PushKind } from "@/lib/modules/push/push.type";
@@ -30,6 +32,7 @@ const textFor = (kind: PushKind, code: string, hospital: string | null): Message
     case "hospital_called_back": return { title: `A hospital called back · ${code}`, body: `${who} called the line. Open Haazir.` };
     case "bed_held": return { title: `Bed held · ${code}`, body: `${who} confirmed the bed.` };
     case "bed_declined": return { title: `Bed no longer available · ${code}`, body: `${who} can't take the patient now. Choose another hospital.` };
+    case "not_arrived": return { title: `Patient not arrived · ${code}`, body: `${who} says the patient hasn't arrived. Open Haazir.` };
     case "exhausted": return { title: `No hospital accepted · ${code}`, body: "Open Haazir to call the desks or widen the search." };
   }
 };
@@ -60,6 +63,18 @@ const send = async (tokens: string[], message: Message, referralId: string): Pro
   if (dead.length > 0) log.info({ removed: dead.length }, "removed tokens Expo no longer accepts");
 };
 
+/**
+ * The same notification as a text message to the referring doctor's own number, for a phone with no data or an app that is
+ * closed. Plain characters only (the middle dot would turn it into a costlier Unicode message), and a link to the board.
+ */
+const sendSms = async (r: Referral, message: Message): Promise<void> => {
+  const doctor = await ReferralRepository.referrer(r.referrer_id);
+  if (!doctor?.phone_e164) return;
+  const link = env.appBaseUrl ? ` ${env.appBaseUrl.replace(/\/$/, "")}/referrals/${r.id}` : "";
+  const result = await SmsClient.deliver(doctor.phone_e164, `Haazir: ${message.title.replace(/ · /g, " ")}. ${message.body}${link}`);
+  if (result.status === "failed") log.warn({ referralId: r.id, error: result.error }, "text message not sent");
+};
+
 /** Push notifications to the doctor's phone (the mobile app). Best effort: a failure is logged and nothing else. */
 export const PushService = {
   /** Saves this device's token for the signed-in person. */
@@ -77,13 +92,18 @@ export const PushService = {
       const r = await ReferralRepository.get(referralId);
       if (!r) return;
       const tokens = (await PushRepository.forReferral(r.org_id, r.referrer_id)).map((t) => t.token);
-      if (tokens.length === 0) return;
+      const sms = env.smsProvider !== "none";
+      if (tokens.length === 0 && !sms) return;
       const facility = facilityId ? await FacilityRepository.get(facilityId) : null;
       const message = textFor(kind, r.code, facility ? spokenName(facility.name) : null);
-      const job = send(tokens, message, r.id)
-        .catch((err) => log.warn({ kind, err }, "push notification failed"))
-        .finally(() => pending.delete(job));
-      pending.add(job);
+      const run = (work: Promise<void>, what: string) => {
+        const job: Promise<void> = work
+          .catch((err) => log.warn({ kind, err }, `${what} failed`))
+          .finally(() => pending.delete(job));
+        pending.add(job);
+      };
+      if (tokens.length > 0) run(send(tokens, message, r.id), "push notification");
+      if (sms) run(sendSms(r, message), "text message");
     } catch (err) {
       log.warn({ kind, err }, "push notification skipped");
     }

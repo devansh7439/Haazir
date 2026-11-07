@@ -1,4 +1,5 @@
 import type { Acuity, Attempt, EventRow, Referral, ReferralStatus } from "@/lib/core/types";
+import type { NearestEmergency } from "@/lib/modules/facility/facility.type";
 import type { Audience } from "@/lib/modules/handoff/message.repository";
 
 /** A call as the board shows it, with its hospital and number. */
@@ -54,6 +55,10 @@ export interface ReferralView {
   messages: MessageView[];
   alerts: Alert[];
   portal_flags: Record<string, PortalFlag>;
+  /** When no hospital accepted, or the patient is critical and the search is running: the closest emergency departments to stabilise at. Empty otherwise. */
+  nearest_ed: NearestEmergency[];
+  /** Only when no hospital accepted: the numbers an admin listed to call beyond 108 and 112. Empty otherwise. */
+  escalation: Array<{ label: string; phone: string }>;
   tick_interval_ms: number;
   server_time: string;
 }

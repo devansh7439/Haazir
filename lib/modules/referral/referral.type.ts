@@ -1,4 +1,7 @@
-import type { Acuity, AgeUnit, Attempt, Capability, CaseTemplate, Contact, Facility, Referral, Referrer, Sex } from "@/lib/core/types";
+import type {
+  Acuity, AgeUnit, Airway, Attempt, BloodGroup, Capability, CaseTemplate, ClinicalFacts, Contact, Facility, HandoverFacts, InfectiousRisk, Payer,
+  Referral, Referrer, Sex, TransferConsent, TransferReason, TraumaMechanism,
+} from "@/lib/core/types";
 import type { MatchParams } from "@/lib/modules/facility/facility.type";
 import type { RankedFacility } from "@/lib/modules/facility/matching.helper";
 import type { DialTarget, RedialReason } from "@/lib/modules/call/call.type";
@@ -13,6 +16,21 @@ export interface ReferralInput {
   age_unit?: AgeUnit;
   sex?: Sex;
   note?: string | null;
+  airway?: Airway;
+  spo2?: number | null;
+  gcs?: number | null;
+  on_oxygen?: boolean | null;
+  payer?: Payer;
+  medico_legal?: boolean | null;
+  pregnancy_weeks?: number | null;
+  trauma_mechanism?: TraumaMechanism;
+  infectious_risk?: InfectiousRisk;
+  treatment_given?: string | null;
+  blood_group?: BloodGroup;
+  blood_needed?: boolean | null;
+  /** Who agreed to the transfer; recorded with the time it was created. Null when not asked. */
+  transfer_consent?: TransferConsent | null;
+  transfer_reason?: TransferReason | null;
   transport?: "ambulance" | "private_vehicle" | "unknown";
   search_radius_km?: number;
   origin_lat?: number;
@@ -52,7 +70,10 @@ export interface PreparedReferral {
 }
 
 /** The columns a new referral is inserted with. */
-export interface NewReferral {
+export interface NewReferral extends ClinicalFacts, HandoverFacts {
+  transfer_consent: TransferConsent | null;
+  transfer_consent_at: Date | null;
+  transfer_reason: TransferReason | null;
   referrer_id: string;
   origin_facility_id: string | null;
   origin_lat: number;
@@ -111,4 +132,5 @@ export type EvaluationStep =
   | { kind: "redial"; attempt: Attempt; target: DialTarget; reason: RedialReason }
   | { kind: "next_wave"; expectedWave: number; exhaustIfEmpty: boolean }
   | { kind: "exhaust" }
-  | { kind: "hold_expired" };
+  | { kind: "hold_expired" }
+  | { kind: "arrival_check"; selected: Attempt };

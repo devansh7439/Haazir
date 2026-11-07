@@ -2,7 +2,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import { GATE_COOKIE, SESSION_COOKIE, bearerToken, gateToken, verifySession } from "@/lib/modules/auth/gate.helper";
 
 // Routes that authenticate with their own secrets or signatures, plus the sign-in page.
-const PUBLIC = ["/api/bolna", "/api/cron", "/api/whatsapp", "/api/triggers", "/login", "/api/login", "/api/logout", "/api/mobile/config"];
+const PUBLIC = ["/api/bolna", "/api/bridge", "/api/cron", "/api/whatsapp", "/api/triggers", "/api/attachments", "/login", "/api/login", "/api/logout", "/api/mobile/config", "/hospital", "/api/hospital"];
 
 // Console gate. AUTH_MODE=users: a signed per-user session. Otherwise the shared DEMO_PASSCODE
 // (unset = no gate, for local development). Route handlers check the session again and scope data by organisation.

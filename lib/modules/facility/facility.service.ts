@@ -2,7 +2,9 @@ import "server-only";
 import type { Capability } from "@/lib/core/types";
 import { FacilityRepository } from "@/lib/modules/facility/facility.repository";
 import type { MatchParams } from "@/lib/modules/facility/facility.type";
-import { rankFacilities, type RankedFacility } from "@/lib/modules/facility/matching.helper";
+import { roadMinutes } from "@/lib/integrations/routing/routing.client";
+import { now } from "@/lib/core/clock";
+import { isNight, rankFacilities, withRoadMinutes, type RankedFacility } from "@/lib/modules/facility/matching.helper";
 
 /** The radius the "widen the search" suggestion offers. */
 const WIDE_RADIUS_KM = 80;
@@ -11,10 +13,11 @@ const WIDE_RADIUS_KM = 80;
 export const FacilityService = {
   /** Eligible hospitals, ranked, each with the number to call. Empty when none qualify. */
   rankEligible: async (params: MatchParams, needLabels: string[]): Promise<RankedFacility[]> => {
-    const rows = await FacilityRepository.eligible(params);
-    if (rows.length === 0) return [];
+    const found = await FacilityRepository.eligible(params);
+    if (found.length === 0) return [];
+    const rows = withRoadMinutes(found, await roadMinutes(params, found));
     const contacts = await FacilityRepository.contactsByFacility(rows.map((r) => r.id));
-    return rankFacilities(rows, contacts, needLabels);
+    return rankFacilities(rows, contacts, needLabels, isNight(now()));
   },
 
   /** When nobody qualifies: which change would find a hospital ("widen radius to 80 km", "remove: ventilator"). */

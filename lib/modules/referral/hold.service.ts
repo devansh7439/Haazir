@@ -13,6 +13,8 @@ import { noFollowUp, type FollowUp, type OutcomeSource } from "@/lib/modules/cal
 import { EventRepository } from "@/lib/modules/event/event.repository";
 import { FacilityRepository } from "@/lib/modules/facility/facility.repository";
 import { CONFIRMABLE, SELECTABLE, handoffFacts, holdUntil } from "@/lib/modules/referral/referral.helper";
+import { sbarFor } from "@/lib/modules/referral/sbar.helper";
+import { AttachmentService } from "@/lib/modules/attachment/attachment.service";
 import { EvaluationService } from "@/lib/modules/referral/evaluation.service";
 import { PushService } from "@/lib/modules/push/push.service";
 import { ReferralRepository } from "@/lib/modules/referral/referral.repository";
@@ -161,7 +163,12 @@ export const HoldService = {
     ]);
     if (!selected || !facility) return;
     const contactPerson = hold?.contact_person || selected.contact_person;
-    const facts = handoffFacts({ ctx, selected, facility, patient, contactPerson, now: now() });
+    const links = await AttachmentService.hospitalLinks(r);
+    const facts = {
+      ...handoffFacts({ ctx, selected, facility, patient, contactPerson, now: now() }),
+      sbar: sbarFor(ctx, selected),
+      attachment_links: links.map((l) => `${l.label}: ${l.url}`),
+    };
     const prearrival = preArrivalNote(facts);
     await WhatsAppService.send({
       referral_id: r.id,

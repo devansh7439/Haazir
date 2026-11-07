@@ -110,6 +110,10 @@ export function attemptDisplay(a: AttemptLike, nowMs: number): Display {
       return { tone: "red", icon: "x", text: "Bed no longer available", group: "not_available" };
     case "release_ack":
       return { tone: "grey", icon: "check", text: "Released", group: "not_available" };
+    case "arrival_confirmed":
+      return { tone: "green", icon: "check", text: "Patient arrived", group: "accepted" };
+    case "not_arrived":
+      return { tone: "purple", icon: "help", text: "Not arrived yet", group: "waiting" };
   }
   switch (a.status) {
     case "queued":
@@ -209,6 +213,12 @@ export function eventText(e: EventLike, facilityName: (id: unknown) => string): 
       return `WhatsApp to ${p.audience === "receiving_facility" ? "hospital" : p.audience === "referrer" ? "you" : "family"}: ${p.status}`;
     case "release_dispatched":
       return `Releasing ${f()}`;
+    case "arrival_check_dispatched":
+      return `Asking ${f()} whether the patient has arrived`;
+    case "arrival_confirmed":
+      return `${f()} says the patient has arrived`;
+    case "not_arrived":
+      return `${f()} says the patient has not arrived yet`;
     case "hold_expired":
       return "Hold expired";
     case "referral_exhausted":

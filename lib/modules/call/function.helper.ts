@@ -12,6 +12,21 @@ export const isUuid = (value: string | null | undefined): value is string => !!v
 export const isContradictoryYes = (outcome: AvailabilityOutcome, bedType: string | null): boolean =>
   (outcome === "accepted" || outcome === "conditional") && bedType === "none";
 
+/**
+ * A yes whose desk then says the specialist or equipment the patient needs is not there or not working right now is a
+ * conditional yes: the doctor sees what is missing and decides (CLAUDE.md rule 10: never "accepted" from a doubtful answer).
+ */
+export const withNeedsCheck = (
+  outcome: AvailabilityOutcome,
+  needsReady: "yes" | "no" | null,
+  unavailable: string | null,
+  conditions: string | null,
+): { outcome: AvailabilityOutcome; conditions: string | null } => {
+  if (needsReady !== "no" || (outcome !== "accepted" && outcome !== "conditional")) return { outcome, conditions };
+  const missing = `Not available right now: ${unavailable ?? "something the patient needs"}`;
+  return { outcome: "conditional", conditions: conditions ? `${missing} · ${conditions}` : missing };
+};
+
 /** Whether the patient no longer needs this hospital: placed at another one, or the referral was cancelled. */
 export const lateYesReason = (r: Referral | null, attemptId: string): "placed_elsewhere" | "no_longer_needed" | null => {
   if (!r) return null;

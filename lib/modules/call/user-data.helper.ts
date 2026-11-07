@@ -9,12 +9,16 @@ export const CALL_PREFIX_TEST: Record<string, string> = {
   en: "This is a test call agreed with your hospital. ",
   hi: "यह आपके अस्पताल की अनुमति से किया गया एक टेस्ट कॉल है। ",
   kn: "ಇದು ನಿಮ್ಮ ಆಸ್ಪತ್ರೆಯ ಅನುಮತಿಯೊಂದಿಗೆ ಮಾಡುತ್ತಿರುವ ಪರೀಕ್ಷಾ ಕರೆ. ",
+  ta: "இது உங்கள் மருத்துவமனையின் ஒப்புதலுடன் செய்யப்படும் சோதனை அழைப்பு. ",
+  te: "ఇది మీ ఆసుపత్రి అనుమతితో చేస్తున్న టెస్ట్ కాల్. ",
 };
 
 const ACCEPTED_BY_FALLBACK: Record<string, string> = {
   en: "your desk",
   hi: "आपकी डेस्क",
   kn: "ನಿಮ್ಮ ಡೆಸ್ಕ್",
+  ta: "உங்கள் டெஸ்க்",
+  te: "మీ డెస్క్",
 };
 
 const BED_PHRASE: Record<string, string> = {
@@ -56,12 +60,16 @@ function base(ctx: CallContext) {
 /** The `user_data` for an availability call. It carries no patient name or phone (CLAUDE.md rule 1). */
 export function availabilityUserData(
   ctx: CallContext,
-  c: { case_summary: string; needs_spoken: string; eta_minutes: number | null },
+  c: { case_summary: string; needs_spoken: string; eta_minutes: number | null; known_facts?: string; night_note?: string },
 ): Record<string, string> {
   return {
     ...base(ctx),
     case_summary: c.case_summary,
     needs_spoken: c.needs_spoken,
+    // At night, which needed services this hospital has only in the daytime; empty otherwise (always sent, so the token is never spoken).
+    night_note: c.night_note ?? "",
+    // What the agent may answer if asked (airway, vitals, payer, medico-legal); never an identifier.
+    known_facts: c.known_facts ?? "Nothing else was given.",
     eta_minutes: String(c.eta_minutes ?? ""),
   };
 }
@@ -93,6 +101,11 @@ export function holdConfirmUserData(
     eta_minutes: String(eta),
     hold_until_spoken: `for the next ${eta + HOLD_BUFFER_MIN} minutes`,
   };
+}
+
+/** The `user_data` for the arrival check: one question to the chosen hospital, once the patient is due. */
+export function arrivalCheckUserData(ctx: CallContext, c: { case_summary_short: string; eta_minutes: number | null }): Record<string, string> {
+  return { ...base(ctx), case_summary_short: c.case_summary_short, eta_minutes: String(c.eta_minutes ?? "") };
 }
 
 /** The `user_data` for a call that tells a hospital it no longer needs to hold the bed. */

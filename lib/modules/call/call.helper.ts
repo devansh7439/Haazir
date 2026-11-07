@@ -5,6 +5,12 @@ import type { DialTarget, RedialPlan } from "@/lib/modules/call/call.type";
 import { isTerminal } from "@/lib/modules/call/status.helper";
 import { chooseContact } from "@/lib/modules/facility/matching.helper";
 
+/** Languages every Bolna agent has a welcome for (bolna/prompts/*.md). Bolna returns 400 for any other `agent_data.language`. */
+export const CALL_LANGUAGES = ["en", "hi", "kn", "ta", "te"];
+
+/** The language to start a call in: the desk's own when an agent speaks it, English otherwise. */
+export const callLanguage = (language: string): string => (CALL_LANGUAGES.includes(language) ? language : "en");
+
 /** A yes, with or without a condition. */
 export const isAcceptance = (a: Pick<Attempt, "outcome">): boolean => a.outcome === "accepted" || a.outcome === "conditional";
 

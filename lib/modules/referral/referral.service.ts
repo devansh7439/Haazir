@@ -2,8 +2,9 @@ import "server-only";
 import { ACTIVE_LIVE_WINDOW_H, DEFAULT_RADIUS_KM, WAVE_SIZE, env } from "@/lib/core/config";
 import { addMinutes, now } from "@/lib/core/clock";
 import { ApiError } from "@/lib/core/error";
+import { mayRefer } from "@/lib/modules/auth/registration.helper";
 import { normalizePhone } from "@/lib/core/normalize";
-import type { Attempt, Referral } from "@/lib/core/types";
+import type { AmbulanceStatus, Attempt, Referral } from "@/lib/core/types";
 import { stopCall } from "@/lib/integrations/bolna/bolna.client";
 import { buildSpokenSummary, checkNote } from "@/lib/modules/referral/summary.helper";
 import { CallRepository } from "@/lib/modules/call/call.repository";
@@ -14,7 +15,7 @@ import { FacilityRepository } from "@/lib/modules/facility/facility.repository";
 import { FacilityService } from "@/lib/modules/facility/facility.service";
 import type { MatchParams } from "@/lib/modules/facility/facility.type";
 import { applyEtaCap } from "@/lib/modules/facility/matching.helper";
-import { CANCELLABLE, CLOSABLE } from "@/lib/modules/referral/referral.helper";
+import { CANCELLABLE, CLOSABLE, clinicalFactsOf, handoverFactsOf } from "@/lib/modules/referral/referral.helper";
 import { EvaluationService } from "@/lib/modules/referral/evaluation.service";
 import { ReferralRepository } from "@/lib/modules/referral/referral.repository";
 import type { PreparedReferral, ReferralInput } from "@/lib/modules/referral/referral.type";
@@ -26,6 +27,9 @@ const prepare = async (input: ReferralInput, orgId?: string): Promise<PreparedRe
   const referrer = await ReferralRepository.referrer(input.referrer_id);
   // A referrer from another organisation is reported exactly like a missing one.
   if (!referrer || (orgId && referrer.org_id !== orgId)) throw ApiError.unprocessable("UNKNOWN_REFERRER", "Referrer not found");
+  if (!mayRefer(referrer.verification_status, env.requireVerifiedReferrer)) {
+    throw ApiError.unprocessable("REFERRER_NOT_VERIFIED", "Your medical registration has not been verified yet. Ask an admin to verify it.");
+  }
   const origin = referrer.facility_id ? await FacilityRepository.get(referrer.facility_id) : null;
   const lat = origin?.lat ?? input.origin_lat;
   const lng = origin?.lng ?? input.origin_lng;
@@ -41,6 +45,14 @@ const prepare = async (input: ReferralInput, orgId?: string): Promise<PreparedRe
   if (needs.length === 0 && input.case_type !== "other") throw ApiError.unprocessable("NEEDS_REQUIRED", "Choose at least one need");
   const noteCheck = checkNote(input.note);
   if (noteCheck.blocked) throw ApiError.unprocessable("NOTE_CONTAINS_IDENTIFIER", noteCheck.errors[0], { errors: noteCheck.errors });
+  // Treatment given is read to a desk that asks, so it is held to the same rule as the note.
+  const treatmentCheck = checkNote(input.treatment_given);
+  if (treatmentCheck.blocked) {
+    throw ApiError.unprocessable("TREATMENT_CONTAINS_IDENTIFIER", treatmentCheck.errors[0], { errors: treatmentCheck.errors });
+  }
+  if (input.pregnancy_weeks && input.sex === "male") {
+    throw ApiError.unprocessable("PREGNANCY_NOT_APPLICABLE", "Pregnancy weeks can't be given for a male patient");
+  }
 
   const spoken_summary = buildSpokenSummary({
     age_value: input.age_value ?? null,
@@ -50,6 +62,8 @@ const prepare = async (input: ReferralInput, orgId?: string): Promise<PreparedRe
     acuity: input.acuity,
     note: input.note,
     needs_spoken_list: needs.map((n) => n.spoken_en),
+    facts: clinicalFactsOf(input),
+    handover: handoverFactsOf(input),
   });
   const params: MatchParams = {
     lat,
@@ -61,7 +75,7 @@ const prepare = async (input: ReferralInput, orgId?: string): Promise<PreparedRe
   };
   const ranked = await FacilityService.rankEligible(params, needs.map((n) => n.label));
   const { kept, skipped } = applyEtaCap(ranked, env.maxEtaMinutes(input.acuity));
-  return { referrer, origin, template, needs, params, spoken_summary, warnings: noteCheck.warnings, ranked: kept, skipped_far: skipped };
+  return { referrer, origin, template, needs, params, spoken_summary, warnings: [...noteCheck.warnings, ...treatmentCheck.warnings], ranked: kept, skipped_far: skipped };
 };
 
 /** The referral an earlier press of the same "Find a bed" created, with its calls; null when this is the first. */
@@ -143,6 +157,11 @@ export const ReferralService = {
         age_unit: input.age_unit ?? "years",
         sex: input.sex ?? "unknown",
         note: input.note?.trim() || null,
+        ...clinicalFactsOf(input),
+        ...handoverFactsOf(input),
+        transfer_consent: input.transfer_consent ?? null,
+        transfer_consent_at: input.transfer_consent ? t : null,
+        transfer_reason: input.transfer_reason ?? null,
         required_capabilities: p.params.needs,
         spoken_summary: p.spoken_summary,
         transport: input.transport ?? "ambulance",
@@ -179,6 +198,31 @@ export const ReferralService = {
     const ctx = await ReferralRepository.context(claimed ?? referral);
     const attempts = claimed ? await CallService.dispatchWave(ctx, 1, p.ranked) : [];
     return { referral: claimed ?? referral, attempts };
+  },
+
+  /**
+   * Records where the ambulance is. Haazir does not book it; the doctor does that with 108 or the hospital. 409 once the
+   * referral was cancelled or closed.
+   */
+  recordAmbulance: async (referral: Referral, status: AmbulanceStatus): Promise<Referral> => {
+    const updated = await ReferralRepository.update(referral.id, { ambulance_status: status, ambulance_updated_at: now() }, CANCELLABLE);
+    if (!updated) throw ApiError.conflict("NOT_RECORDABLE", `Referral is ${referral.status}`);
+    await EventRepository.add(referral.id, "ambulance_status", { status });
+    return updated;
+  },
+
+  /**
+   * Records that the receiving hospital began treating the patient. Idempotent: the first record wins and a repeat changes
+   * nothing. 409 until a bed is confirmed.
+   */
+  recordTreatmentStarted: async (referral: Referral): Promise<Referral> => {
+    if (referral.status !== "confirmed" && referral.status !== "closed") {
+      throw ApiError.conflict("NOT_RECORDABLE", "Treatment can be recorded once a hospital has confirmed the bed");
+    }
+    if (referral.treatment_started_at) return referral;
+    const updated = await ReferralRepository.markTreatmentStarted(referral.id, now());
+    if (updated) await EventRepository.add(referral.id, "treatment_started", {});
+    return updated ?? (await ReferralRepository.get(referral.id)) ?? referral;
   },
 
   /** Stops the search. Queued calls are stopped; calls already ringing finish. Returns the follow-up (releases). */
@@ -229,6 +273,10 @@ export const ReferralService = {
         age_unit: r.age_unit,
         sex: r.sex,
         note: r.note,
+        ...clinicalFactsOf(r),
+        ...handoverFactsOf(r),
+        transfer_consent: r.transfer_consent,
+        transfer_reason: r.transfer_reason,
         transport: r.transport as ReferralInput["transport"],
         search_radius_km: Math.max(radiusKm, r.search_radius_km + 1),
         origin_lat: r.origin_lat,

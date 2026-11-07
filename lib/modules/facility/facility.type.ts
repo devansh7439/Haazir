@@ -10,8 +10,23 @@ export interface MatchParams {
   org_id: string;
 }
 
+/** A hospital the doctor can stabilise the patient at when nobody accepts: it has a casualty desk number. */
+export interface NearestEmergency {
+  facility_id: string;
+  name: string;
+  kind: string;
+  distance_km: number;
+  /** Straight line × 1.4 at 30 km/h, like the ranking's fallback; not a road time. */
+  eta_minutes: number;
+  phone: string;
+}
+
 /** A hospital as the Hospitals page lists it: its capabilities, numbers and call record. */
 export interface FacilityListItem extends Facility {
+  /** Set from the hospital's own desk screen: new searches skip it until then. */
+  full_until?: string | null;
+  /** The declared capabilities that are only there in the daytime. */
+  day_only?: string[];
   capabilities: string[];
   contacts: Contact[];
   availability_calls: number;

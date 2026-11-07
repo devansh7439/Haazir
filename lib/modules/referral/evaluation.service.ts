@@ -61,6 +61,9 @@ const applyStep = async (
     case "exhaust":
       await exhaust(r.id, actions);
       return;
+    case "arrival_check":
+      if (await CallService.dispatchArrivalCheck(await getCtx(), step.selected)) actions.push("arrival_check_dispatched");
+      return;
     case "hold_expired":
       if (await EventRepository.addOnce(r.id, "hold_expired", { facility_id: r.selected_facility_id })) actions.push("hold_expired");
       return;
