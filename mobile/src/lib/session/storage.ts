@@ -1,15 +1,16 @@
-import * as SecureStore from "expo-secure-store";
-import { Platform } from "react-native";
+import * as SecureStore from 'expo-secure-store';
+import { Platform } from 'react-native';
 
 // The token goes in the platform's secure store (Keychain, Keystore). On the web build, which is only a preview,
 // SecureStore doesn't exist, so localStorage stands in. Every call tolerates storage being unavailable.
 
-const web = Platform.OS === "web";
+const web = Platform.OS === 'web';
 
+/** The phone's keychain (a browser's local storage on the web preview) for small secrets; every call quietly does nothing if storage is unavailable. */
 export const storage = {
   async get(key: string): Promise<string | null> {
     try {
-      return web ? globalThis.localStorage?.getItem(key) ?? null : await SecureStore.getItemAsync(key);
+      return web ? (globalThis.localStorage?.getItem(key) ?? null) : await SecureStore.getItemAsync(key);
     } catch {
       return null;
     }

@@ -1,4 +1,5 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { t } from '../lib/i18n';
 
 /**
  * Loads data once, and again on `reload` (pull to refresh) or when `deps` change. Only the newest request may set
@@ -26,7 +27,7 @@ export function useLoad<T>(load: () => Promise<T>, deps: readonly unknown[]) {
       setError(null);
     } catch (err) {
       if (mine !== seq.current) return;
-      setError(err instanceof Error ? err.message : "Something went wrong");
+      setError(err instanceof Error ? err.message : t('Something went wrong'));
     } finally {
       if (mine === seq.current) {
         setLoading(false);
@@ -36,7 +37,6 @@ export function useLoad<T>(load: () => Promise<T>, deps: readonly unknown[]) {
   }, []);
 
   useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect -- loading data when the screen opens or its inputs change
     void run(false);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, deps);

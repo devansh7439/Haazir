@@ -1,6 +1,7 @@
-import { useEffect, useState } from "react";
-import { api } from "../../api/client";
-import { PreviewSchema, type Preview } from "../../api/schema";
+import { useEffect, useState } from 'react';
+import { api } from '../../../api/client';
+import { PreviewSchema, type Preview } from '../../../api/schema';
+import { t } from '../../../lib/i18n';
 
 /** Wait this long after the last change before asking for a preview. */
 const DEBOUNCE_MS = 400;
@@ -17,22 +18,22 @@ export function useReferralPreview(body: Record<string, unknown>, caseType: stri
 
   useEffect(() => {
     if (!caseType) return;
-    const ctl = new AbortController();
+    const controller = new AbortController();
     const timer = setTimeout(async () => {
       setLoading(true);
       try {
-        const next = await api("/api/referrals/preview", PreviewSchema, { body: JSON.parse(key), signal: ctl.signal });
+        const next = await api('/api/referrals/preview', PreviewSchema, { body: JSON.parse(key), signal: controller.signal });
         setPreview(next);
         setError(null);
       } catch (err) {
-        if (ctl.signal.aborted) return;
-        setError(err instanceof Error ? err.message : "Preview failed");
+        if (controller.signal.aborted) return;
+        setError(err instanceof Error ? err.message : t('Preview failed'));
       }
       setLoading(false);
     }, DEBOUNCE_MS);
     return () => {
       clearTimeout(timer);
-      ctl.abort();
+      controller.abort();
     };
   }, [key, caseType]);
 

@@ -1,25 +1,26 @@
-import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
-import { ApiError, api, configureApi } from "../api/client";
-import { BootstrapSchema, ConfigSchema, LoginSchema, type Bootstrap } from "../api/schema";
-import { normalizeServerUrl } from "../lib/url";
-import { unregisterPush } from "../push/push";
-import { storage } from "./storage";
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
+import { ApiError, api, configureApi } from '../../api/client';
+import { BootstrapSchema, ConfigSchema, LoginSchema, type Bootstrap } from '../../api/schema';
+import { normalizeServerUrl } from '../url';
+import { unregisterPush } from '../push/push';
+import { storage } from './storage';
+import { t } from '../i18n';
 
-const SESSION_KEY = "haazir.session";
-const SERVER_KEY = "haazir.server";
+const SESSION_KEY = 'haazir.session';
+const SERVER_KEY = 'haazir.server';
 
 export type Credentials = { passcode: string } | { email: string; password: string };
 
 type State =
-  | { status: "loading" }
-  | { status: "signedOut"; serverUrl: string }
-  | { status: "unreachable"; message: string }
-  | { status: "signedIn"; serverUrl: string; boot: Bootstrap };
+  | { status: 'loading' }
+  | { status: 'signedOut'; serverUrl: string }
+  | { status: 'unreachable'; message: string }
+  | { status: 'signedIn'; serverUrl: string; boot: Bootstrap };
 
 interface SessionApi {
   state: State;
   /** Asks the server how people sign in, before anyone is signed in. */
-  authMode: (serverUrl: string) => Promise<"passcode" | "users">;
+  authMode: (serverUrl: string) => Promise<'passcode' | 'users'>;
   signIn: (serverUrl: string, credentials: Credentials) => Promise<void>;
   signOut: () => Promise<void>;
   /** Reloads the case templates and the referrer. */
@@ -31,26 +32,26 @@ const Ctx = createContext<SessionApi | null>(null);
 
 /** The signed-in person, the server they use and the data the forms need. Restores itself from secure storage. */
 export function SessionProvider({ children }: { children: ReactNode }) {
-  const [state, setState] = useState<State>({ status: "loading" });
-  const serverRef = useRef("");
+  const [state, setState] = useState<State>({ status: 'loading' });
+  const serverRef = useRef('');
 
   const signOut = useCallback(async () => {
     await unregisterPush(); // while the token is still valid
     configureApi(null);
     await storage.remove(SESSION_KEY);
-    setState({ status: "signedOut", serverUrl: serverRef.current });
+    setState({ status: 'signedOut', serverUrl: serverRef.current });
   }, []);
 
   const open = useCallback(
     async (serverUrl: string, token: string | null) => {
       configureApi({ baseUrl: serverUrl, token, onUnauthorized: () => void signOut() });
-      return api("/api/mobile/bootstrap", BootstrapSchema);
+      return api('/api/mobile/bootstrap', BootstrapSchema);
     },
     [signOut],
   );
 
   const restore = useCallback(async () => {
-    serverRef.current = (await storage.get(SERVER_KEY)) ?? process.env.EXPO_PUBLIC_API_URL ?? "";
+    serverRef.current = (await storage.get(SERVER_KEY)) ?? process.env.EXPO_PUBLIC_API_URL ?? '';
     const saved = await storage.get(SESSION_KEY);
     let session: { serverUrl: string; token: string | null } | null = null;
     try {
@@ -58,14 +59,14 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     } catch {
       session = null;
     }
-    if (!session?.serverUrl) return setState({ status: "signedOut", serverUrl: serverRef.current });
+    if (!session?.serverUrl) return setState({ status: 'signedOut', serverUrl: serverRef.current });
     try {
       const boot = await open(session.serverUrl, session.token);
-      setState({ status: "signedIn", serverUrl: session.serverUrl, boot });
+      setState({ status: 'signedIn', serverUrl: session.serverUrl, boot });
     } catch (err) {
       // A 401 already signed the person out. Anything else (no network) keeps the session and offers a retry.
       if (!(err instanceof ApiError && err.status === 401)) {
-        setState({ status: "unreachable", message: err instanceof Error ? err.message : "Can't reach the server" });
+        setState({ status: 'unreachable', message: err instanceof Error ? err.message : t('Can’t reach the server') });
       }
     }
   }, [open]);
@@ -80,13 +81,13 @@ export function SessionProvider({ children }: { children: ReactNode }) {
       state,
       authMode: async (serverUrl) => {
         const base = normalizeServerUrl(serverUrl);
-        if (!base) throw new ApiError(0, "BAD_URL", "That doesn't look like a server address");
-        return (await api("/api/mobile/config", ConfigSchema, { baseUrl: base })).auth_mode;
+        if (!base) throw new ApiError(0, 'BAD_URL', t('That doesn’t look like a server address'));
+        return (await api('/api/mobile/config', ConfigSchema, { baseUrl: base })).auth_mode;
       },
       signIn: async (serverUrl, credentials) => {
         const base = normalizeServerUrl(serverUrl);
-        if (!base) throw new ApiError(0, "BAD_URL", "That doesn't look like a server address");
-        const { token } = await api("/api/login", LoginSchema, { baseUrl: base, body: credentials, mobileLogin: true });
+        if (!base) throw new ApiError(0, 'BAD_URL', t('That doesn’t look like a server address'));
+        const { token } = await api('/api/login', LoginSchema, { baseUrl: base, body: credentials, mobileLogin: true });
         let boot: Bootstrap;
         try {
           boot = await open(base, token);
@@ -97,16 +98,16 @@ export function SessionProvider({ children }: { children: ReactNode }) {
         serverRef.current = base;
         await storage.set(SERVER_KEY, base);
         await storage.set(SESSION_KEY, JSON.stringify({ serverUrl: base, token }));
-        setState({ status: "signedIn", serverUrl: base, boot });
+        setState({ status: 'signedIn', serverUrl: base, boot });
       },
       signOut,
       reload: async () => {
         const s = state;
-        if (s.status !== "signedIn") return;
-        setState({ ...s, boot: await api("/api/mobile/bootstrap", BootstrapSchema) });
+        if (s.status !== 'signedIn') return;
+        setState({ ...s, boot: await api('/api/mobile/bootstrap', BootstrapSchema) });
       },
       retry: () => {
-        setState({ status: "loading" });
+        setState({ status: 'loading' });
         void restore();
       },
     }),
@@ -116,15 +117,16 @@ export function SessionProvider({ children }: { children: ReactNode }) {
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
 }
 
+/** The session: who is signed in, and the ways to sign in, sign out and try again. It throws outside the provider. */
 export function useSession(): SessionApi {
   const v = useContext(Ctx);
-  if (!v) throw new Error("useSession must be used inside SessionProvider");
+  if (!v) throw new Error('useSession must be used inside SessionProvider');
   return v;
 }
 
 /** The signed-in state; only for screens that sit behind the sign-in gate. */
-export function useSignedIn(): Extract<State, { status: "signedIn" }> & Pick<SessionApi, "signOut" | "reload"> {
+export function useSignedIn(): Extract<State, { status: 'signedIn' }> & Pick<SessionApi, 'signOut' | 'reload'> {
   const { state, signOut, reload } = useSession();
-  if (state.status !== "signedIn") throw new Error("useSignedIn outside the signed-in area");
+  if (state.status !== 'signedIn') throw new Error('useSignedIn outside the signed-in area');
   return { ...state, signOut, reload };
 }

@@ -1,6 +1,6 @@
 # Haazir mobile
 
-The doctor's phone app for Haazir: start a referral, watch hospitals answer live, pick one, call a desk. Expo (SDK 58) with Expo Router, TypeScript strict. It talks to the same server as the web console and adds no server of its own.
+The doctor's phone app for Haazir: start a referral, watch hospitals answer live, pick one, call a desk. Expo (SDK 58) with React Navigation (bottom tabs and a native stack), TypeScript strict. Its folder layout and English and Hindi switch follow the MARCOFED app; the look is warmer than the web console's, closer to RaktKhoj, with colours, radii and shadow taken from raktkhoj.org: a crimson brand (AA-safe steps of #E8394C) on a warm-grey page (#F6F4F2) with white bars, cards and chips and warm hairlines, RaktKhoj's top bar on Home (logo and wordmark, EN / हिं switch, account button), rose-and-crimson picked chips, dashed empty states, a crimson hero on Home with the network's numbers, flat cards on hairlines (shadow only on what floats), hand-drawn illustrations in `src/components/ui/illustrations.ts` (a phone calling three hospitals, a held bed, nobody answering, an empty list; each shows something that really happens, drawn in ink with an offset flat fill), no pulses or rings, Inter for text and Inter Tight for headings. It talks to the same server as the web console and adds no server of its own.
 
 ## Run it
 
@@ -22,12 +22,32 @@ bun run lint           # eslint (eslint-config-expo)
 bun run export:web     # browser build in dist/ (a preview; the app targets iOS and Android)
 ```
 
+## How it is laid out
+
+```
+src/
+  App.tsx            fonts, language, session, navigation container
+  theme/             design tokens (colour, type, space, motion); screens never write a raw hex or font size
+  components/ui/     Screen, ScreenHeader, Button, Card, TextField, FilterChip, BottomSheet, Banner, StatusPill, TabBar ...
+  navigation/        RootNavigator (signed in or not), MainTabs, route types
+  features/<area>/   screens/ and components/ for account, auth, board, hospitals, referral, referrals
+  lib/               i18n (English and Hindi), session, push, and the copies of the web's display logic
+  api/               the typed client and the zod schemas
+```
+
+## Languages
+
+The app shows English or Hindi, chosen on the sign-in screen or in Account, and remembered on the phone. Every text goes through `t('English text')` (or `phrase()` for a constant); the Hindi is in `src/lib/i18n/hindi.ts`, keyed by the English. Text missing there shows in English. Text the server sends (case names, service names, hospital names) is shown as sent.
+
+`src/lib/display.ts` and `board.ts` are kept identical to the web's, so they return English; `src/lib/localize.ts` translates their output. `bun run strings > strings.csv` lists every text with its Hindi. `tests/mobile-i18n.test.ts` (root) fails when a text has no Hindi or loses a `{placeholder}`.
+
 ## What it does
 
 | Tab / screen | What |
 |---|---|
 | Sign in | Server address, then passcode or email and password. The token is kept in the Keychain or Keystore (SecureStore). |
-| New referral | Referrals doctors sent by WhatsApp appear at the top; Review pre-fills the form. Case, needs, acuity, age, sex, note, optional patient and family details with consent, search distance, optional "start from my location". A live preview shows exactly what hospitals will hear and who will be phoned. One request id per form makes a double tap safe. |
+| Home (hospital directory) | The first tab. A "Find a bed" button on top, then the directory: search, filter by service, call a desk, directions. Three tabs: Home, Referrals, Account. |
+| Find a bed (opened from Home) | Five steps with Back and Next and a numbered progress bar, each in a numbered card as on raktkhoj.org. 1 Patient: age, sex, urgency, "Condition now" (awake, breathing, time since onset, SpO₂, blood pressure, what has been done) and private patient and family details with consent. 2 Case: the case as a vertical list and an optional note. The taps from step 1 are joined into the note hospitals hear (`features/referral/clinical.helper.ts`, kept under 160 characters). 3 Needs. 4 Search: this phone or your centre, and the distance. 5 Review: a "Before you submit" checklist, the nearest capable hospitals ranked by distance and travel time, what they will hear, and send. Referrals doctors sent by WhatsApp appear at the top of step 1; Review pre-fills the form. Haazir still phones every capable hospital at once. One request id per form makes a double tap safe. The live board replaces this screen, so Back goes to Home. |
 | Live board (`referral/[id]`) | Timers, a card per hospital grouped by answer, alerts when a desk asks for the doctor, select a hospital (call to confirm, or "I already confirmed by phone"), call desk, redial, route in Maps, record an outcome by hand, the bed-hold panel with the WhatsApp handoff, family call and released hospitals, patient arrived, cancel, widen when nobody accepted, and the activity feed. |
 | Referrals | In progress first, then earlier ones. |
 | Hospitals | Search, a service filter (a sheet with a live count), Google star ratings when the server has a Places key, desk numbers to call, directions. |

@@ -1,4 +1,5 @@
-import type { ZodType, ZodTypeDef } from "zod";
+import type { ZodType, ZodTypeDef } from 'zod';
+import { t } from '../lib/i18n';
 
 /** A failed call: the server's stable error code and message, or NETWORK, TIMEOUT or BAD_RESPONSE. */
 export class ApiError extends Error {
@@ -8,7 +9,7 @@ export class ApiError extends Error {
     message: string,
   ) {
     super(message);
-    this.name = "ApiError";
+    this.name = 'ApiError';
   }
 }
 
@@ -28,7 +29,7 @@ export function configureApi(next: ApiConfig | null): void {
 }
 
 export interface CallOptions {
-  method?: "GET" | "POST" | "PUT" | "PATCH" | "DELETE";
+  method?: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE';
   body?: unknown;
   /** Send the mobile marker so the server returns the session token in the body. */
   mobileLogin?: boolean;
@@ -38,8 +39,8 @@ export interface CallOptions {
 }
 
 const messageOf = (body: unknown, fallback: string): { code: string; message: string } => {
-  const e = body && typeof body === "object" ? (body as { error?: { code?: unknown; message?: unknown } }).error : undefined;
-  return { code: typeof e?.code === "string" ? e.code : "ERROR", message: typeof e?.message === "string" ? e.message : fallback };
+  const e = body && typeof body === 'object' ? (body as { error?: { code?: unknown; message?: unknown } }).error : undefined;
+  return { code: typeof e?.code === 'string' ? e.code : 'ERROR', message: typeof e?.message === 'string' ? e.message : fallback };
 };
 
 /**
@@ -48,18 +49,18 @@ const messageOf = (body: unknown, fallback: string): { code: string; message: st
  */
 export async function api<T>(path: string, schema: ZodType<T, ZodTypeDef, unknown>, opts: CallOptions = {}): Promise<T> {
   const baseUrl = opts.baseUrl ?? config?.baseUrl;
-  if (!baseUrl) throw new ApiError(0, "NO_SERVER", "Enter the Haazir server address first");
+  if (!baseUrl) throw new ApiError(0, 'NO_SERVER', t('Enter the Haazir server address first'));
   const ctl = new AbortController();
   const timer = setTimeout(() => ctl.abort(), TIMEOUT_MS);
-  opts.signal?.addEventListener("abort", () => ctl.abort());
-  const headers: Record<string, string> = { Accept: "application/json" };
-  if (opts.body !== undefined) headers["Content-Type"] = "application/json";
-  if (opts.mobileLogin) headers["x-haazir-client"] = "mobile";
+  opts.signal?.addEventListener('abort', () => ctl.abort());
+  const headers: Record<string, string> = { Accept: 'application/json' };
+  if (opts.body !== undefined) headers['Content-Type'] = 'application/json';
+  if (opts.mobileLogin) headers['x-haazir-client'] = 'mobile';
   if (config?.token && !opts.baseUrl) headers.Authorization = `Bearer ${config.token}`;
   let res: Response;
   try {
     res = await fetch(baseUrl + path, {
-      method: opts.method ?? (opts.body === undefined ? "GET" : "POST"),
+      method: opts.method ?? (opts.body === undefined ? 'GET' : 'POST'),
       headers,
       body: opts.body === undefined ? undefined : JSON.stringify(opts.body),
       signal: ctl.signal,
@@ -67,19 +68,27 @@ export async function api<T>(path: string, schema: ZodType<T, ZodTypeDef, unknow
   } catch (err) {
     if (opts.signal?.aborted) throw err;
     const timedOut = ctl.signal.aborted;
-    throw new ApiError(0, timedOut ? "TIMEOUT" : "NETWORK", timedOut ? "The server took too long to answer" : "Can't reach the server. Check the address and your connection.");
+    throw new ApiError(
+      0,
+      timedOut ? 'TIMEOUT' : 'NETWORK',
+      timedOut ? t('The server took too long to answer') : t('Can’t reach the server. Check the address and your connection.'),
+    );
   } finally {
     clearTimeout(timer);
   }
   const data: unknown = await res.json().catch(() => null);
   if (!res.ok) {
-    const { code, message } = messageOf(data, `Request failed (${res.status})`);
+    const { code, message } = messageOf(data, t('Request failed ({status})', { status: res.status }));
     if (res.status === 401 && !opts.baseUrl && !opts.mobileLogin) config?.onUnauthorized();
     throw new ApiError(res.status, code, message);
   }
   const parsed = schema.safeParse(data);
   if (!parsed.success) {
-    throw new ApiError(res.status, "BAD_RESPONSE", "The server sent something this version of the app doesn't understand. Update the app.");
+    throw new ApiError(
+      res.status,
+      'BAD_RESPONSE',
+      t('The server sent something this version of the app doesn’t understand. Update the app.'),
+    );
   }
   return parsed.data;
 }

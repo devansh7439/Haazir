@@ -1,32 +1,48 @@
-import { Linking, StyleSheet, Text, View } from "react-native";
-import type { Alert } from "../../api/schema";
-import { Button } from "../../ui/Button";
-import { Icon } from "../../ui/Icon";
-import { color, font, radius } from "../../ui/theme";
+import { Linking, StyleSheet, Text, View } from 'react-native';
+import type { Alert } from '../../../api/schema';
+import Button from '../../../components/ui/Button';
+import Icon from '../../../components/ui/Icon';
+import { t } from '../../../lib/i18n';
+import theme from '../../../theme';
 
 /** Something that needs the doctor: a desk asking for them, a hospital calling back, or a system alert. */
-export function AlertCard({ alert, onDismiss }: { alert: Alert; onDismiss: () => void }) {
-  const system = alert.type === "alert";
-  const who = alert.facility_name ?? "A hospital";
-  const title = system ? alert.reason ?? alert.kind ?? "Alert" : `${who} ${alert.type === "inbound_callback" ? "called back" : "wants to talk to you"}${alert.contact_person ? ` · ${alert.contact_person}` : ""}`;
+export default function AlertCard({ alert, onDismiss }: { alert: Alert; onDismiss: () => void }) {
+  const system = alert.type === 'alert';
+  const name = alert.facility_name ?? t('A hospital');
+  const what = alert.type === 'inbound_callback' ? t('{name} called back', { name }) : t('{name} wants to talk to you', { name });
+  const title = system ? (alert.reason ?? alert.kind ?? t('Alert')) : `${what}${alert.contact_person ? ` · ${alert.contact_person}` : ''}`;
   return (
     <View accessibilityRole="alert" style={styles.box}>
       <View style={styles.head}>
-        <Icon name={system ? "alert-triangle" : "phone-incoming"} size={18} color={color.warnText} style={{ marginTop: 2 }} />
+        <Icon name={system ? 'alert' : 'phone-incoming'} size={theme.size.icon} color={theme.color.status.pendingFg} />
         <Text style={styles.title}>{title}</Text>
       </View>
       {!system && alert.reason ? <Text style={styles.reason}>{`“${alert.reason}”`}</Text> : null}
-      <View style={{ gap: 8 }}>
-        {alert.number ? <Button variant="primary" icon="phone" label={`Call desk · ${alert.number}`} onPress={() => void Linking.openURL(`tel:${alert.number}`)} /> : null}
-        <Button label="Dismiss" variant="secondary" onPress={onDismiss} />
+      <View style={styles.actions}>
+        {alert.number ? (
+          <Button
+            icon="phone"
+            label={t('Call desk · {number}', { number: alert.number })}
+            onPress={() => void Linking.openURL(`tel:${alert.number}`)}
+          />
+        ) : null}
+        <Button label={t('Dismiss')} variant="secondary" onPress={onDismiss} />
       </View>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  box: { backgroundColor: color.warnBg, borderRadius: radius.lg, borderWidth: 1, borderColor: "#facc15", padding: 14, gap: 10 },
-  head: { flexDirection: "row", gap: 10 },
-  title: { flex: 1, fontSize: font.md, fontWeight: "700", color: color.warnText },
-  reason: { fontSize: font.md, color: color.text2 },
+  box: {
+    backgroundColor: theme.color.status.pendingBg,
+    borderRadius: theme.radius.field,
+    borderLeftWidth: 3,
+    borderLeftColor: theme.color.status.pendingFg,
+    padding: theme.space.l,
+    gap: theme.space.m,
+  },
+  head: { flexDirection: 'row', gap: theme.space.m, alignItems: 'flex-start' },
+  title: { ...theme.type.rowTitle, flex: 1, color: theme.color.status.pendingFg },
+  reason: { ...theme.type.secondary, color: theme.color.textSecondary },
+  actions: { gap: theme.space.s },
 });

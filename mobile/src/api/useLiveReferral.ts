@@ -1,10 +1,11 @@
-import * as Haptics from "expo-haptics";
-import { useCallback, useEffect, useRef, useState } from "react";
-import { AppState } from "react-native";
-import { isIdle, isLive } from "../lib/board";
-import { z } from "zod";
-import { ApiError, api } from "./client";
-import { ReferralViewSchema, type ReferralView } from "./schema";
+import * as Haptics from 'expo-haptics';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { AppState } from 'react-native';
+import { isIdle, isLive } from '../lib/board';
+import { z } from 'zod';
+import { ApiError, api } from './client';
+import { ReferralViewSchema, type ReferralView } from './schema';
+import { t } from '../lib/i18n';
 
 /** Tick interval once the bed is held and every call has finished: only the hold-expiry check is left. */
 const IDLE_TICK_MS = 30_000;
@@ -35,7 +36,7 @@ export function useLiveReferral(id: string) {
   const skewMs = useRef(0);
   const [nowMs, setNowMs] = useState(() => Date.now());
   const lastRequest = useRef(0);
-  const [foreground, setForeground] = useState(AppState.currentState === "active");
+  const [foreground, setForeground] = useState(AppState.currentState === 'active');
   const sawAccepted = useRef<boolean | null>(null);
 
   const refresh = useCallback(async () => {
@@ -51,8 +52,8 @@ export function useLiveReferral(id: string) {
       if (seq !== lastRequest.current) return;
       setStale(true);
       // A blip while the board is already showing is ignored; the next poll tries again.
-      if (err instanceof ApiError && (err.status === 404 || err.code === "BAD_RESPONSE")) setLoadError(err.message);
-      else setLoadError((prev) => prev ?? (err instanceof Error ? err.message : "Can't load the referral"));
+      if (err instanceof ApiError && (err.status === 404 || err.code === 'BAD_RESPONSE')) setLoadError(err.message);
+      else setLoadError((prev) => prev ?? (err instanceof Error ? err.message : t('Can’t load the referral')));
     }
   }, [id]);
 
@@ -60,11 +61,11 @@ export function useLiveReferral(id: string) {
     async (path: string, body?: unknown): Promise<ActResult> => {
       setActionError(null);
       try {
-        const data = await api(path, AnyOk, { method: "POST", body: body ?? {} });
+        const data = await api(path, AnyOk, { method: 'POST', body: body ?? {} });
         await refresh();
         return { ok: true, data };
       } catch (err) {
-        setActionError(err instanceof Error ? err.message : "That didn't work");
+        setActionError(err instanceof Error ? err.message : t('That didn’t work'));
         await refresh();
         return { ok: false, data: null };
       }
@@ -73,7 +74,7 @@ export function useLiveReferral(id: string) {
   );
 
   useEffect(() => {
-    const sub = AppState.addEventListener("change", (s) => setForeground(s === "active"));
+    const sub = AppState.addEventListener('change', (s) => setForeground(s === 'active'));
     return () => sub.remove();
   }, []);
 
@@ -93,7 +94,7 @@ export function useLiveReferral(id: string) {
     let stop = false;
     let timer: ReturnType<typeof setTimeout>;
     const loop = async () => {
-      if (hasView) await api(`/api/referrals/${id}/tick`, AnyOk, { method: "POST", body: {} }).catch(() => {});
+      if (hasView) await api(`/api/referrals/${id}/tick`, AnyOk, { method: 'POST', body: {} }).catch(() => {});
       await refresh();
       if (!stop) timer = setTimeout(loop, idle ? IDLE_TICK_MS : tickMs);
     };

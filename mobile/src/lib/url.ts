@@ -6,11 +6,11 @@ export function normalizeServerUrl(input: string): string | null {
   const text = input.trim();
   if (!text) return null;
   const local = /^(localhost|127\.|10\.|192\.168\.|172\.(1[6-9]|2\d|3[01])\.|\[::1\])/i;
-  const withScheme = /^https?:\/\//i.test(text) ? text : `${local.test(text) ? "http" : "https"}://${text}`;
+  const withScheme = /^https?:\/\//i.test(text) ? text : `${local.test(text) ? 'http' : 'https'}://${text}`;
   try {
     const u = new URL(withScheme);
     if (!u.hostname || /\s/.test(text)) return null;
-    return `${u.protocol}//${u.host}${u.pathname.replace(/\/+$/, "")}`;
+    return `${u.protocol}//${u.host}${u.pathname.replace(/\/+$/, '')}`;
   } catch {
     return null;
   }

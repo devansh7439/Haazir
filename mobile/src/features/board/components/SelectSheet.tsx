@@ -1,23 +1,24 @@
-import { useState } from "react";
-import { Text } from "react-native";
-import type { AttemptView } from "../../api/schema";
-import { shortName } from "../../lib/display";
-import { Button } from "../../ui/Button";
-import { Callout } from "../../ui/Callout";
-import { Field } from "../../ui/Field";
-import { Sheet } from "../../ui/Sheet";
-import { color, font } from "../../ui/theme";
+import { useState } from 'react';
+import { StyleSheet, Text, View } from 'react-native';
+import type { AttemptView } from '../../../api/schema';
+import Banner from '../../../components/ui/Banner';
+import BottomSheet from '../../../components/ui/BottomSheet';
+import Button from '../../../components/ui/Button';
+import TextField from '../../../components/ui/TextField';
+import { shortName } from '../../../lib/display';
+import { t } from '../../../lib/i18n';
+import theme from '../../../theme';
 
 /** Confirms the choice of hospital: Haazir calls the desk to hold the bed, or the doctor says they already did. */
-export function SelectSheet(props: {
-  a: AttemptView;
+export default function SelectSheet(props: {
+  attempt: AttemptView;
   onClose: () => void;
   onConfirmCall: () => Promise<void>;
   onConfirmManual: (contact: string) => Promise<void>;
 }) {
-  const { a } = props;
+  const { attempt: a } = props;
   const [manual, setManual] = useState(false);
-  const [contact, setContact] = useState(a.contact_person ?? "");
+  const [contact, setContact] = useState(a.contact_person ?? '');
   const [busy, setBusy] = useState(false);
   const run = async (work: () => Promise<void>) => {
     setBusy(true);
@@ -25,23 +26,57 @@ export function SelectSheet(props: {
     props.onClose();
   };
   return (
-    <Sheet title={`Send the patient to ${shortName(a.facility_name)}?`} onClose={props.onClose}>
-      <Text style={{ fontSize: font.md, color: color.muted, lineHeight: 22 }}>
-        {`About ${a.eta_minutes ?? "?"} min away. Haazir calls the desk to confirm the bed, sends the pre-arrival note on WhatsApp and releases the other hospitals.`}
-      </Text>
-      {a.needs_review ? <Callout kind="warn">Their answer was flagged as unclear. Only continue if you listened to the recording.</Callout> : null}
-      {manual ? (
+    <BottomSheet
+      visible
+      onClose={props.onClose}
+      title={t('Send the patient to {name}?', { name: shortName(a.facility_name) })}
+      footer={
         <>
-          <Field label="Who confirmed? (optional)" value={contact} onChangeText={setContact} testID="confirm-contact" />
-          <Button label="Mark bed confirmed" variant="primary" loading={busy} onPress={() => run(() => props.onConfirmManual(contact))} testID="confirm-manual" />
+          {manual ? (
+            <Button
+              label={t('Mark bed confirmed')}
+              loading={busy}
+              onPress={() => run(() => props.onConfirmManual(contact))}
+              testID="confirm-manual"
+            />
+          ) : (
+            <>
+              <Button
+                label={t('Confirm and call')}
+                icon="phone-call"
+                loading={busy}
+                onPress={() => run(props.onConfirmCall)}
+                testID="confirm-call"
+              />
+              <Button label={t('I already confirmed by phone')} variant="secondary" onPress={() => setManual(true)} />
+            </>
+          )}
+          <Button label={t('Back')} variant="text" onPress={props.onClose} />
         </>
-      ) : (
-        <>
-          <Button label="Confirm and call" icon="phone-call" variant="primary" loading={busy} onPress={() => run(props.onConfirmCall)} testID="confirm-call" />
-          <Button label="I already confirmed by phone" onPress={() => setManual(true)} />
-        </>
-      )}
-      <Button label="Back" variant="ghost" onPress={props.onClose} />
-    </Sheet>
+      }
+    >
+      <View style={styles.body}>
+        <Text style={styles.text}>
+          {t(
+            'About {minutes} min away. Haazir calls the desk to confirm the bed, sends the pre-arrival note on WhatsApp and releases the other hospitals.',
+            { minutes: a.eta_minutes ?? '?' },
+          )}
+        </Text>
+        {a.needs_review ? (
+          <Banner tone="warning" title={t('Their answer was flagged as unclear. Only continue if you listened to the recording.')} />
+        ) : null}
+        {manual ? (
+          <TextField
+            appearance="plain"
+            label={t('Who confirmed? (optional)')}
+            value={contact}
+            onChangeText={setContact}
+            testID="confirm-contact"
+          />
+        ) : null}
+      </View>
+    </BottomSheet>
   );
 }
+
+const styles = StyleSheet.create({ body: { gap: theme.space.m }, text: { ...theme.type.secondary, color: theme.color.textSecondary } });

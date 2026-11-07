@@ -1,5 +1,6 @@
-import * as Location from "expo-location";
-import { useCallback, useState } from "react";
+import * as Location from 'expo-location';
+import { useCallback, useState } from 'react';
+import { t } from '../../../lib/i18n';
 
 export interface Origin {
   lat: number;
@@ -19,13 +20,13 @@ export function useOrigin() {
     setBusy(true);
     setError(null);
     try {
-      const perm = await Location.requestForegroundPermissionsAsync();
-      if (!perm.granted) throw new Error("Location permission was not given");
-      const pos = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced });
-      setOrigin({ lat: pos.coords.latitude, lng: pos.coords.longitude });
+      const permission = await Location.requestForegroundPermissionsAsync();
+      if (!permission.granted) throw new Error(t('Location permission was not given'));
+      const position = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced });
+      setOrigin({ lat: position.coords.latitude, lng: position.coords.longitude });
     } catch (err) {
       setOrigin(null);
-      setError(err instanceof Error ? err.message : "Couldn't get your location");
+      setError(err instanceof Error ? err.message : t('Couldn’t get your location'));
     } finally {
       setBusy(false);
     }
