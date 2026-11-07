@@ -1,6 +1,7 @@
-import { ShieldCheck } from "lucide-react";
+import { Clock, ShieldCheck } from "lucide-react";
 import { useState } from "react";
 import type { Contact } from "@/lib/core/types";
+import { CONTACT_STALE_AFTER_DAYS, contactFreshness } from "@/lib/modules/facility/freshness.helper";
 import { cx } from "../ui";
 import { send } from "./api";
 
@@ -8,6 +9,8 @@ const ROLES = ["casualty_desk", "referral_desk", "nursing_station", "duty_manage
 
 export function ContactsSection({ facilityId, contacts, onError, onSaved }: { facilityId: string; contacts: Contact[]; onError: (message: string | null) => void; onSaved: () => Promise<void> }) {
   const [newContact, setNewContact] = useState({ role: "casualty_desk", phone: "", priority: 1, is_ivr: false });
+
+  const freshness = (c: Contact) => contactFreshness(c.verified_at, Date.now());
 
   async function contactAction(c: Contact, patch: Record<string, unknown>) {
     onError(await send("PATCH", `/api/contacts/${c.id}`, patch));
@@ -26,13 +29,14 @@ export function ContactsSection({ facilityId, contacts, onError, onSaved }: { fa
               <span className="capitalize text-zinc-600">{c.role.replace(/_/g, " ")}</span>
               <span className="tag">P{c.priority}</span>
               {c.is_ivr && <span className="tag bg-amber-50 text-amber-800">IVR</span>}
-              {c.verified_at && <span className="inline-flex items-center gap-1 text-xs text-emerald-700"><ShieldCheck aria-hidden className="size-3.5" />verified</span>}
+              {freshness(c) === "fresh" && <span className="inline-flex items-center gap-1 text-xs text-emerald-700"><ShieldCheck aria-hidden className="size-3.5" />verified</span>}
+              {freshness(c) === "stale" && <span className="inline-flex items-center gap-1 text-xs text-amber-700"><Clock aria-hidden className="size-3.5" />no answer confirmed in {CONTACT_STALE_AFTER_DAYS}+ days</span>}
               <span className="ml-auto text-xs text-zinc-500">answered {c.calls_answered}/{c.calls_made}</span>
             </div>
             <div className="mt-2 flex flex-wrap gap-1">
               <button className="btn btn-ghost min-h-8 px-2 text-xs" onClick={() => contactAction(c, { active: !c.active })}>{c.active ? "Deactivate" : "Activate"}</button>
               <button className="btn btn-ghost min-h-8 px-2 text-xs" onClick={() => contactAction(c, { is_ivr: !c.is_ivr })}>{c.is_ivr ? "Not a phone menu" : "Mark as phone menu"}</button>
-              {!c.verified_at && <button className="btn btn-ghost min-h-8 px-2 text-xs" onClick={() => contactAction(c, { verified: true })}>Mark verified</button>}
+              {freshness(c) !== "fresh" && <button className="btn btn-ghost min-h-8 px-2 text-xs" onClick={() => contactAction(c, { verified: true })}>Mark verified</button>}
             </div>
           </li>
         ))}

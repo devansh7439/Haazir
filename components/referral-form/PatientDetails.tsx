@@ -14,17 +14,17 @@ export function PatientDetails(props: { open: boolean; onToggle: () => void; pat
   const { open, patient } = props;
   const set = (key: keyof PatientFields, value: string | boolean) => props.onChange({ ...patient, [key]: value });
   return (
-    <div className="border-t border-line px-5 py-4 sm:px-6">
-      <button type="button" aria-expanded={open} onClick={props.onToggle} className="flex w-full items-center gap-3 text-left">
-        <span className="grid size-8 place-items-center rounded-lg bg-zinc-100"><Lock aria-hidden className="size-4 text-zinc-600" /></span>
+    <div className="rounded-xl border border-line bg-zinc-50/60">
+      <button type="button" aria-expanded={open} onClick={props.onToggle} className="flex w-full items-center gap-3 px-4 py-3 text-left">
+        <Lock aria-hidden className="size-4 shrink-0 text-zinc-500" />
         <span className="flex-1">
-          <span className="block text-sm font-semibold text-zinc-900">Patient &amp; family details</span>
-          <span className="block text-xs text-zinc-500">Private. Sent on WhatsApp only to the hospital that accepts. Never spoken on calls.</span>
+          <span className="block text-sm font-medium text-zinc-900">Patient and family details</span>
+          <span className="block text-xs text-zinc-500">Optional. Sent on WhatsApp only to the hospital that accepts. Never spoken.</span>
         </span>
         <ChevronDown aria-hidden className={cx("size-4 text-zinc-400 transition", open && "rotate-180")} />
       </button>
       {open && (
-        <div className="mt-4 grid gap-3 sm:grid-cols-2">
+        <div className="grid gap-3 border-t border-line px-4 py-4 sm:grid-cols-2">
           {TEXT_FIELDS.map(([k, label]) => (
             <Field key={k} label={label} htmlFor={k}>
               <input id={k} className="input" value={patient[k]} onChange={(e) => set(k, e.target.value)} />
@@ -35,6 +35,8 @@ export function PatientDetails(props: { open: boolean; onToggle: () => void; pat
               <option value="en">English</option>
               <option value="kn">Kannada</option>
               <option value="hi">Hindi</option>
+              <option value="ta">Tamil</option>
+              <option value="te">Telugu</option>
             </select>
           </Field>
           {patient.attendant_phone.trim() && (

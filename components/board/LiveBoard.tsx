@@ -14,6 +14,7 @@ import { AttemptCard } from "./AttemptCard";
 import { Callout } from "./Callout";
 import { CancelButton } from "./CancelButton";
 import { ExhaustedPanel } from "./ExhaustedPanel";
+import { StabilisePanel } from "./StabilisePanel";
 import { HoldPanel } from "./HoldPanel";
 import { Legend } from "./Legend";
 import { Metric } from "./Metric";
@@ -132,6 +133,8 @@ export function LiveBoard({ initial }: { initial: ReferralView }) {
               if (res.ok) router.push(`/referrals/${res.data.id}`);
             }} />
           )}
+
+          {(r.status === "searching" || r.status === "options_ready") && view.nearest_ed.length > 0 && <StabilisePanel hospitals={view.nearest_ed} />}
 
           {nextId && (
             <Callout tone="brand" icon={RotateCw} title="The search continues in a new referral with a wider radius.">

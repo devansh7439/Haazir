@@ -207,6 +207,8 @@ export function AddHospitalDrawer(props: { capabilities: Capability[]; onClose: 
                 <option value="en">English</option>
                 <option value="kn">Kannada</option>
                 <option value="hi">Hindi</option>
+                <option value="ta">Tamil</option>
+                <option value="te">Telugu</option>
               </select>
             </div>
           </section>

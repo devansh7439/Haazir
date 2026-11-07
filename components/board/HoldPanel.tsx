@@ -109,6 +109,24 @@ export function HoldPanel(props: {
           </div>
         )}
 
+        {view.attempts.some((a) => a.purpose === "arrival_check") && (
+          <div className="px-5 py-3">
+            <div className="eyebrow mb-2">Arrival</div>
+            <ul className="space-y-1.5">
+              {view.attempts.filter((a) => a.purpose === "arrival_check").map((a) => {
+                const d = attemptDisplay(a, Date.now());
+                return (
+                  <li key={a.id} className="flex items-center gap-2 text-sm">
+                    <PhoneCall aria-hidden className="size-4 text-zinc-400" />
+                    <span className="flex-1 text-zinc-800">Asked {props.facilityName(a.facility_id)} whether the patient arrived</span>
+                    <StatusPill size="sm" tone={d.tone} text={d.text} icon={d.icon} />
+                  </li>
+                );
+              })}
+            </ul>
+          </div>
+        )}
+
         {props.releases.length > 0 && (
           <div className="px-5 py-3">
             <div className="eyebrow mb-2">Released</div>

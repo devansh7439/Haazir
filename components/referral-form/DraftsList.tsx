@@ -10,7 +10,7 @@ export function DraftsList({ initial }: { initial: DraftSummary[] }) {
   const [drafts, setDrafts] = useState(initial);
   if (drafts.length === 0) return null;
   return (
-    <section aria-labelledby="drafts-h" className="card mb-6 overflow-hidden">
+    <section aria-labelledby="drafts-h" className="card-soft mx-auto mt-10 max-w-[780px] overflow-hidden">
       <div className="flex items-center gap-2 border-b border-line px-5 py-3">
         <MessageCircle aria-hidden className="size-4 text-emerald-600" />
         <h2 id="drafts-h" className="text-sm font-semibold">From WhatsApp</h2>

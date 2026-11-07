@@ -3,6 +3,7 @@ import dynamic from "next/dynamic";
 import type { Capability } from "@/lib/core/types";
 import type { FacilityListItem } from "@/lib/modules/facility/facility.type";
 import { LANGUAGE_LABEL, clock, shortName } from "@/lib/ui/display";
+import { CONTACT_STALE_AFTER_DAYS, contactFreshness } from "@/lib/modules/facility/freshness.helper";
 import { Stars } from "./Stars";
 import { CONTACT_ROLE_LABEL, KIND_LABEL, OWNERSHIP_LABEL, firstDesk, groupByCategory, mapsLink, telLink } from "@/lib/ui/facility";
 
@@ -90,7 +91,8 @@ export function FacilityProfile(props: {
                     <a className="kbd-num font-medium text-zinc-900 underline-offset-2 hover:underline" href={telLink(c.phone_e164)}>{c.phone_e164}</a>
                     <span className="text-zinc-600">{CONTACT_ROLE_LABEL[c.role] ?? c.role}</span>
                     {c.is_ivr && <span className="tag bg-amber-50 text-amber-800">Phone menu</span>}
-                    {c.verified_at && <span className="inline-flex items-center gap-1 text-xs text-emerald-700"><ShieldCheck aria-hidden className="size-3.5" />verified</span>}
+                    {contactFreshness(c.verified_at, Date.now()) === "fresh" && <span className="inline-flex items-center gap-1 text-xs text-emerald-700"><ShieldCheck aria-hidden className="size-3.5" />verified</span>}
+                    {contactFreshness(c.verified_at, Date.now()) === "stale" && <span className="tag bg-amber-50 text-amber-800">not checked in {CONTACT_STALE_AFTER_DAYS}+ days</span>}
                     {!c.active && <span className="tag">not in use</span>}
                   </li>
                 ))}

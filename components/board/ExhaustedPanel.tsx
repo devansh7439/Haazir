@@ -1,6 +1,7 @@
 import { Phone, RotateCw, X } from "lucide-react";
 import { attemptDisplay, shortName } from "@/lib/ui/display";
 import type { AttemptView, ReferralView } from "@/lib/modules/referral/view.type";
+import { NearestEdList } from "./StabilisePanel";
 
 export function ExhaustedPanel({ view, cards, onWiden }: { view: ReferralView; cards: AttemptView[]; onWiden: () => void }) {
   const calls = view.attempts.filter((a) => a.purpose === "availability").length;
@@ -29,6 +30,22 @@ export function ExhaustedPanel({ view, cards, onWiden }: { view: ReferralView; c
       </ol>
       <div className="border-t border-line px-5 py-3">
         <button className="btn btn-primary" onClick={onWiden}><RotateCw aria-hidden className="size-4" /> Widen to 80 km and try again</button>
+      </div>
+      {view.nearest_ed.length > 0 && (
+        <div className="border-t border-line px-5 py-3">
+          <div className="eyebrow mb-2">Nearest emergency departments · stabilise there</div>
+          <NearestEdList hospitals={view.nearest_ed} />
+        </div>
+      )}
+      <div className="flex flex-wrap items-center gap-3 border-t border-line bg-zinc-50 px-5 py-3">
+        <p className="min-w-0 flex-1 text-sm text-zinc-600">
+          If the patient can&apos;t wait, you can hand the search to a control room or stop at the nearest emergency department. Your call.
+        </p>
+        <a className="btn btn-secondary" href="tel:108"><Phone aria-hidden className="size-4" /> 108</a>
+        <a className="btn btn-secondary" href="tel:112"><Phone aria-hidden className="size-4" /> 112</a>
+        {view.escalation.map((c) => (
+          <a key={c.phone} className="btn btn-secondary" href={`tel:${c.phone}`}><Phone aria-hidden className="size-4" /> {c.label}</a>
+        ))}
       </div>
     </section>
   );

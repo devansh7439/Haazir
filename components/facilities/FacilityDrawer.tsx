@@ -6,12 +6,14 @@ import { LANGUAGE_LABEL, shortName } from "@/lib/ui/display";
 import { cx } from "../ui";
 import { send } from "./api";
 import { ContactsSection } from "./ContactsSection";
+import { DeskLinkSection } from "./DeskLinkSection";
 
 export function FacilityDrawer({ f, capabilities, onClose, onSaved }: { f: FacilityListItem; capabilities: Capability[]; onClose: () => void; onSaved: () => Promise<void> }) {
   const [form, setForm] = useState({
     lat: String(f.lat), lng: String(f.lng), call_language: f.call_language, whatsapp_number: f.whatsapp_number ?? "", active: f.active,
   });
   const [caps, setCaps] = useState<string[]>(f.capabilities);
+  const [dayOnly, setDayOnly] = useState<string[]>(f.day_only ?? []);
   const [error, setError] = useState<string | null>(null);
   const [saved, setSaved] = useState(false);
 
@@ -21,7 +23,7 @@ export function FacilityDrawer({ f, capabilities, onClose, onSaved }: { f: Facil
     const e1 = await send("PATCH", `/api/facilities/${f.id}`, {
       lat: Number(form.lat), lng: Number(form.lng), call_language: form.call_language, whatsapp_number: form.whatsapp_number || null, active: form.active,
     });
-    const e2 = e1 ?? (await send("PUT", `/api/facilities/${f.id}/capabilities`, { codes: caps }));
+    const e2 = e1 ?? (await send("PUT", `/api/facilities/${f.id}/capabilities`, { codes: caps, day_only: dayOnly.filter((c) => caps.includes(c)) }));
     if (e2) setError(e2);
     else setSaved(true);
     await onSaved();
@@ -73,9 +75,30 @@ export function FacilityDrawer({ f, capabilities, onClose, onSaved }: { f: Facil
                 );
               })}
             </div>
+            {caps.length > 0 && (
+              <fieldset className="mt-4">
+                <legend className="mb-1 text-xs font-medium text-zinc-700">Only there in the daytime</legend>
+                <p className="mb-2 text-xs text-zinc-500">At night a hospital that needs one of these for the patient ranks lower, and the call asks whether it is there now.</p>
+                <div className="flex flex-wrap gap-x-4 gap-y-1.5">
+                  {capabilities.filter((c) => caps.includes(c.code)).map((c) => (
+                    <label key={c.code} className="flex items-center gap-2 text-sm text-zinc-700">
+                      <input
+                        type="checkbox"
+                        className="size-4 accent-brand-600"
+                        checked={dayOnly.includes(c.code)}
+                        onChange={(e) => setDayOnly((x) => (e.target.checked ? [...x, c.code] : x.filter((y) => y !== c.code)))}
+                      />
+                      {c.label}
+                    </label>
+                  ))}
+                </div>
+              </fieldset>
+            )}
           </section>
 
           <ContactsSection facilityId={f.id} contacts={f.contacts} onError={setError} onSaved={onSaved} />
+
+          <DeskLinkSection facilityId={f.id} fullUntil={f.full_until ?? null} />
         </div>
 
         <div className="flex items-center gap-3 border-t border-line px-6 py-4">

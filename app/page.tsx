@@ -2,7 +2,7 @@ import { ArrowRight } from "lucide-react";
 import Link from "next/link";
 import { DraftsList } from "@/components/referral-form/DraftsList";
 import { ReferralForm } from "@/components/referral-form/ReferralForm";
-import { PageHeader, ReferralStatusPill } from "@/components/ui";
+import { ReferralStatusPill } from "@/components/ui";
 import { env } from "@/lib/core/config";
 import { IntakeService } from "@/lib/modules/intake/intake.service";
 import { FacilityRepository } from "@/lib/modules/facility/facility.repository";
@@ -34,11 +34,6 @@ export default async function NewReferralPage({ searchParams }: { searchParams: 
 
   return (
     <div>
-      <PageHeader
-        title="New referral"
-        description="Haazir phones every capable hospital nearby at once, in their language, and shows you who says yes."
-      />
-      {!draft && <DraftsList initial={drafts} />}
       <ReferralForm
         key={draft?.id ?? "new"}
         draft={draft ? { id: draft.id, parsed: draft.parsed } : null}
@@ -47,8 +42,9 @@ export default async function NewReferralPage({ searchParams }: { searchParams: 
         capabilities={capabilities}
         bolnaReady={bolnaReady}
       />
+      {!draft && <DraftsList initial={drafts} />}
       {recent.length > 0 && (
-        <section aria-labelledby="recent-h" className="card mt-6 overflow-hidden">
+        <section aria-labelledby="recent-h" className="card-soft mx-auto mt-14 max-w-[780px] overflow-hidden">
           <div className="flex items-center justify-between border-b border-line px-5 py-3.5">
             <h2 id="recent-h" className="text-sm font-semibold">Recent referrals</h2>
             <Link href="/history" className="inline-flex items-center gap-1 text-sm font-medium text-brand-700 hover:text-brand-800">
