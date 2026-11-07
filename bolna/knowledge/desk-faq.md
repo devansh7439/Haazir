@@ -97,6 +97,22 @@ Common answers in Kannada (romanised) and what they mean:
 - "swalpa kāyiri", "ondu nimisha": wait, they are checking.
 - "āmēle kare māḍi": call back later.
 
+Common answers in Tamil (romanised) and what they mean:
+- "anuppunga", "vaanga", "eduthukkurom": yes, send the patient.
+- "bed illa", "idam illa": no bed is free.
+- "ventilator illa": no ventilator.
+- "doctor kitta pesanum": they want to speak to the doctor.
+- "oru nimisham", "paathu solren": wait, they are checking.
+- "konjam neram kazhichu call pannunga": call back later.
+
+Common answers in Telugu (romanised) and what they mean:
+- "pampandi", "teesukuntaam": yes, send the patient.
+- "bed ledu", "jaaga ledu": no bed is free.
+- "ventilator ledu": no ventilator.
+- "doctor tho matladali": they want to speak to the doctor.
+- "okka nimisham", "choosi cheptaanu": wait, they are checking.
+- "koncham sepatiki call cheyandi": call back later.
+
 Clinical words that may come up:
 - ASV: anti-snake venom.
 - Ventilator: a machine that breathes for the patient.

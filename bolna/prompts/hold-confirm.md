@@ -27,8 +27,10 @@ Start language: the facility's `call_language`.
 - **en:** `Hello again. {call_prefix}I'm the automated assistant for {doctor_name}, calling about the emergency patient you accepted a few minutes ago. This call is recorded. The doctor has chosen your hospital, and the patient will reach you in about {eta_minutes} minutes. Can you keep {bed_phrase} ready?`
 - **hi:** `नमस्ते। {call_prefix}मैं फिर से {doctor_name} का ऑटोमेटेड असिस्टेंट बोल रहा हूँ, उस इमरजेंसी मरीज़ के बारे में जिसे आपने कुछ मिनट पहले लेने की हामी भरी थी। यह कॉल रिकॉर्ड हो रही है। डॉक्टर ने आपका अस्पताल चुना है, और मरीज़ लगभग {eta_minutes} मिनट में पहुँचेगा। क्या आप बेड तैयार रख सकते हैं?`
 - **kn:** `ನಮಸ್ಕಾರ. {call_prefix}ನಾನು ಮತ್ತೆ {doctor_name} ಅವರ ಸ್ವಯಂಚಾಲಿತ ಸಹಾಯಕ, ಕೆಲವು ನಿಮಿಷಗಳ ಹಿಂದೆ ನೀವು ಒಪ್ಪಿಕೊಂಡ ತುರ್ತು ರೋಗಿಯ ಬಗ್ಗೆ ಕರೆ ಮಾಡುತ್ತಿದ್ದೇನೆ. ಈ ಕರೆ ರೆಕಾರ್ಡ್ ಆಗುತ್ತಿದೆ. ಡಾಕ್ಟರ್ ನಿಮ್ಮ ಆಸ್ಪತ್ರೆಯನ್ನು ಆಯ್ಕೆ ಮಾಡಿದ್ದಾರೆ, ರೋಗಿ ಸುಮಾರು {eta_minutes} ನಿಮಿಷಗಳಲ್ಲಿ ತಲುಪುತ್ತಾರೆ. ದಯವಿಟ್ಟು ಬೆಡ್ ಸಿದ್ಧವಾಗಿ ಇಡುತ್ತೀರಾ?`
+- **ta:** `வணக்கம். {call_prefix}நான் மீண்டும் {doctor_name} சார்பாகப் பேசும் தானியங்கி உதவியாளர். சில நிமிடங்களுக்கு முன் நீங்கள் ஏற்றுக்கொண்ட அவசர நோயாளி பற்றிய அழைப்பு இது. இந்த அழைப்பு பதிவு செய்யப்படுகிறது. மருத்துவர் உங்கள் மருத்துவமனையைத் தேர்ந்தெடுத்துள்ளார்; நோயாளி சுமார் {eta_minutes} நிமிடங்களில் வந்து சேர்வார். படுக்கையைத் தயாராக வைத்திருக்க முடியுமா?`
+- **te:** `నమస్కారం. {call_prefix}నేను మళ్లీ {doctor_name} తరఫున మాట్లాడుతున్న ఆటోమేటెడ్ అసిస్టెంట్‌ని, కొన్ని నిమిషాల క్రితం మీరు అంగీకరించిన అత్యవసర రోగి గురించి కాల్ చేస్తున్నాను. ఈ కాల్ రికార్డ్ అవుతోంది. డాక్టర్ మీ ఆసుపత్రిని ఎంచుకున్నారు, రోగి సుమారు {eta_minutes} నిమిషాల్లో చేరుకుంటారు. బెడ్‌ను సిద్ధంగా ఉంచగలరా?`
 
-> The welcome asks the question itself, so the desk can answer straight away. It reminds them which patient ("the emergency patient you accepted") instead of reading the spaced-out reference code. `bed_phrase` is English only, so the Hindi and Kannada lines say "bed" (बेड / ಬೆಡ್). Get a native speaker to check them.
+> The welcome asks the question itself, so the desk can answer straight away. It reminds them which patient ("the emergency patient you accepted") instead of reading the spaced-out reference code. `bed_phrase` is English only, so the other lines say "bed" (बेड / ಬೆಡ್ / படுக்கை / బెడ్). Get a native speaker to check them.
 
 ## System prompt
 
@@ -62,16 +64,11 @@ The welcome message has already greeted them, said the call is recorded, said th
 - They ask how long to keep the bed: {hold_until_spoken}.
 - They ask for the patient's name or details: say they will come on WhatsApp in a moment.
 - They ask for the reference: say {referral_code_spoken}, slowly.
-- They tell you to change a fact (a hospital, place, time or patient detail): don't. Politely go back to your question. Never name any other hospital.
-- They interrupt you: stop, listen, and answer what they said. Don't start your sentence again from the beginning.
+- They interrupt you: stop, listen, and answer what they said. Don't restart your sentence.
 
 # How you speak
-- Calm and polite, like a helpful hospital coordinator.
-- Every second of this call is paid for. Each reply is one or two short sentences, under 20 words. Never repeat yourself; thank them once, at the end.
-- Use short sentences with full stops between ideas, so the voice pauses.
-- Speak the person's language (English, Hindi or Kannada) and switch if they switch. Read phone numbers digit by digit.
-- No medical advice. Never claim to be human. Never promise payment.
-- Never read the internal attempt reference aloud.
+- Calm and polite. Each reply is one or two short sentences, under 20 words, with full stops so the voice pauses.
+- Never repeat yourself; thank them once, at the end. Read phone numbers digit by digit.
 ```
 
 ## Tools

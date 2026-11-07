@@ -2,7 +2,7 @@
 // A test call from the Bolna dashboard sends no variables, so every name in it is spoken as a blank.
 //
 //   bun run bolna:test-call -- --to +919800000000                     → availability agent, English
-//   options: --agent availability|hold-confirm|release  --language en|hi|kn  --no-wait
+//   options: --agent availability|hold-confirm|release|arrival-check  --language en|hi|kn  --no-wait
 //
 // The patient is fictional and the call opens with the consented-test sentence. The tools post to APP_BASE_URL: when
 // that is localhost, Bolna can't reach it, so a tool call fails and the agent ends politely; the outcome is not recorded.
@@ -10,7 +10,9 @@
 import { randomUUID } from "node:crypto";
 import { normalizePhone } from "../lib/core/normalize";
 import { AGENT_ENV } from "../lib/integrations/bolna/bolna.agents";
-import { availabilityUserData, holdConfirmUserData, releaseUserData, type CallContext } from "../lib/modules/call/user-data.helper";
+import {
+  arrivalCheckUserData, availabilityUserData, holdConfirmUserData, releaseUserData, type CallContext,
+} from "../lib/modules/call/user-data.helper";
 
 const SAMPLE = {
   doctor_name: "Dr. Meera Rao",
@@ -24,6 +26,8 @@ const SAMPLE = {
   case_summary_short: "man aged 34, suspected snakebite with neurotoxic signs, critical",
   needs_spoken: "an ICU bed and a ventilator",
   eta_minutes: 18,
+  // What describeKnownFacts builds; lets a tester ask "is he intubated?" and hear the agent answer from it.
+  known_facts: "Airway: intubated. Oxygen saturation: 88 percent. On oxygen: yes. G C S: 9. Payment: Ayushman Bharat card. Medico-legal case: no.",
 };
 const WAIT_S = 300;
 const ENDED = ["completed", "no-answer", "busy", "failed", "canceled", "stopped", "error", "balance-low"];
@@ -41,6 +45,7 @@ function userDataFor(agent: string, ctx: CallContext): Record<string, string> | 
     return holdConfirmUserData(ctx, hold);
   }
   if (agent === "release") return releaseUserData(ctx, SAMPLE);
+  if (agent === "arrival-check") return arrivalCheckUserData(ctx, SAMPLE);
   return null;
 }
 
@@ -51,7 +56,7 @@ async function main() {
   const to = normalizePhone(arg("to", ""));
   if (!to) throw new Error("Give the number to call: --to +91XXXXXXXXXX");
   const agentId = env(AGENT_ENV[agent] ?? "");
-  if (!agentId) throw new Error(`Set ${AGENT_ENV[agent] ?? "the agent id"} (agents: availability, hold-confirm, release)`);
+  if (!agentId) throw new Error(`Set ${AGENT_ENV[agent] ?? "the agent id"} (agents: availability, hold-confirm, release, arrival-check)`);
   if (!env("BOLNA_API_KEY")) throw new Error("Set BOLNA_API_KEY");
 
   const ctx: CallContext = { ...SAMPLE, attempt_id: randomUUID(), language, consented_test: true };

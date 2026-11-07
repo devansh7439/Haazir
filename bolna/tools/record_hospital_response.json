@@ -20,6 +20,14 @@
         "type": "string",
         "description": "Whether the needed specialist is available now. One of: yes, on_call, no, unknown."
       },
+      "needs_ready": {
+        "type": "string",
+        "description": "Only after a yes: whether what the patient needs (the specialist and equipment named in the call context) is physically present and working right now. One of: yes, no, unknown. Leave empty if you did not ask."
+      },
+      "unavailable_needs": {
+        "type": "string",
+        "description": "Only if needs_ready is no: what they said is missing or not working, in a few words, for example: ventilator is down, neurosurgeon not in the hospital."
+      },
       "ready_in_minutes": {
         "type": "string",
         "description": "Minutes until they are ready to receive the patient, as digits, for example 15. Leave empty if not said."
@@ -55,6 +63,8 @@
       "outcome": "%(outcome)s",
       "bed_type": "%(bed_type)s",
       "specialist_available": "%(specialist_available)s",
+      "needs_ready": "%(needs_ready)s",
+      "unavailable_needs": "%(unavailable_needs)s",
       "ready_in_minutes": "%(ready_in_minutes)s",
       "contact_person": "%(contact_person)s",
       "conditions": "%(conditions)s",

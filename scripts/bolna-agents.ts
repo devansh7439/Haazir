@@ -32,7 +32,7 @@ async function main() {
   if (!appUrl || !webhookSecret || !functionSecret) throw new Error("Set APP_BASE_URL, BOLNA_WEBHOOK_SECRET and BOLNA_FUNCTION_SECRET");
   if ((apply || update) && !env("BOLNA_API_KEY")) throw new Error("Set BOLNA_API_KEY for --apply and --update");
 
-  const only = arg("only", "availability,hold-confirm,release,family-update,inbound-callback").split(",").map((s) => s.trim());
+  const only = arg("only", "availability,hold-confirm,release,family-update,arrival-check,inbound-callback").split(",").map((s) => s.trim());
   const knowledgeBaseId = arg("kb", env("BOLNA_KNOWLEDGE_BASE_ID")) || null;
   const ttsSpeed = Number(arg("speed", String(DEFAULT_TTS_SPEED)));
   if (!(ttsSpeed >= 0.5 && ttsSpeed <= 2)) throw new Error("--speed must be between 0.5 and 2.0");

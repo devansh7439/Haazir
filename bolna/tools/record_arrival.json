@@ -1,0 +1,41 @@
+{
+  "name": "record_arrival",
+  "description": "Record whether the patient has reached the hospital. Call this once, only after they have clearly said yes or no.",
+  "parameters": {
+    "type": "object",
+    "properties": {
+      "attempt_id": {
+        "type": "string",
+        "description": "Internal attempt reference from the call context. Filled in automatically; never ask for it and never say it."
+      },
+      "arrived": {
+        "type": "string",
+        "description": "yes if the patient has reached the hospital, no if they have not arrived yet."
+      },
+      "contact_person": {
+        "type": "string",
+        "description": "Name or role of the person who answered, if they said it."
+      },
+      "to_number": {
+        "type": "string",
+        "description": "The number you called. Filled in automatically; never ask for it."
+      }
+    },
+    "required": ["attempt_id", "arrived"]
+  },
+  "key": "custom_task",
+  "value": {
+    "method": "POST",
+    "param": {
+      "attempt_id": "%(attempt_id)s",
+      "arrived": "%(arrived)s",
+      "contact_person": "%(contact_person)s",
+      "to_number": "%(to_number)s"
+    },
+    "url": "https://YOUR_APP_URL/api/bolna/functions/record-arrival",
+    "api_token": "Bearer YOUR_BOLNA_FUNCTION_SECRET",
+    "headers": {
+      "Content-Type": "application/json"
+    }
+  }
+}
