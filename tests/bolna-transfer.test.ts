@@ -28,7 +28,7 @@ describe("demo live transfer", () => {
   });
 
   it("never touches the other agents", () => {
-    for (const key of ["hold-confirm", "release", "family-update", "inbound-callback"]) {
+    for (const key of ["hold-confirm", "release", "family-update", "arrival-check", "inbound-callback"]) {
       expect(promptOf(key, { demoTransfer: true })).not.toContain("Transfer Call");
     }
   });

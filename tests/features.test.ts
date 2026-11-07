@@ -143,7 +143,7 @@ describe("inbound WhatsApp parsing and signatures", () => {
 
 describe("Bolna agent builder", () => {
   it("builds every agent from the prompt files with tools wired to our routes", () => {
-    for (const key of ["availability", "hold-confirm", "release", "family-update", "inbound-callback"]) {
+    for (const key of ["availability", "hold-confirm", "release", "family-update", "arrival-check", "inbound-callback"]) {
       const doc = parsePromptDoc(key, fs.readFileSync(`bolna/prompts/${key}.md`, "utf8"));
       expect(doc.systemPrompt.length).toBeGreaterThan(100);
       const tools = doc.toolFiles.map((f) => JSON.parse(fs.readFileSync(f, "utf8")) as ToolDef);
@@ -160,7 +160,7 @@ describe("Bolna agent builder", () => {
     }
     const avail = parsePromptDoc("availability", fs.readFileSync("bolna/prompts/availability.md", "utf8"));
     expect(avail.toolFiles).toHaveLength(3);
-    expect(Object.keys(avail.welcome).sort()).toEqual(["en", "hi", "kn"]);
+    expect(Object.keys(avail.welcome).sort()).toEqual(["en", "hi", "kn", "ta", "te"]);
   });
 
   it("matches Bolna's v2 schema: Sarvam voice id, param as a JSON string, the app's own scheme", () => {
@@ -199,6 +199,7 @@ describe("Bolna agent builder", () => {
       "hold-confirm": "keeping the bed at {facility_name} ready",
       release: "it can release the bed",
       "family-update": "where the patient is being taken",
+      "arrival-check": "whether the patient has reached {facility_name}",
       "inbound-callback": "a hospital's message about a referral",
     };
     for (const key of Object.keys(scope)) {
@@ -235,10 +236,11 @@ describe("Bolna agent builder", () => {
   });
 
   it("opens every call with a greeting, then the test notice, then the recording notice, in every language", () => {
-    const recorded: Record<string, string> = { en: "This call is recorded.", hi: "यह कॉल रिकॉर्ड हो रही है।", kn: "ಈ ಕರೆ ರೆಕಾರ್ಡ್ ಆಗುತ್ತಿದೆ." };
+    const recorded: Record<string, string> = { en: "This call is recorded.", hi: "यह कॉल रिकॉर्ड हो रही है।", kn: "ಈ ಕರೆ ರೆಕಾರ್ಡ್ ಆಗುತ್ತಿದೆ.",
+      ta: "இந்த அழைப்பு பதிவு செய்யப்படுகிறது.", te: "ఈ కాల్ రికార్డ్ అవుతోంది." };
     for (const key of ["availability", "hold-confirm", "release"]) {
       const doc = parsePromptDoc(key, fs.readFileSync(`bolna/prompts/${key}.md`, "utf8"));
-      for (const lang of ["en", "hi", "kn"]) {
+      for (const lang of ["en", "hi", "kn", "ta", "te"]) {
         const welcome = doc.welcome[lang];
         // A test call must not open with the notice before "Hello", and every call discloses recording (docs/09).
         expect(welcome.indexOf("{call_prefix}")).toBeGreaterThan(0);

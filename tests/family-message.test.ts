@@ -16,6 +16,15 @@ describe("familyMessage", () => {
     expect(familyMessage(facts, "hi").body).toBe("हाज़िर रेफ़रल R-4821: डॉ. Meera Rao ने मरीज़ के इलाज की व्यवस्था Tamarind District Hospital में की है। पता: 12 MG Road, Bengaluru। नक्शा: https://www.google.com/maps/search/?api=1&query=12.97,77.59। कैज़ुअल्टी डेस्क पर यह संदेश दिखाएँ और Dr Kiran से मिलें।");
   });
 
+  it("says the same words in Tamil and Telugu, naming the desk when no contact is known", () => {
+    const ta = familyMessage(facts, "ta");
+    expect(ta.body).toBe("ஹாஜிர் பரிந்துரை R-4821: டாக்டர் Meera Rao அவர்கள் நோயாளிக்கு Tamarind District Hospital-இல் சிகிச்சைக்கு ஏற்பாடு செய்துள்ளார். முகவரி: 12 MG Road, Bengaluru. வரைபடம்: https://www.google.com/maps/search/?api=1&query=12.97,77.59. அவசரப் பிரிவு மேசையில் இந்தச் செய்தியைக் காட்டி Dr Kiran என்பவரைக் கேளுங்கள்.");
+    expect(ta.template?.language).toBe("ta");
+    const te = familyMessage(bare, "te");
+    expect(te.body).toContain("క్యాజువాల్టీ డెస్క్ గురించి అడగండి.");
+    expect(te.template?.language).toBe("te");
+  });
+
   it("falls back to English for an unsupported language, and to the casualty desk when no name is known", () => {
     expect(familyMessage(facts, "xx").body).toBe("Haazir referral R-4821: Dr. Meera Rao has arranged treatment for the patient at Tamarind District Hospital. Address: 12 MG Road, Bengaluru. Map: https://www.google.com/maps/search/?api=1&query=12.97,77.59. Show this message at the casualty desk and ask for Dr Kiran.");
     expect(familyMessage(bare, "kn").body).toBe("ಹಾಜಿರ್ ರೆಫರಲ್ R-4821: ಡಾ. Meera Rao ಅವರು ರೋಗಿಗೆ Tamarind District Hospital ನಲ್ಲಿ ಚಿಕಿತ್ಸೆಯ ವ್ಯವಸ್ಥೆ ಮಾಡಿದ್ದಾರೆ. ವಿಳಾಸ: Tamarind District Hospital. ನಕ್ಷೆ: https://www.google.com/maps/search/?api=1&query=12.97,77.59. ಕ್ಯಾಶುವಾಲ್ಟಿ ಡೆಸ್ಕ್‌ನಲ್ಲಿ ಈ ಸಂದೇಶವನ್ನು ತೋರಿಸಿ ಮತ್ತು ಕ್ಯಾಶುವಾಲ್ಟಿ ಡೆಸ್ಕ್ ಅವರನ್ನು ಕೇಳಿ.");

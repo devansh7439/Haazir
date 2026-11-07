@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { buildShortSummary, buildSpokenSummary, checkNote, describeWho, joinSpoken, normaliseNote, spokenCode, spokenName } from "@/lib/modules/referral/summary.helper";
+import { buildShortSummary, buildSpokenSummary, checkNote, describeKnownFacts, describeVitals, describeWho, joinSpoken, normaliseNote, spokenCode, spokenName } from "@/lib/modules/referral/summary.helper";
 
 const KRAIT = {
   age_value: 34,
@@ -72,5 +72,34 @@ describe("identifier guard", () => {
     const c = checkNote("Mr. Ramesh collapsed at home");
     expect(c.blocked).toBe(false);
     expect(c.warnings.length).toBe(1);
+  });
+});
+
+describe("clinical facts", () => {
+  it("reads the bedside status after the note and before the needs", () => {
+    const facts = { airway: "intubated" as const, spo2: 88, on_oxygen: true, gcs: 9 };
+    expect(buildSpokenSummary({ ...KRAIT, facts })).toBe(
+      "Man aged 34, suspected snakebite with neurotoxic signs, critical. Drooping eyelids and trouble swallowing 2 hours after bite. Given 10 vials of anti-snake venom. Intubated. Oxygen saturation 88 percent on oxygen. G C S 9. Needs an ICU bed and a ventilator.",
+    );
+  });
+
+  it("leaves the summary unchanged when the doctor gave no facts", () => {
+    const plain = buildSpokenSummary(KRAIT);
+    expect(buildSpokenSummary({ ...KRAIT, facts: { airway: "unknown", spo2: null, gcs: null, on_oxygen: null } })).toBe(plain);
+    expect(describeVitals(undefined)).toBe("");
+  });
+
+  it("says room air, own airway and oxygen without a reading", () => {
+    expect(describeVitals({ airway: "own", spo2: 96, on_oxygen: false })).toBe("Not intubated. Oxygen saturation 96 percent on room air.");
+    expect(describeVitals({ on_oxygen: true })).toBe("On oxygen.");
+  });
+
+  it("gives the agent every fact it may answer, and 'not stated' for the rest", () => {
+    expect(describeKnownFacts({ airway: "intubated", spo2: 88, gcs: 9, on_oxygen: true, payer: "pmjay", medico_legal: false })).toBe(
+      "Airway: intubated. Oxygen saturation: 88 percent. On oxygen: yes. G C S: 9. Payment: Ayushman Bharat card. Medico-legal case: no.",
+    );
+    expect(describeKnownFacts(undefined)).toBe(
+      "Airway: not stated. Oxygen saturation: not stated. On oxygen: not stated. G C S: not stated. Payment: not stated. Medico-legal case: not stated.",
+    );
   });
 });

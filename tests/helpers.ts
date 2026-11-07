@@ -1,5 +1,7 @@
 import { connect, setDb, type Db } from "@/lib/core/db";
 import { setClock } from "@/lib/core/clock";
+import { readFileSync } from "node:fs";
+import path from "node:path";
 
 export const IDS = {
   hoskote: "00000000-0000-4000-8000-000000000100",
@@ -12,9 +14,10 @@ export const IDS = {
   referrer: "00000000-0000-4000-8000-000000000201",
 };
 
-/** Fresh in-memory Postgres (PGlite) with every migration and the seed applied. */
+/** Fresh in-memory Postgres (PGlite) with every migration, the seed and the fictional demo directory applied. */
 export async function freshDb(): Promise<Db> {
   const db = await connect("pglite:memory"); // auto-applies schema + seed when empty
+  await db.exec(readFileSync(path.join(process.cwd(), "supabase/demo-directory.sql"), "utf8"));
   setDb(db);
   return db;
 }

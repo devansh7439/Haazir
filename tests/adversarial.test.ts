@@ -191,6 +191,18 @@ describe("safety: never a false yes", () => {
     expect((await ReferralRepository.get(referral.id))!.status).not.toBe("options_ready");
   });
 
+  it("a yes where the desk says the ventilator is down is a conditional yes with the reason", async () => {
+    fakeClock();
+    stubBolna();
+    const { referral } = await ReferralService.create(KRAIT);
+    const [a, b] = await CallRepository.listForReferral(referral.id);
+    await FunctionService.recordResponse({ attempt_id: a.id, outcome: "accepted", bed_type: "icu", needs_ready: "no", unavailable_needs: "ventilator is down", conditions: "send the case sheet" });
+    await FunctionService.recordResponse({ attempt_id: b.id, outcome: "accepted", bed_type: "icu", needs_ready: "unknown" });
+    const calls = await CallRepository.listForReferral(referral.id);
+    expect(calls.find((x) => x.id === a.id)).toMatchObject({ outcome: "conditional", conditions: "Not available right now: ventilator is down · send the case sheet" });
+    expect(calls.find((x) => x.id === b.id)).toMatchObject({ outcome: "accepted", conditions: null });
+  });
+
   it("an availability answer sent with a hold call's id is ignored", async () => {
     fakeClock();
     stubBolna();

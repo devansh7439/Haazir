@@ -30,11 +30,11 @@ interface Multilingual {
 }
 
 describe("languages", () => {
-  it("gives every hospital agent English, Hindi and Kannada, each greeting in its own language with the same voice", () => {
+  it("gives every hospital agent English, Hindi, Kannada, Tamil and Telugu, each greeting in its own language with the same voice", () => {
     for (const key of ["availability", "hold-confirm", "release"]) {
       const { doc, multilingual } = build(key);
       expect(multilingual?.enabled).toBe(true);
-      expect(Object.keys(multilingual?.languages ?? {}).sort()).toEqual(["en", "hi", "kn"]);
+      expect(Object.keys(multilingual?.languages ?? {}).sort()).toEqual(["en", "hi", "kn", "ta", "te"]);
       for (const [lang, entry] of Object.entries(multilingual?.languages ?? {})) {
         expect(entry.welcome_message).toBe(doc.welcome[lang]);
         expect(entry.synthesizer.provider_config).toMatchObject({ voice_id: "shubh", language: lang, speed: 0.9 });
@@ -45,7 +45,7 @@ describe("languages", () => {
   it("starts in the hospital's language, so a Kannada desk is greeted in Kannada", () => {
     expect(build("availability", { startLanguage: "kn" }).multilingual?.active_language).toBe("kn");
     // A language the prompt has no welcome for falls back to the first one rather than failing the call.
-    expect(build("availability", { startLanguage: "ta" }).multilingual?.active_language).toBe("en");
+    expect(build("availability", { startLanguage: "ml" }).multilingual?.active_language).toBe("en");
   });
 });
 
@@ -87,5 +87,35 @@ describe("post-call extractions", () => {
     const minutes = dispositionBody(category("Referral outcome").dispositions[2], "agent-1", "cat-1");
     expect(minutes).toMatchObject({ is_objective: false, is_subjective: true, subjective_type: "numeric" });
     expect(minutes).not.toHaveProperty("objective_options");
+  });
+});
+
+describe("call languages", () => {
+  it("lists exactly the languages every prompt file has a welcome for, and falls back to English for the rest", async () => {
+    const { CALL_LANGUAGES, callLanguage } = await import("@/lib/modules/call/call.helper");
+    for (const key of ["availability", "hold-confirm", "release", "family-update", "arrival-check", "inbound-callback"]) {
+      expect(Object.keys(build(key).doc.welcome).sort()).toEqual([...CALL_LANGUAGES].sort());
+    }
+    expect(callLanguage("te")).toBe("te");
+    expect(callLanguage("ml")).toBe("en");
+  });
+});
+
+describe("start language", () => {
+  it("uses one language for the welcome, transcriber and voice, English when the prompt has none for the request", () => {
+    const task = (o: Partial<BuildOptions>) => {
+      const doc = parsePromptDoc("availability", fs.readFileSync("bolna/prompts/availability.md", "utf8"));
+      const agent = buildAgent(doc, [], { ...options, ...o }) as {
+        agent_config: { agent_welcome_message: string; tasks: Array<{ tools_config: { transcriber: { language: string }; synthesizer: { provider_config: { language: string } } } }> };
+      };
+      return { welcome: agent.agent_config.agent_welcome_message, tc: agent.agent_config.tasks[0].tools_config, doc };
+    };
+    const ml = task({ startLanguage: "ml" });
+    expect(ml.tc.transcriber.language).toBe("en");
+    expect(ml.tc.synthesizer.provider_config.language).toBe("en");
+    expect(ml.welcome).toBe(ml.doc.welcome.en);
+    const ta = task({ startLanguage: "ta" });
+    expect(ta.tc.transcriber.language).toBe("ta");
+    expect(ta.welcome).toBe(ta.doc.welcome.ta);
   });
 });

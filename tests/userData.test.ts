@@ -39,6 +39,13 @@ describe("user_data privacy", () => {
     for (const v of Object.values(data)) expect(typeof v).toBe("string");
   });
 
+  it("passes the known facts to the agent, with no identifiers, and a default when none were given", () => {
+    expect(data.known_facts).toBe("Nothing else was given.");
+    const d = availabilityUserData(ctx, { case_summary: "x", needs_spoken: "y", eta_minutes: 1, known_facts: "Airway: intubated. Payment: cash." });
+    expect(d.known_facts).toBe("Airway: intubated. Payment: cash.");
+    for (const k of FORBIDDEN_KEYS) expect(Object.keys(d)).not.toContain(k);
+  });
+
   it("adds the consented-test sentence in the call language", () => {
     const d = availabilityUserData({ ...ctx, consented_test: true }, { case_summary: "x", needs_spoken: "y", eta_minutes: 1 });
     expect(d.call_prefix).toContain("ಪರೀಕ್ಷಾ ಕರೆ");

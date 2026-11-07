@@ -50,13 +50,14 @@ const PASSWORD = "password-demo-1";
 const METHODS = ["GET", "POST", "PUT", "PATCH", "DELETE"] as const;
 
 // Routes that authenticate with their own secret or signature (or are the sign-in itself).
-const SELF_AUTHED = ["bolna/", "cron/", "whatsapp/", "triggers/", "login", "logout"];
+const SELF_AUTHED = ["bolna/", "cron/", "whatsapp/", "triggers/", "attachments/", "hospital/", "login", "logout"];
 // Open to anyone on purpose; the "public routes" test pins what they may say.
 const PUBLIC_ROUTES = ["mobile/config"];
 // [route, method] pairs only an admin may call. Kept in step with the source by the "admin list is complete" test.
 const ADMIN_ONLY = [
   "POST facilities", "PATCH facilities/[id]", "PUT facilities/[id]/capabilities", "POST facilities/[id]/contacts",
-  "PATCH contacts/[id]", "POST portal-snapshots",
+  "PATCH contacts/[id]", "POST portal-snapshots", "GET referrers", "POST referrers/[id]/verification",
+  "POST escalation-contacts", "DELETE escalation-contacts/[id]", "POST facilities/[id]/desk-link",
 ];
 
 type Handler = (req: Request, ctx: { params: Promise<{ id: string }> }) => Promise<Response>;
@@ -215,6 +216,7 @@ describe("route access control", () => {
       "attempts/[id]": attempts[0].id,
       "facilities/[id]": IDS.tamarind,
       "contacts/[id]": contact.id,
+      "referrers/[id]": IDS.referrer,
     };
     const before = JSON.stringify(await db.query(`select status, current_wave from referrals where id = $1`, [referral.id]));
     const facilityBefore = JSON.stringify(await db.query(`select * from facilities where id = $1`, [IDS.tamarind]));
@@ -371,6 +373,7 @@ describe("database exposure (Supabase roles)", () => {
     };
     await sb.exec(SUPABASE_LIKE);
     await migrate(sb);
+    await sb.exec(fs.readFileSync(path.join(process.cwd(), "supabase/demo-directory.sql"), "utf8"));
     setDb(sb);
     await ReferralService.create(KRAIT, { orgId: DEFAULT_ORG_ID });
     await sb.query(`insert into organisations (id, name) values ($1, 'Other hospital network')`, [ORG_B]);

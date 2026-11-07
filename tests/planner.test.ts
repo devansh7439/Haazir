@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import type { Attempt, Contact, Referral } from "@/lib/core/types";
+import { NO_HANDOVER_FACTS, type Attempt, type Contact, type Referral } from "@/lib/core/types";
 import { planRedial } from "@/lib/modules/call/call.helper";
 import { lateYesReason, responsePlan } from "@/lib/modules/call/function.helper";
 import { readAvailability } from "@/lib/modules/call/webhook.helper";
@@ -14,7 +14,10 @@ const ago = (s: number) => new Date(NOW.getTime() - s * 1000).toISOString();
 const referral = (o: Partial<Referral> = {}): Referral => ({
   id: "r1", org_id: "o1", code: "R-1000", status: "searching", referrer_id: "d1", origin_facility_id: null,
   origin_lat: 13, origin_lng: 77, case_type: "snakebite_neuro", acuity: "critical", age_value: 34, age_unit: "years",
-  sex: "male", note: null, required_capabilities: [], spoken_summary: "", transport: "ambulance", search_radius_km: 40,
+  sex: "male", note: null, airway: "unknown", spo2: null, gcs: null, on_oxygen: null, payer: "unknown", medico_legal: null,
+  ...NO_HANDOVER_FACTS, transfer_consent: null, transfer_consent_at: null, transfer_reason: null,
+  ambulance_status: "not_requested", ambulance_updated_at: null, treatment_started_at: null,
+  required_capabilities: [], spoken_summary: "", transport: "ambulance", search_radius_km: 40,
   current_wave: 1, wave_started_at: ago(30), selected_facility_id: null, selected_attempt_id: null, hold_expires_at: null,
   first_acceptance_at: null, confirmed_at: null, closed_at: null, close_reason: null, is_demo: true,
   created_at: ago(60), updated_at: ago(30), ...o,
@@ -27,7 +30,7 @@ const attempt = (o: Partial<Attempt> = {}): Attempt => ({
   bolna_agent_id: null, bolna_execution_id: null, status: "ringing", bolna_status: null, termination_reason: null,
   outcome: null, outcome_source: null, extraction_outcome: null, needs_review: false, bed_type: null,
   specialist_available: null, ready_in_minutes: null, conditions: null, contact_person: null, decline_reason: null,
-  alternate_number: null, callback_due_at: null, transcript: null, recording_url: null, extracted_data: null,
+  alternate_number: null, callback_due_at: null, transcript: null, recording_url: null, cost: null, duration_s: null, extracted_data: null,
   dispatched_at: ago(30), answered_at: null, outcome_at: null, ended_at: null, last_polled_at: null,
   created_at: ago(30), updated_at: ago(30), ...o,
 });
