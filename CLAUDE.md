@@ -14,7 +14,7 @@ Next.js App Router + TypeScript (strict) · Tailwind + shadcn/ui · Supabase Pos
 ```bash
 bun run db:setup     # apply supabase/migrations/* + seed to DATABASE_URL (pglite:./.data/pglite needs no setup)
 bun run dev          # local app on :3000 (dev mode is 6–12× slower than production)
-bun run serve        # production build + start: use for demos, rehearsals and latency checks
+bun run serve        # production build + start: use for demos, rehearsals and latency checks. Dev builds into .next-dev, serve into .next; both use port 3000, so run one at a time (a port guard stops the second). Restart `bun run dev` after editing next.config.ts, or the page loses its CSS and scripts (404 text/plain on /_next/static)
 bun run lint && bun run typecheck && bun run test   # not `bun test`: tests use vitest
 ngrok http 3000      # public URL for Bolna callbacks; put it in APP_BASE_URL and in the DEV agents
 ```
@@ -39,6 +39,7 @@ ngrok http 3000      # public URL for Bolna callbacks; put it in APP_BASE_URL an
 - Migrations are tracked in `haazir_migrations`; `bun run db:setup` (and the embedded DB on connect) applies only new files.
 - `WebhookService.recoverStale` re-reads stuck calls from Bolna; `MaintenanceService.tick` is the background loop.
 - **Safety rules added after a devil's-advocate review** (tests in `tests/adversarial.test.ts`): function routes only accept an id for the right kind of call; "accepted" with bed `none` goes to review; a yes after the patient is placed is released on the same call (`CallService.recordInCallRelease`); no TTFA after cancel/close; at most two redials or callbacks per hospital, then the doctor is asked to call; family-call transcripts and recordings are never stored; `parseBody` requires `application/json`; `ReferralService.create` is idempotent on `client_request_id`.
+- **Attachments** (`lib/modules/attachment/`, migration 0018) are server-only like `patient_details`: a photo or record can show a name even though Haazir never reads it. Browsers get metadata only; the bytes go to a console session of the same organisation or to a signed link (`ATTACHMENT_LINK_SECRET`, 24 hours, only while a bed is confirmed). They are stored in Postgres, so tests, Supabase and any Postgres need no storage service.
 - Handlers return `{ instruction, followUp }`; routes run `followUp` with `after()`, tests await it.
 - No shadcn/ui: a small in-house design system instead. Tokens and component classes (`btn`, `card`, `input`, `chip`, `tag`) live in `app/globals.css` (monochrome: near-black `brand-*` accent, zinc neutrals, every other hue mapped to zinc; `line` hairline border, Inter). Primitives are in `components/ui.tsx` (`StatusPill`, `PageHeader`, `Stat`, `SectionTitle`, `Logo`), with `lucide-react` line icons. Never use emoji as icons; every status shows an icon or dot plus text.
 
@@ -57,7 +58,7 @@ ngrok http 3000      # public URL for Bolna callbacks; put it in APP_BASE_URL an
 ## Where things are
 | Path | What |
 |---|---|
-| `supabase/migrations/0001_init.sql`, `supabase/seed.sql` | Schema (tested on Postgres 16) and demo data |
+| `supabase/migrations/0001_init.sql`, `supabase/seed.sql`, `supabase/demo-directory.sql` | Schema (tested on Postgres 16), reference data (capabilities, case types), and the fictional demo directory (tests load it; `bun run db:setup -- --demo` loads it on purpose) |
 | `bolna/prompts/*.md`, `bolna/tools/*.json`, `bolna/extractions.md`, `bolna/knowledge/desk-faq.md` | Agent prompts, tool definitions, extraction setup, knowledge base. Applied by `bun run bolna:agents -- --update`, `bolna:extractions -- --apply` and `bolna:kb -- --upload`; `bolna:test-call` calls a phone with real `user_data` |
 | `tests/support/krait-bite.json`, `tests/support/scripted-calls.ts` | The krait-bite test script, the scripted-call driver and the fake Bolna |
 | `context.md` | Code-quality rules and the refactor plan: read it before changing code |
@@ -72,7 +73,7 @@ ngrok http 3000      # public URL for Bolna callbacks; put it in APP_BASE_URL an
 | `mobile/` | Expo phone app. Own package; signs in with a Bearer token (`x-haazir-client: mobile` on `POST /api/login`). `mobile/src/api/schema.ts` checks every answer; `mobile/src/lib/{display,board,facility}.ts` are copies of `lib/ui/*`, kept in step by `tests/mobile-contract.test.ts`. A change to a response shape or to `lib/ui/display.ts` / `board.ts` / `facility.ts` must be mirrored there. `lib/modules/mobile/` serves its config and bootstrap; `lib/modules/push/` sends Expo push notifications (no patient identifiers in the text) |
 
 ## Unverified against live services
-Bolna's v2 agent payload (`lib/integrations/bolna/bolna.agents.ts`), Google Places ratings (`lib/integrations/google/google.places.ts`, only with `GOOGLE_PLACES_API_KEY`), the execution-polling response shape, Sarvam speech-to-text (`lib/integrations/sarvam/sarvam.stt.ts`), Expo push (`lib/modules/push/push.service.ts` and `mobile/src/push/`, tested only against a fake endpoint), and Meta/Twilio WhatsApp sends were written without access to those docs or accounts. Each file says so; test them before relying on them.
+Bolna's v2 agent payload (`lib/integrations/bolna/bolna.agents.ts`), Google Places ratings (`lib/integrations/google/google.places.ts`, only with `GOOGLE_PLACES_API_KEY`), the execution-polling response shape, Sarvam speech-to-text (`lib/integrations/sarvam/sarvam.stt.ts`), Expo push (`lib/modules/push/push.service.ts` and `mobile/src/push/`, tested only against a fake endpoint), road drive times (`lib/integrations/routing/routing.client.ts`, only with `ROUTING_BASE_URL`), the `total_cost` and `conversation_duration` fields of the Bolna `completed` webhook (`lib/modules/call/webhook.helper.ts`), the bridge number for live transfer (`app/api/bridge/answer`, `lib/modules/call/bridge.service.ts`, never run against Bolna or Plivo), the arrival-check agent and its Hindi, Kannada, Tamil and Telugu lines (`bolna/prompts/arrival-check.md`, never heard on a real call), and Meta/Twilio WhatsApp sends were written without access to those docs or accounts. Each file says so; test them before relying on them.
 
 ## Tests to write first
 - `summary.ts`: the krait-bite example produces exactly the string in `docs/02-architecture.md` §8; a note with 10 digits is rejected.

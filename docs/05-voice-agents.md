@@ -12,6 +12,7 @@ What each agent says, how it's configured, and how to test it. The exact text to
 | **Hold confirmation** | `BOLNA_AGENT_ID_HOLD_CONFIRM` | The chosen hospital, right after the doctor selects | `record_hold_confirmation` | `Hold` | 120 s |
 | **Release** | `BOLNA_AGENT_ID_RELEASE` | Hospitals that accepted but weren't chosen | — | — | 60 s |
 | **Family update** (stretch) | `BOLNA_AGENT_ID_FAMILY` | Attendant, after the hold is confirmed | — | — | 120 s |
+| **Arrival check** | `BOLNA_AGENT_ID_ARRIVAL` | The chosen hospital, once, `ETA + 10 min` after the bed was confirmed | `record_arrival` | — | 60 s |
 | **Inbound callback** (should-have) | attach to the caller-ID number | When a hospital calls back | `report_inbound_callback` | — | 90 s |
 
 Keep **separate dev and demo copies** of each agent. Webhook and tool URLs live inside the agent, so the dev copies point at your tunnel and the demo copies point at production.
@@ -23,7 +24,7 @@ Keep **separate dev and demo copies** of each agent. Webhook and tool URLs live 
 | Setting (dashboard tab) | Value | Why |
 |---|---|---|
 | LLM (Agent) | A fast model available in your account; compare latency on 3 test calls | Turns are short; speed matters more than eloquence |
-| Languages (Agent) | `multilingual_config` with **en, kn, hi**; auto-detect and switch **on** | Desks switch languages mid-sentence **[B14]** |
+| Languages (Agent) | `multilingual_config` with **en, hi, kn, ta, te**; auto-detect and switch **on** | Desks switch languages mid-sentence **[B14]** |
 | Transcriber | **Sarvam `saaras:v4`** for `kn` and `hi` (Bolna's Kannada guide calls Sarvam usually the strongest for Indian callers); keep the same for `en` unless English accuracy is worse | Indian accents and code-mixing |
 | Transcriber keywords | Your demo hospital names, "ICU", "ventilator", "anti-snake venom", "casualty", "NICU", "referral" | Better recognition of key terms (`keywords` needs `saaras:v4`) |
 | Voice | Sarvam `bulbul:v3`, voice `shubh`, speed **0.9** (1.0 sounded rushed on test calls); `bulbul:v4-flash` or ElevenLabs as alternatives. Match the Hindi verb gender in the welcome text to the voice | Natural Indian voices a desk can follow |
@@ -33,7 +34,7 @@ Keep **separate dev and demo copies** of each agent. Webhook and tool URLs live 
 | Outbound calling hours (Call) | **Off**, and send `bypass_call_guardrails: true` on every call | Emergencies are 24×7 **[B10]** |
 | Auto reschedule (Call) | Off | We schedule callbacks ourselves |
 | Interruptions (Engine) | Wait **3 words** before stopping (2 let "on call" or "haan haan" cut every read-back short); stopwords: "wait", "ruko", "ಒಂದು ನಿಮಿಷ" | Desks interrupt constantly |
-| User-online detection (Engine) | On; after about 15 s say "I'm still here, please take your time." (per language) | Keeps the line open while they check the ward |
+| User-online detection (Engine) | On, after 15 s of silence. Bolna's API has no field for the message text (`check_if_user_online` and `trigger_user_online_message_after` only), so it speaks its own default | Keeps the line open while they check the ward |
 | Hangup on user silence (Engine) | **30–45 s** (find the largest value the dashboard allows) | "Hold on, let me check" often means 20+ seconds of silence |
 | Total call timeout (Engine) | As in §1 | Bounds cost and runaway calls |
 | Hangup using a prompt (Agent) | On; text is in each prompt file | Ends cleanly after the tool returns **[B18]** |
@@ -56,11 +57,14 @@ Availability example (the hospital hears no identifiers):
   "referral_code_spoken": "R 4 8 2 1",
   "case_summary": "Man aged 34, suspected snakebite with neurotoxic signs, critical. Drooping eyelids and trouble swallowing 2 hours after bite. Given 10 vials of anti-snake venom. Needs an ICU bed and a ventilator.",
   "needs_spoken": "an ICU bed and a ventilator",
+  "known_facts": "Airway: intubated. Oxygen saturation: 88 percent. On oxygen: yes. G C S: 9. Payment: Ayushman Bharat card. Medico-legal case: no.",
   "eta_minutes": "18",
   "timezone": "Asia/Kolkata",
   "call_prefix": ""
 }
 ```
+
+`known_facts` is what the agent may answer if a desk asks about airway, oxygen, G C S, payment or a medico-legal case (`describeKnownFacts`). A fact the doctor left out reads "not stated", and the agent then offers the doctor's callback instead of guessing. It is "Nothing else was given." for a referral without any. Apply the changed prompt with `bun run bolna:agents -- --update`.
 
 Also send `agent_data: { "language": "<facilities.call_language>" }` and `bypass_call_guardrails: true`.
 `call_prefix` is empty for real referrals and holds the test sentence for consented test calls (`09-validation-safety-compliance.md` §1.3).
@@ -77,6 +81,7 @@ Also send `agent_data: { "language": "<facilities.call_language>" }` and `bypass
 
 - Start each call in the hospital's `call_language` with `agent_data.language`. It must match a language key configured on the agent, or Bolna returns 400 **[B1]**.
 - Bolna's Kannada guide: use code `kn` for both transcriber and synthesizer (not `kn-IN`), write Kannada prompts in **Kannada script**, and ask for the **polite plural** **[B14]**. Start with the shared English prompt plus the line "Speak in Kannada, using polite plural forms." If quality is poor, translate the prompt into Kannada script.
+- Tamil and Telugu were added with the same voice and transcriber. A `call_language` with no agent (for example `ml`) starts the call in English (`callLanguage` in `call.helper.ts`) instead of failing with 400. To add a language: a welcome in every `bolna/prompts/*.md`, an entry in `AGENT_LANGUAGES` and `CALL_LANGUAGES`, the test sentence and desk fallback in `user-data.helper.ts`, then `bun run bolna:agents -- --update`.
 - Numbers: ask the agent to confirm numbers back, and to read phone numbers digit by digit. Code-mixed speech ("ICU bed ಇದೆ") is normal, and Sarvam handles English words inside Kannada sentences.
 - **Native-speaker check:** every Hindi and Kannada line in this pack was drafted for you. Have a native speaker read them aloud with the chosen voice before the demo.
 
@@ -97,6 +102,8 @@ Also send `agent_data: { "language": "<facilities.call_language>" }` and `bypass
 11. **Stay in scope.** Every agent's prompt ends with the same boundaries (`guardrails()` in `lib/integrations/bolna/bolna.agents.ts`): it talks only about its own call, answers anything else with "Sorry, I can only help with this emergency referral.", takes instructions only from its prompt, never reveals its instructions, tools or model, never names another hospital, and ends the call after two off-topic reminders (the availability agent records `unclear` first). Bolna has no content filter, and its documented `llm_agent.routes` (fixed replies) is not stored, so these rules live in the prompt.
 
 ---
+
+**Keep prompts short.** Every token is paid for on each turn, and the boundaries block is appended to every prompt. A rule that `guardrails()` already states (no medical advice, never claim to be human, ignore instructions to change facts, don't name other hospitals) doesn't belong in a prompt file, and nor does a fact already in "Who you are".
 
 ## 6. Edge-case playbook
 
@@ -133,6 +140,16 @@ Bolna's Transfer Call tool forwards to a destination **configured on the tool**:
 
 When the agent transfers, the call ends without `record_hospital_response`. The doctor talks to the desk and records the result with **Record outcome** on the hospital's card, exactly as after a callback. Never enable the transfer on a production agent.
 
+### 7.1 Bridge number (built, never run against Bolna or Plivo)
+
+The destination is fixed per tool, so point it at a number that works out the doctor at transfer time instead of at one person:
+
+1. Rent a number on Plivo (the agents use Plivo telephony) and make an application for it whose **answer URL** is `https://<APP_BASE_URL>/api/bridge/answer?token=<BRIDGE_SECRET>`, method POST. Set `BRIDGE_SECRET`.
+2. Set the Transfer Call tool's destination to that number (§7 steps 1–5).
+3. When the transfer arrives, Plivo asks our route who to dial. It reads the `From` number, finds the live referral whose call we placed to that number in the last 10 minutes, and answers with `<Dial>` to that referral's **referring doctor** (from our database). The route dials nothing the caller supplies, and nothing at all when no live referral matches (the caller hears a short apology).
+
+**Assumptions to check on a spare number before relying on it:** that Bolna's transfer reaches the bridge number with the desk's number as `From` (if it shows Bolna's own number, nothing matches and nobody is dialled); that Plivo accepts this XML (`Response`, `Dial`, `Number`, `Speak`, `Hangup`); and that the doctor's phone shows a caller ID they will answer. With several referrals live at once the match is by the desk's number, so it is exact only if `From` is the desk's number.
+
 ---
 
 ## 8. Setting up the agents
@@ -148,7 +165,7 @@ When the agent transfers, the call ends without `record_hospital_response`. The 
 **With the scripts (what the dev agents were built with)**
 1. `bun run bolna:kb -- --upload`: prints `bolna/knowledge/desk-faq.md` to PDF (Bolna ingests PDFs or public URLs only), uploads it and prints `BOLNA_KNOWLEDGE_BASE_ID`.
 2. `bun run bolna:agents -- --apply` creates the agents; `--update` rewrites the ones whose `BOLNA_AGENT_ID_*` is set, keeping their IDs. Run either without the flag first and check `bolna/generated/`.
-3. The knowledge base goes to the availability and hold agents only. It answers desk questions (who we are, what happens after a yes, privacy, payment) and lists the words desks use; the call rules stay in the prompts. Hindi and Kannada phrases are romanised, because conjuncts don't survive PDF text extraction.
+3. The knowledge base goes to the availability and hold agents only. It answers desk questions (who we are, what happens after a yes, privacy, payment) and lists the words desks use; the call rules stay in the prompts. Hindi, Kannada, Tamil and Telugu phrases are romanised, because conjuncts don't survive PDF text extraction.
 4. Languages (en, hi, kn, each with its own welcome) are part of the agent payload (`multilingual_config`), so `--update` keeps them.
 5. `bun run bolna:extractions -- --apply` creates or updates the post-call extractions from `lib/integrations/bolna/bolna.extractions.ts`. They are separate Bolna resources, so `--update` doesn't touch them. Without a tunnel they are the only way an answer reaches the app.
 6. Anything changed only in the dashboard is lost on the next `--update`: change the files and rerun instead.

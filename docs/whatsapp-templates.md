@@ -10,7 +10,7 @@ Create these in WhatsApp Manager → Message templates (category **Utility**), w
 |---|---|---|
 | `META_WA_TEMPLATE_PREARRIVAL` | `haazir_prearrival` | `en` |
 | `META_WA_TEMPLATE_DOCTOR` | `haazir_confirmed` | `en` |
-| `META_WA_TEMPLATE_FAMILY` | `haazir_family` | `en`, `kn`, `hi` (one template, three translations) |
+| `META_WA_TEMPLATE_FAMILY` | `haazir_family` | `en`, `kn`, `hi`, `ta`, `te` (one template, five translations) |
 | `META_WA_TEMPLATE_BED_REQUEST` | `haazir_bed_request` | `en` (only if `WHATSAPP_AVAILABILITY_PING=on`) |
 
 Leave a variable empty to send plain text for that message. Parameters are filled in the order below (`lib/modules/handoff/message.helper.ts`);
@@ -44,7 +44,9 @@ Bed held until {{8}}
 ```
 Haazir referral {{1}}: Dr. {{2}} has arranged treatment for the patient at {{3}}. Address: {{4}}. Map: {{5}}. Show this message at the casualty desk and ask for {{6}}.
 ```
-The Kannada and Hindi bodies are in `docs/04-api-spec.md` §4.3. Have a native speaker check them before submitting.
+The Kannada and Hindi bodies are in `docs/04-api-spec.md` §4.3; the Tamil and Telugu ones are `FAMILY.ta` and `FAMILY.te` in `lib/modules/handoff/message.helper.ts`. Have a native speaker check them before submitting.
+
+**Add the `ta` and `te` translations to `haazir_family` before setting `META_WA_TEMPLATE_FAMILY`.** The message is sent in the attendant's language, and Meta rejects a template language that isn't approved, so a missing translation fails the send.
 
 ## `haazir_bed_request` (5 parameters)
 ```

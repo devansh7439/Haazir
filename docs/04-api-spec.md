@@ -47,6 +47,27 @@ Creates the referral and dispatches wave 1.
   "note": "Drooping eyelids and trouble swallowing 2 hrs after bite. Given 10 vials of ASV.",
   "transport": "ambulance",
   "search_radius_km": 40,
+  // Optional clinical facts. None identify the patient. airway/spo2/gcs/on_oxygen are read to every desk; payer and
+  // medico_legal are only told to a desk that asks. Defaults: "unknown" / null.
+  "airway": "intubated",          // intubated | own | unknown
+  "spo2": 88,                     // 0–100
+  "gcs": 9,                       // 3–15
+  "on_oxygen": true,
+  "payer": "pmjay",               // free_govt | pmjay | insurance | cash | unknown
+  "medico_legal": false,
+  // Optional handover (migration 0014). None identify the patient. pregnancy_weeks, trauma_mechanism, infectious_risk and
+  // blood_needed are read to every desk; treatment_given and blood_group are only told to a desk that asks.
+  // treatment_given gets the same identifier check as note (422 TREATMENT_CONTAINS_IDENTIFIER). pregnancy_weeks with sex
+  // "male" is 422 PREGNANCY_NOT_APPLICABLE.
+  "pregnancy_weeks": 34,          // 1–45
+  "trauma_mechanism": "road_accident", // not_trauma | road_accident | fall | assault | burn | penetrating | other | unknown
+  "infectious_risk": "airborne",  // none | airborne | contact | bloodborne | unknown
+  "treatment_given": "IV fluids, tetanus toxoid", // up to 160 characters
+  "blood_group": "B-",            // A+ A- B+ B- AB+ AB- O+ O- | unknown
+  "blood_needed": true,
+  // Optional consent to the transfer itself (migration 0015); the time is set when the referral is created.
+  "transfer_consent": "attendant", // patient | attendant | emergency_waiver
+  "transfer_reason": "service_not_available", // service_not_available | needs_higher_care | no_bed | other
   "patient": {
     "patient_name": "Ramesh K.",
     "attendant_name": "Lakshmi",
@@ -81,6 +102,8 @@ Creates the referral and dispatches wave 1.
 ### 2.3 `GET /api/referrals/:id`
 Returns the referral (no identifiers), attempts joined with facility name, coordinates, ETA and contact role, the latest 200 events, and message **previews** (`{audience, to_masked, status, preview_redacted}`).
 
+`nearest_ed` is empty unless the referral is `exhausted`; then it holds up to 3 `{facility_id, name, kind, distance_km, eta_minutes, phone}`: the closest CHC, district, medical-college or private hospitals (not the origin) with an active, non-IVR `casualty_desk` number, whatever they can do, so the doctor can stabilise the patient there. `eta_minutes` is the straight-line estimate (× 1.4 at 30 km/h), not a road time.
+
 ### 2.4 `POST /api/referrals/:id/select`
 ```jsonc
 // request
@@ -99,6 +122,32 @@ For when the doctor already spoke to the hospital. `{ "attempt_id": "a1…", "co
 
 ### 2.7 `POST /api/referrals/:id/close`
 `{ "reason": "arrived" | "hold_expired" | "transferred_elsewhere" | "other", "note": "…" }` → `closed`.
+
+### 2.7a `POST /api/referrals/:id/transfer-consent`
+`{ "transfer_consent": "patient" | "attendant" | "emergency_waiver", "transfer_reason"?: … }` records, or corrects, who agreed to the transfer; the time is the moment of recording and an omitted reason keeps the one on file. → `{ transfer_consent, transfer_consent_at, transfer_reason }`. 409 `NOT_RECORDABLE` once the referral is cancelled. Writes the audit event `transfer_consent_recorded`.
+
+### 2.7b `GET /api/referrals/:id/slip`
+The referral slip (transfer record) once a hospital has confirmed the bed: `{ slip: { code, confirmed_at, hold_until, from, to, reason, consent, sbar, lines } }`. `lines` is the same slip as plain text for pasting into a case sheet. It holds no patient name or phone. 409 `NO_DESTINATION` before a bed is confirmed.
+
+### 2.7d `POST /api/referrals/:id/ambulance`
+`{ "status": "requested" | "dispatched" | "at_patient" | "not_available" | "not_requested" }` records where the ambulance is, as the doctor last set it. Haazir does not book the ambulance (there is no public 108 dispatch API): the doctor calls 108 or the hospital and taps the state. → `{ ambulance_status, ambulance_updated_at }`. 409 `NOT_RECORDABLE` once the referral is cancelled or closed. Writes the audit event `ambulance_status`. The slip prints it.
+
+### 2.7e Attachments (ECG, photos, records)
+- `POST /api/referrals/:id/attachments` is `multipart/form-data` with `kind` (`ecg | photo | record | other`) and `file`, and needs the header `x-haazir-upload: 1` (a cross-site form can't set it; 400 `UPLOAD_HEADER_MISSING` without). JPEG, PNG, WebP or PDF, recognised from the file's first bytes, not from what the browser claims; up to 4 MB; at most 6 per referral. 422 `UNSUPPORTED_FILE`, `FILE_TOO_LARGE`, `EMPTY_FILE`, `TOO_MANY_ATTACHMENTS`; 409 `NOT_ATTACHABLE` once the referral is cancelled or closed. → 201 `{ attachment: { id, kind, content_type, size_bytes, created_at } }`. No filename is stored.
+- `GET /api/referrals/:id/attachments` → `{ attachments: [...metadata], hospital_links: [{ label, url }] }`. `hospital_links` is empty until a bed is confirmed, and always empty without `ATTACHMENT_LINK_SECRET` (32+ characters) and `APP_BASE_URL`.
+- `DELETE /api/referrals/:id/attachments/:attachmentId`.
+- `GET /api/attachments/:id/file` serves the bytes (`inline`, `nosniff`, a sandboxing CSP, `no-store`). It authenticates itself: a console session of the same organisation (404 otherwise), or the link given to the hospital, `?exp=<seconds>&sig=<hmac>`, which works for 24 hours while the referral has a confirmed bed and never after it is cancelled (401).
+The files sit in `referral_attachments`, which no browser role can read. The pre-arrival WhatsApp note carries one `ECG: https://…` line per file (the Meta template parameters are unchanged, so a template-only send has no links; copy them from the console). The console's message preview says only how many files there are. A photo or record can show the patient's name, so the retention purge deletes attachments with the other identifiers.
+
+### 2.7f `POST /api/referrals/:id/treatment-started`
+Records that the receiving hospital began treating the patient: `{ treatment_started_at }`. Idempotent (the first record wins). 409 `NOT_RECORDABLE` until a bed is confirmed. Audit event `treatment_started`. Analytics shows the median from "Find a bed" to a confirmed bed and to treatment starting.
+
+### 2.7c Doctor registration
+- `POST /api/referrers/:id/registration` `{ "registration_no": "KA 12345", "registration_council": "NMC" }`. A doctor can send their own; an admin anyone's in the organisation. Tidies the number (upper case, no spaces; 3–32 of letters, digits, `/`, `.`, `-`), stores it and sets `verification_status` to `pending`. A changed number goes back to `pending`. 422 `INVALID_REGISTRATION`.
+- `POST /api/referrers/:id/verification` (admin) `{ "decision": "verified" | "rejected" }`, after the admin looked the number up in the NMC Indian Medical Register or the state council's. 409 `NO_REGISTRATION` when the doctor gave none.
+- `GET /api/referrers` (admin) lists the organisation's doctors with their registration and status, without phone numbers.
+- With `REQUIRE_VERIFIED_REFERRER=on`, `POST /api/referrals` and the preview answer 422 `REFERRER_NOT_VERIFIED` for a doctor who is not `verified`. Off by default.
+Nothing calls an outside register: the check is a person's.
 
 ### 2.8 `POST /api/referrals/:id/tick`
 Runs `evaluateReferral` and re-reads stuck calls from Bolna. Called by the open console every 5 s.
@@ -174,6 +223,8 @@ Configured per agent: **Extractions tab → Webhook URL**, all statuses **[B5]**
   "outcome": "accepted",
   "bed_type": "icu_with_ventilator",
   "specialist_available": "yes",
+  "needs_ready": "yes",          // asked after a yes: are the specialist and equipment here and working now? yes | no | unknown
+  "unavailable_needs": "",       // only with needs_ready "no": what is missing, in a few words
   "ready_in_minutes": "15",
   "contact_person": "Dr Kiran",
   "conditions": "",
@@ -186,6 +237,7 @@ Configured per agent: **Extractions tab → Webhook URL**, all statuses **[B5]**
 | `outcome` | Server action | `instruction` returned |
 |---|---|---|
 | `accepted` / `conditional` | Save details; set `first_acceptance_at` once; referral → `options_ready` | "Thank them, say Dr. Meera Rao's team will confirm within a few minutes if they send the patient, and end the call." |
+| `accepted` with `needs_ready: "no"` | Recorded as `conditional`, with `conditions` starting "Not available right now: …" so the doctor sees what is missing before choosing. `unknown` changes nothing | as above |
 | `declined` | Save `decline_reason` | "Thank them for their time and end the call." |
 | `redirected` | Normalise `alternate_number`; if valid, create a redial attempt to it and add it as a contact (`role: other`, unverified) | "Thank them, say you will call that number now, and end the call." |
 | `unclear` | Save | "Thank them and end the call." |
@@ -220,6 +272,21 @@ Sets outcome `needs_doctor`; event `doctor_callback_requested` with `{facility_n
 | `no` | Attempt `hold_declined`; referral → `options_ready`; event; the doctor chooses again |
 
 → `{ "result": "recorded", "instruction": "Thank them, say the pre-arrival note is coming on WhatsApp, and end the call." }`
+
+#### `POST /api/bolna/functions/record-arrival`
+Called by the **arrival check** agent: the chosen hospital says whether the patient has reached it.
+```jsonc
+{ "attempt_id": "c3…", "arrived": "yes", "contact_person": "Sister Rekha", "to_number": "+919800000103" }
+```
+
+| `arrived` | Server action |
+|---|---|
+| `yes` | Attempt `arrival_confirmed`; event `arrival_confirmed` `{facility_id}` |
+| `no` | Attempt `not_arrived`; event `not_arrived` `{facility_id}` |
+| anything else | Nothing is recorded (CLAUDE.md rule 10); the call ends |
+
+The route only accepts the id of an `arrival_check` call. It does not close the referral: the doctor still presses **Patient arrived**, so a desk's word is never the only record.
+→ `{ "result": "recorded", "instruction": "Thank them and end the call." }`
 
 #### `POST /api/bolna/functions/inbound-callback` (should-have S6)
 Called by the **inbound** agent when a hospital rings our number back.
@@ -286,10 +353,16 @@ Map link format: `https://www.google.com/maps/search/?api=1&query={lat},{lng}`
 | `needs_review` | Reconciliation conflict | `{facility_id, function_outcome, extraction_outcome}` |
 | `options_ready` | First acceptance | `{facility_id, ttfa_seconds}` |
 | `facility_selected` | 2.4 | `{facility_id}` |
+| `transfer_consent_recorded` | 2.7a | `{consent, reason}`; not shown on the timeline |
+| `ambulance_status` | 2.7d | `{status}`; not shown on the timeline |
+| `attachment_added` / `attachment_removed` | 2.7e | `{kind, size_bytes}` / `{}`; not shown on the timeline |
+| `treatment_started` | 2.7f | `{}`; not shown on the timeline |
 | `hold_confirmed` / `hold_declined` | 3.2 | `{facility_id, contact_person}` |
 | `handoff_sent` | Message sent | `{audience, to_masked, status, preview_redacted}` |
 | `release_dispatched` | Release call | `{facility_id}` |
 | `hold_expired` | Evaluator | `{facility_id}` |
+| `arrival_check_dispatched` | Evaluator, `ETA + ARRIVAL_CHECK_AFTER_MIN` after confirmation | `{facility_id}` |
+| `arrival_confirmed` / `not_arrived` | 3.2 `record-arrival` | `{facility_id}` |
 | `referral_exhausted` / `referral_cancelled` / `referral_closed` | State changes | `{reason}` |
 | `alert` | Guardrails reschedule, low balance, concurrency limit | `{kind, message}` |
 

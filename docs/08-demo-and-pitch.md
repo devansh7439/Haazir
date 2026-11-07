@@ -18,6 +18,14 @@ A 3-minute script, printable judge cards, a stage checklist, a fallback ladder, 
 
 **Rules:** only say numbers you measured. If a phone doesn't ring, keep going: "that's what a no-answer looks like, and it's why we call six."
 
+**Status line, said once and shown on the title and last slides:** "Pilot-ready, not deployed." Haazir has not run with a hospital in production.
+
+**Filling the `{…}` placeholders (here and in section 6):** take `{N}`, `{X}`, `{TTFA}`, `{answer rate}` and the cost from Analytics with "real hospitals only" on, never from the demo hospitals or a rehearsal. Check outcomes against recordings before quoting an accuracy. A figure you can't source, drop; don't round it up.
+
+**If there are no measured runs by demo day, use this instead of the proof row:** "We haven't yet run this with real hospitals; it is pilot-ready, not deployed. The board already measures what a pilot needs to prove: time to the first confirmed answer, how often desks pick up, and cost per referral. Here is a call we recorded with a consenting team phone." And on the business row: "Next: a pilot. We are talking to {ambulance or 108 operator} / we are looking for one." Say only what is true.
+
+**Scope in the pitch.** The demo is the loop: find → hold → hand off → release, plus the arrival check as a one-line mention. Family *calls*, voice-note intake and the mobile app are roadmap: say so if asked (Q17), don't demo them. The family WhatsApp in the handoff is part of the loop and stays.
+
 ---
 
 ## 2. Judge cards (print one per phone; number each phone with a sticker)
@@ -49,6 +57,16 @@ A 3-minute script, printable judge cards, a stage checklist, a fallback ladder, 
 
 Use phones **you control** (team, friends). Don't depend on collecting judges' numbers on the day. Hand each judge a phone with a card.
 
+### Safety-net variants (use one or both; rehearse them, neither is guaranteed to fire)
+
+> **Card 3, "changes mind" variant · Neem Trauma & Neuro Centre**
+> Say **"Yes, we can take him, ICU with a ventilator."** Wait for the read-back, then say **"Sorry, no: the last ventilator just went to another patient."**
+> What it shows: if the call's recorded answer and the post-call transcript disagree, the card turns orange, **Check the recording**, and Select stays locked until the doctor listens (CLAUDE.md rule 10). The agent is told to read back before recording, so it may record your final "no" and nothing fires. If it doesn't, show the flagged call from the rehearsal run. `tests/flow.test.ts` proves the mechanism.
+
+> **Card 6, "calls back" variant · Lotus Burns & Plastic Centre**
+> Don't answer the first call. Then ring the Haazir caller-ID number and say **"This is Lotus, about R 4821, we can take the patient now."**
+> What it shows: the inbound agent matches the call to the referral and the board shows **Lotus called back** with a tap-to-call link. Needs `BOLNA_AGENT_ID_INBOUND` attached to that number.
+
 ---
 
 ## 3. Stage checklist (T-30 minutes)
@@ -59,6 +77,7 @@ Use phones **you control** (team, friends). Don't depend on collecting judges' n
 - [ ] WhatsApp: every demo phone has messaged your WhatsApp number in the last 24 h (or use `none` with previews on screen).
 - [ ] Laptop on a reliable connection, plus a backup hotspot. Browser zoom 125%. Notifications off.
 - [ ] Backup video on the desktop.
+- [ ] `FAMILY_CALLS=off` in the demo environment (family calls are roadmap, so no phone should ring for them).
 - [ ] Rehearsed three times with the same people holding the same cards.
 
 ---
@@ -84,8 +103,31 @@ Use phones **you control** (team, friends). Don't depend on collecting judges' n
 6. **Live demo**
 7. **Proof:** consented test calls, median TTFA, answer rate, one quote
 8. **Trust by design:** no identifiers on first call · read-back · recorded and disclosed · doctor decides · holds expire · no paid ranking
-9. **Why Bolna:** parallel outbound calls, Kannada/Hindi with mid-call switching, mid-call functions writing to our system, extractions as a second check, webhooks driving the board
-10. **Business and next steps:** buyer, unit economics (calls per referral), pilot ask, team
+9. **Why Bolna:** parallel outbound calls, Kannada/Hindi with mid-call switching, mid-call functions writing to our system, extractions as a second check, webhooks driving the board. Name the feature behind each job:
+
+   | Job | Bolna feature |
+   |---|---|
+   | Ring six hospitals at once, in their language | Outbound API calls, per-call `agent_data.language`, multilingual switching |
+   | Write the answer while the call is live | Custom functions (`record_hospital_response`, `record_hold_confirmation`, `record_arrival`) |
+   | Answer "is he intubated?" without a callback | The prompt with per-call `user_data` (`known_facts`) and the knowledge base for desk FAQs |
+   | Catch a wrong or doubtful answer | Post-call extractions compared with the function result (`needs_review`) |
+   | Take a hospital's call back | Inbound agent |
+   | Keep the board current | Status webhooks; `GET /executions` to recover a missed one |
+   | Cost and call length for the proof slide | The `completed` webhook (`total_cost`, `conversation_duration`; unverified fields) |
+10. **Business and next steps:** buyer, unit economics (calls per referral), pilot ask, team. Footer on this slide and the title: "Pilot-ready, not deployed." Roadmap strip: family calls, voice-note intake, mobile app, WhatsApp quick replies
+
+### Optional slide after 8: "What a casualty doctor would ask us"
+
+One line each. Say "built" only for what a test or a real call has shown; everything else is "next".
+
+| A doctor asks | Today | Next |
+|---|---|---|
+| "Is he intubated? What's the SpO₂ and GCS?" | The form takes airway, SpO₂, GCS and oxygen; they are read to every desk and the agent answers follow-ups from them, never guessing (`known_facts`). Not yet shown on a real call | Run the question on consented test calls and report how often the desk still asked for a doctor |
+| "Is it free? Ayushman? Is it medico-legal?" | Payer and the medico-legal flag are given to the agent to answer if asked. The agent never discusses fees or deposits | Learn from the pilot which questions desks actually ask |
+| "How long is the drive, really?" | Straight line × 1.4 at 30 km/h; road times from an OSRM server when `ROUTING_BASE_URL` is set (unverified against a live server) | Ambulance availability and traffic; the 108 operator's own ETA |
+| "Did the patient actually get in?" | The doctor marks "arrived" by hand, and an arrival-check agent phones the chosen hospital once at ETA + 10 min and records yes or no (tested against the fake Bolna; the agent is not yet created or heard on a real call) | Report how often the desk's answer matched what happened; a bounce rate per hospital |
+| "What if nobody says yes?" | The ranked tap-to-call list, a wider search, one-tap 108 / 112, and the three nearest hospitals with a casualty desk number to stabilise at (straight-line ETA, not road time) | An admin can list escalation numbers (district referral officer, state referral hospital); they appear as call buttons beside 108 / 112 (web board only; none are seeded). Check with doctors that "has a casualty desk number" is the right test for an emergency department, and that a phone number is enough escalation |
+| "Can I talk to their doctor?" | A callback request with a banner; live transfer works on the demo agent only | A fixed bridge number that rings the active referral's doctor (untested) |
 
 ---
 
@@ -109,9 +151,10 @@ Use phones **you control** (team, friends). Don't depend on collecting judges' n
 | 14 | "Who pays? Doesn't that steer patients to payers?" | Ambulance and emergency-response operators pay per placement. Ranking uses only capability, distance and track record; it's never for sale, and that's a stated principle. |
 | 15 | "Name one casualty doctor you spoke to." | {Name, role, hospital — with permission}, plus {2 more}. What they told us: {one line}. |
 | 16 | "The demo is theatre; judges are cooperating." | Yes, and we say so. Here's a recorded call with {consenting hospital}, unscripted on their side. The judge cards just let you see every outcome in three minutes. |
-| 17 | "Too much scope." | The MVP is the loop: find → hold → hand off → release. Family calls, voice-note intake and analytics are on the roadmap, not in the demo. |
+| 17 | "Too much scope." | The MVP is the loop: find → hold → hand off → release. Family calls, voice-note intake, the mobile app and WhatsApp quick replies are on the roadmap, not in the demo. Pilot-ready, not deployed. |
 | 18 | "The name sounds like an attendance app." | {Final name}. Haazir means "present", which is what we ask hospitals to be. |
 | 19 | "What if hospitals start ignoring your number?" | Indian caller ID, a named doctor in the first sentence, calls under a minute, prompt releases, and we track answer rates per number so we see it early. A hospital can also choose a WhatsApp quick reply instead (roadmap). |
 | 20 | "Cost per referral?" | About 6–9 short calls per placed referral (6 availability, 1 confirmation, up to 2 releases). {Fill in from your Bolna per-minute rate.} |
+| 21 | "A desk asks 'is he intubated?' and your bot has no idea." | The doctor can enter airway, SpO₂ and GCS; they are read in the summary, and the agent answers follow-ups only from those facts. If the doctor left one out, the agent says it wasn't given and offers the doctor's callback. It never guesses. |
 
 **Never say:** "AI saves lives", "we prevent deaths", "hospitals can't refuse", "real-time bed data" (we ask, we don't hold data), "guaranteed bed", "HIPAA" (wrong country; say DPDP).

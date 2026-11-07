@@ -1,6 +1,6 @@
 # 03 · Data Model
 
-Postgres on Supabase. Exact DDL: `supabase/migrations/0001_init.sql`. Demo data: `supabase/seed.sql`.
+Postgres on Supabase. Exact DDL: `supabase/migrations/0001_init.sql`. Reference data: `supabase/seed.sql`. Fictional demo directory: `supabase/demo-directory.sql`.
 Both were run against PostgreSQL 16 together with the queries in §5 (tested 28 Oct 2026).
 
 ---
@@ -62,9 +62,19 @@ erDiagram
 - `current_wave` / `wave_started_at`: used by the atomic wave claim (§5.4).
 - `first_acceptance_at`: set once, on the first `accepted` or `conditional` outcome. This drives TTFA.
 - `selected_attempt_id`, `selected_facility_id`, `hold_expires_at`: the active hold. A referral can only have one.
+- `airway`, `spo2`, `gcs`, `on_oxygen`, `payer`, `medico_legal` (0011) and `pregnancy_weeks`, `trauma_mechanism`, `infectious_risk`, `treatment_given`, `blood_group`, `blood_needed` (0014): clinical and handover facts. None identify the patient, so they sit on `referrals`. "unknown" or null means the doctor gave none.
+- `ambulance_status` (`not_requested | requested | dispatched | at_patient | not_available`), `ambulance_updated_at` (0017): where the ambulance is, as the doctor records it. Haazir does not book it.
+- `treatment_started_at` (0018): when the receiving hospital began treating the patient, as the doctor (or the hospital screen) recorded it.
+- `transfer_consent`, `transfer_consent_at`, `transfer_reason` (0015): who agreed to the transfer and why. Not identifiers; the referral slip reads them.
+
+### `referral_attachments` (0018, server-only)
+- ECG, photo, record or other file kept as `bytea` (`kind`, `content_type`, `size_bytes`, `data`), up to 4 MB each and 6 per referral. Row level security with no policy, so no browser role reads it. No filename is stored. `org_id` is inherited from the referral by trigger. Deleted with the other identifiers by the retention purge (§7).
+
+### `referrers`
+- `registration_no`, `registration_council`, `verification_status` (`unverified | pending | verified | rejected`), `verified_at`, `verified_by` (0014): the doctor's medical registration and an admin's check of it. `verified_by` points at `app_users`.
 
 ### `call_attempts`
-- `purpose`: `availability | hold_confirm | release | family_update`.
+- `purpose`: `availability | hold_confirm | release | family_update | arrival_check`.
 - `status` (our state) versus `bolna_status` (raw); see the mapping in `02-architecture.md` §5.3.
 - `outcome` + `outcome_source` (`function | extraction | manual | whatsapp`).
 - `extraction_outcome`: Bolna's post-call extraction result, kept separately so conflicts are visible. A conflict sets `needs_review = true`.
@@ -98,6 +108,7 @@ erDiagram
 | hold_confirm | `hold_confirmed`, `hold_declined` |
 | release | `release_ack` |
 | family_update | `family_informed` |
+| arrival_check | `arrival_confirmed`, `not_arrived` |
 
 ---
 

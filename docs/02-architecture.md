@@ -302,6 +302,12 @@ async function evaluateReferral(id: string) {
   if (r.status === "confirmed" && r.hold_expires_at && now() > r.hold_expires_at) {
     await addEventOnce(r, "hold_expired");                    // UI prompts: arrived? extend? close?
   }
+
+  // 7. Arrival check: once the patient is due (ETA + ARRIVAL_CHECK_AFTER_MIN after confirmation), ask the chosen
+  //    hospital whether they have arrived. One call per referral (unique index), skipped without BOLNA_AGENT_ID_ARRIVAL.
+  if (r.status === "confirmed" && !hasArrivalCheck(r) && now() >= confirmedAt(r) + (eta(r) + ARRIVAL_CHECK_AFTER_MIN) * 60_000) {
+    await dispatchArrivalCheck(r);
+  }
 }
 ```
 
@@ -356,6 +362,7 @@ Deterministic, never LLM-written, and stored on the referral (`spoken_summary`) 
 | `acuity` | critical, serious or stable | critical |
 | `note_normalised` | Expand: ASV → anti-snake venom, `+` → and, `h`/`hrs` → hours, BP → blood pressure, SpO2 → oxygen saturation, GCS → G C S | Drooping eyelids and trouble swallowing 2 hours after bite. Given 10 vials of anti-snake venom. |
 | `needs_spoken` | `capabilities.spoken_en` joined with commas and "and" | an ICU bed and a ventilator |
+| bedside status | Only what the doctor gave, between the note and the needs: "Intubated." or "Not intubated.", "Oxygen saturation N percent" (+ "on oxygen" / "on room air"), "G C S N." Payer and the medico-legal flag are never read out; they go to the agent as `known_facts` | Intubated. Oxygen saturation 88 percent on oxygen. G C S 9. |
 
 **Input note:** `Drooping eyelids and trouble swallowing 2 hrs after bite. Given 10 vials of ASV.`
 **Result:** "Man aged 34, suspected snakebite with neurotoxic signs, critical. Drooping eyelids and trouble swallowing 2 hours after bite. Given 10 vials of anti-snake venom. Needs an ICU bed and a ventilator."
@@ -459,7 +466,7 @@ haazir/
 │     ├─ contacts/[id]/route.ts
 │     └─ bolna/
 │        ├─ webhook/route.ts
-│        └─ functions/{record-response,request-doctor,request-callback,record-hold,inbound-callback}/route.ts
+│        └─ functions/{record-response,request-doctor,request-callback,record-hold,record-arrival,inbound-callback}/route.ts
 ├─ lib/  (config, bolna, orchestrator, matching, summary, statusMap, whatsapp, supabase, validation)
 ├─ tests/support/krait-bite.json
 ├─ supabase/migrations/0001_init.sql

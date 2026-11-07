@@ -36,7 +36,7 @@ bun run lint && bun run typecheck && bun run test
 
 ## Run it with real calls (Supabase + tunnel + Bolna)
 
-1. **Supabase** (optional; the embedded PGlite database works too): create a project in **ap-south-1 (Mumbai)**, close to the machine running the app. Every request makes several sequential queries, so a database far away adds ~200 ms per query (a "Find a bed" makes about 40). Apply the schema with `DATABASE_URL=<connection string> bun run db:setup`, or paste `supabase/migrations/*.sql` then `supabase/seed.sql` into the SQL editor.
+1. **Supabase** (optional; the embedded PGlite database works too): create a project in **ap-south-1 (Mumbai)**, close to the machine running the app. Every request makes several sequential queries, so a database far away adds ~200 ms per query (a "Find a bed" makes about 40). Apply the schema with `DATABASE_URL=<connection string> bun run db:setup`, or paste `supabase/migrations/*.sql` then `supabase/seed.sql` into the SQL editor. The seed holds reference data only; add `-- --demo` to `db:setup` (or paste `supabase/demo-directory.sql`) to also load the fictional demo hospitals.
 2. **App**: set the env vars from `.env.example` in `.env.local`, then `bun run serve` and `ngrok http 3000` (or cloudflared). Put the tunnel URL in `APP_BASE_URL`.
    - `DATABASE_URL`: the Supabase **transaction pooler** URI (port 6543), or `pglite:./.data/pglite`.
    - `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`: browser Realtime (cards update within ~1 s instead of on the 5 s tick).

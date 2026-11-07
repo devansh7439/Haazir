@@ -28,7 +28,7 @@ Everything you need to start building **Haazir** (working name), an emergency re
 | `CLAUDE.md` | Put at the repo root for AI coding assistants |
 | `.env.example` | All environment variables |
 | `supabase/migrations/0001_init.sql` | Full schema with RLS and realtime |
-| `supabase/seed.sql` | Capabilities, case templates and a fictional Bengaluru demo directory |
+| `supabase/seed.sql`, `supabase/demo-directory.sql` | Capabilities and case templates; the fictional Bengaluru demo directory is separate (`bun run db:setup -- --demo`) |
 | `bolna/prompts/*.md` | Welcome messages (English, Hindi, Kannada) and system prompts for each agent |
 | `bolna/tools/*.json` | Custom function definitions to paste into Bolna |
 | `bolna/extractions.md` | Post-call extraction setup |
