@@ -144,6 +144,24 @@ describe("abuse and cost", () => {
     expect(bolnaCalls).toHaveLength(6);
   });
 
+  it.each([["stable", 3], ["serious", 4]])("a %s referral rings %i desks in its first wave, a critical one six", async (acuity, desks) => {
+    fakeClock();
+    stubBolna();
+    await ReferralService.create({ ...KRAIT, acuity } as typeof KRAIT);
+    expect(bolnaCalls).toHaveLength(desks);
+  });
+
+  it("a desk already on a call for another patient is not rung for a second one while others are free", async () => {
+    fakeClock();
+    stubBolna();
+    const first = await ReferralService.create({ ...KRAIT, acuity: "stable" });
+    const second = await ReferralService.create({ ...KRAIT, acuity: "stable" });
+    const desks = (r: typeof first) => r.attempts.map((a) => a.facility_id);
+    expect(desks(first)).toHaveLength(3);
+    expect(desks(second)).toHaveLength(3);
+    expect(desks(second).filter((id) => desks(first).includes(id))).toEqual([]);
+  });
+
   it("an organisation can't run unlimited live referrals at once", async () => {
     fakeClock();
     stubBolna();

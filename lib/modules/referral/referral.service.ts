@@ -1,5 +1,5 @@
 import "server-only";
-import { ACTIVE_LIVE_WINDOW_H, DEFAULT_RADIUS_KM, WAVE_SIZE, env } from "@/lib/core/config";
+import { ACTIVE_LIVE_WINDOW_H, DEFAULT_RADIUS_KM, env, waveSizeFor } from "@/lib/core/config";
 import { addMinutes, now } from "@/lib/core/clock";
 import { ApiError } from "@/lib/core/error";
 import { mayRefer } from "@/lib/modules/auth/registration.helper";
@@ -93,7 +93,7 @@ export const ReferralService = {
     return {
       spoken_summary: p.spoken_summary,
       warnings: p.warnings,
-      wave_size: WAVE_SIZE,
+      wave_size: waveSizeFor(input.acuity),
       skipped_far: p.skipped_far,
       max_eta_minutes: env.maxEtaMinutes(input.acuity) || null,
       suggestions: p.ranked.length === 0 ? await FacilityService.suggestionsFor(p.params, p.needs) : [],
@@ -104,7 +104,7 @@ export const ReferralService = {
         eta_minutes: f.eta_minutes,
         call_language: f.call_language,
         rank_reasons: f.rank_reasons,
-        will_call: i < WAVE_SIZE,
+        will_call: i < waveSizeFor(input.acuity),
       })),
     };
   },

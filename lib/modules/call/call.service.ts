@@ -1,5 +1,5 @@
 import "server-only";
-import { FAMILY_CALL_GAP_MIN, MANUAL_CALLBACK_MIN, MAX_REDIALS_PER_FACILITY, WAVE_SIZE, env } from "@/lib/core/config";
+import { FAMILY_CALL_GAP_MIN, MANUAL_CALLBACK_MIN, MAX_REDIALS_PER_FACILITY, env, waveSizeFor } from "@/lib/core/config";
 import { addMinutes, now } from "@/lib/core/clock";
 import { ApiError } from "@/lib/core/error";
 import { maskPhone, normalizePhone, redactNumbers } from "@/lib/core/normalize";
@@ -38,7 +38,7 @@ const followOnOf = (parent: Attempt) => ({
 /** Placing Bolna calls for a referral (docs/02-architecture.md §6), and the doctor's own actions on a call. */
 export const CallService = {
   /**
-   * Opens a wave: up to WAVE_SIZE hospitals not yet called, best first. Call only after winning the wave claim
+   * Opens a wave: up to waveSizeFor(acuity) hospitals not yet called, best first. Call only after winning the wave claim
    * (CLAUDE.md rule 5). One failed dispatch never blocks the rest. Returns the calls queued.
    */
   dispatchWave: async (ctx: ReferralCtx, wave: number, ranked?: RankedFacility[]): Promise<Attempt[]> => {
@@ -55,7 +55,11 @@ export const CallService = {
     };
     const rankedNow = async () => FacilityService.rankEligible(params, ctx.needs.map((n) => n.label));
     const pool = ranked ?? applyEtaCap(await rankedNow(), env.maxEtaMinutes(r.acuity)).kept;
-    const pick = pool.filter((f) => !called.has(f.facility_id) && f.contact).slice(0, WAVE_SIZE);
+    const candidates = pool.filter((f) => !called.has(f.facility_id) && f.contact);
+    // Don't ring a desk that is already on an availability call for another patient. If that leaves nobody, ring them anyway.
+    const busy = await CallRepository.busyFacilities(candidates.map((f) => f.facility_id), r.id);
+    const free = candidates.filter((f) => !busy.has(f.facility_id));
+    const pick = (free.length > 0 ? free : candidates).slice(0, waveSizeFor(r.acuity));
     if (pick.length === 0) return [];
 
     const inserted: Attempt[] = [];

@@ -42,6 +42,18 @@ export const CallRepository = {
       [toNumber, purposes],
     ),
 
+  /** The hospitals among `facilityIds` whose desk already has an open availability call for a different referral. */
+  busyFacilities: async (facilityIds: string[], exceptReferralId: string): Promise<Set<string>> => {
+    if (facilityIds.length === 0) return new Set();
+    const rows = await q<{ facility_id: string }>(
+      `select distinct facility_id::text as facility_id from call_attempts
+       where facility_id::text = any($1::text[]) and purpose = 'availability' and referral_id <> $2
+         and status in ${OPEN_STATUSES}`,
+      [facilityIds, exceptReferralId],
+    );
+    return new Set(rows.map((r) => r.facility_id));
+  },
+
   /** Inserts a queued call. Null when a unique guard (one redial or one release per parent) says it already exists. */
   insert: async (a: NewAttempt): Promise<Attempt | null> => {
     const t = now();

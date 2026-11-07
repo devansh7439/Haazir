@@ -1,6 +1,8 @@
 // Orchestration constants (docs/02-architecture.md §6.1) and server env access.
 
-export const WAVE_SIZE = 6;
+/** Parallel availability calls per wave. Only a critical patient justifies ringing six desks at once; less urgent cases ring fewer. */
+export const WAVE_SIZE_BY_ACUITY: Record<string, number> = { critical: 6, serious: 4, stable: 3 };
+export const waveSizeFor = (acuity: string): number => WAVE_SIZE_BY_ACUITY[acuity] ?? WAVE_SIZE_BY_ACUITY.critical;
 export const WAVE_TIMEOUT_S = 150;
 export const MAX_WAVES = 2;
 export const HOLD_BUFFER_MIN = 30;
