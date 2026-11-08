@@ -1,9 +1,9 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useSyncExternalStore } from 'react';
 
-/** What a person can change in Account, grouped by the page it changes. Kept on this phone, never sent to the server. */
+/** What a person sets once in Account, plus the search distance, which Find a bed remembers. Kept on this phone, never sent to the server. */
 export interface Settings {
-  /** Find a bed: how far from the start the search reaches. */
+  /** Find a bed: how far from the start the search reaches; the last distance picked there. */
   radiusKm: number;
   /** Find a bed: start from this phone's position without asking each time. */
   useLocation: boolean;

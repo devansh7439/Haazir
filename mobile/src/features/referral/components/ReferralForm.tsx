@@ -4,7 +4,7 @@ import { ReferralRepository } from '../../../api/referral.repository';
 import type { Acuity, AgeUnit, Bootstrap, CaseTemplate, Draft, Referrer, Sex } from '../../../api/schema';
 import Banner from '../../../components/ui/Banner';
 import Button from '../../../components/ui/Button';
-import FilterChip from '../../../components/ui/FilterChip';
+import SelectField from '../../../components/ui/SelectField';
 import Icon from '../../../components/ui/Icon';
 import Screen from '../../../components/ui/Screen';
 import SearchField from '../../../components/ui/SearchField';
@@ -15,7 +15,7 @@ import { phrase, t } from '../../../lib/i18n';
 import { animateLayout } from '../../../lib/motion';
 import { newRequestId } from '../../../lib/request-id';
 import { matches } from '../../../lib/search';
-import { getSettings } from '../../../lib/settings';
+import { getSettings, updateSettings } from '../../../lib/settings';
 import theme from '../../../theme';
 import { clinicalError, composeNote, EMPTY_CLINICAL, extraLimit, factsBody, type Clinical } from '../clinical.helper';
 import { isValidAge, REVIEW_STEP, sendHint, STEPS, stepBlocker } from '../referral.helper';
@@ -314,13 +314,15 @@ export default function ReferralForm({
                 onValueChange={(on) => (on ? void location.enable() : location.disable())}
               />
               {location.error ? <Banner tone="warning" title={location.error} /> : null}
-            </FormBlock>
-            <FormBlock title={t('Match radius')} hint={t('How far from there to look for hospitals.')}>
-              <View style={styles.chips}>
-                {RADII_KM.map((km) => (
-                  <FilterChip key={km} label={t('{km} km', { km })} selected={km === radius} onPress={() => setRadius(km)} />
-                ))}
-              </View>
+              <SelectField
+                label={t('Search distance')}
+                value={String(radius)}
+                options={RADII_KM.map((km) => ({ value: String(km), label: t('{km} km', { km }) }))}
+                onChange={(v) => {
+                  setRadius(Number(v));
+                  updateSettings({ radiusKm: Number(v) });
+                }}
+              />
             </FormBlock>
           </>
         ) : null}

@@ -1,4 +1,5 @@
-import { type ComponentRef, type ReactNode, useEffect, useRef, useState } from 'react';
+import { BottomTabBarHeightContext } from '@react-navigation/bottom-tabs';
+import { type ComponentRef, type ReactNode, useContext, useEffect, useRef, useState } from 'react';
 import {
   Dimensions,
   Keyboard,
@@ -27,7 +28,7 @@ export type ScreenProps = {
   onRefresh?: (() => void) | undefined;
   background?: string;
   contentStyle?: StyleProp<ViewStyle>;
-  /** The page is a tab: the bar below it already clears the bottom edge. */
+  /** The page is a tab: the floating bar sits over its bottom edge, so the content leaves room for it. */
   inTabs?: boolean;
   testID?: string;
 };
@@ -46,7 +47,13 @@ export default function Screen({
   testID,
 }: ScreenProps) {
   const insets = useSafeAreaInsets();
-  const bottomPad = footer || inTabs ? theme.space.xl : Math.max(insets.bottom, theme.space.l) + theme.space.l;
+  // In a tab the bar floats over the page, so the content ends above it; the bar reports its height (strip included).
+  const tabBarHeight = useContext(BottomTabBarHeightContext) ?? 0;
+  const bottomPad = inTabs
+    ? tabBarHeight + theme.space.l
+    : footer
+      ? theme.space.xl
+      : Math.max(insets.bottom, theme.space.l) + theme.space.l;
   const scrollRef = useRef<ComponentRef<typeof ScrollView>>(null);
   const offset = useRef(0);
   const [keyboardHeight, setKeyboardHeight] = useState(0);

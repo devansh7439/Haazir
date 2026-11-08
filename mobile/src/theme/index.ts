@@ -72,11 +72,9 @@ const font = {
   displayBold: 'InterTight_700Bold',
 } as const;
 
-// The bottom bar: white with a hairline on top; the open tab sits in a rose pill with a crimson icon.
+// The bottom bar: a floating glass capsule; the open tab sits in a translucent rose pill with a crimson icon.
 const tabBar = {
-  fill: '#FFFFFF',
-  edge: '#EAE8EA',
-  active: '#FDEEF0',
+  active: 'rgba(212, 46, 69, 0.12)',
   icon: '#696971',
   activeIcon: '#D42E45',
   label: '#696971',

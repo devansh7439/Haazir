@@ -1,7 +1,7 @@
 import { StyleSheet, View } from 'react-native';
 import type { Acuity, AgeUnit, Sex } from '../../../api/schema';
 import OptionTile from '../../../components/ui/OptionTile';
-import SegmentedControl from '../../../components/ui/SegmentedControl';
+import SelectField from '../../../components/ui/SelectField';
 import TextField from '../../../components/ui/TextField';
 import { t } from '../../../lib/i18n';
 import theme from '../../../theme';
@@ -30,7 +30,7 @@ export function UrgencyPicker({ acuity, onAcuity }: { acuity: Acuity | ''; onAcu
   );
 }
 
-/** Age with its unit, and sex: all one tap or a number. */
+/** Age with its unit beside it, and sex: a number and two dropdowns. */
 export function AgeSex(props: {
   age: string;
   onAge: (age: string) => void;
@@ -42,18 +42,24 @@ export function AgeSex(props: {
   const ageBad = !isValidAge(props.age);
   return (
     <View style={styles.stack}>
-      <TextField
-        appearance="plain"
-        label={t('Age')}
-        value={props.age}
-        onChangeText={props.onAge}
-        keyboardType="number-pad"
-        placeholder={t('e.g. 34')}
-        error={ageBad ? t('Enter a whole number') : null}
-        testID="age"
-      />
-      <SegmentedControl value={props.ageUnit} segments={segments(AGE_UNIT)} onChange={props.onAgeUnit} />
-      <SegmentedControl value={props.sex} segments={segments(SEX)} onChange={props.onSex} />
+      <View style={styles.ageRow}>
+        <View style={styles.half}>
+          <TextField
+            appearance="plain"
+            label={t('Age')}
+            value={props.age}
+            onChangeText={props.onAge}
+            keyboardType="number-pad"
+            placeholder={t('e.g. 34')}
+            error={ageBad ? t('Enter a whole number') : null}
+            testID="age"
+          />
+        </View>
+        <View style={styles.half}>
+          <SelectField label={t('Unit')} value={props.ageUnit} options={segments(AGE_UNIT)} onChange={(v) => props.onAgeUnit(v as AgeUnit)} testID="age-unit" />
+        </View>
+      </View>
+      <SelectField label={t('Sex')} value={props.sex} options={segments(SEX)} onChange={(v) => props.onSex(v as Sex)} testID="sex" />
     </View>
   );
 }
@@ -76,4 +82,9 @@ export function NoteField(props: { note: string; onNote: (note: string) => void;
   );
 }
 
-const styles = StyleSheet.create({ row: { flexDirection: 'row', gap: theme.space.s }, stack: { gap: theme.space.m } });
+const styles = StyleSheet.create({
+  row: { flexDirection: 'row', gap: theme.space.s },
+  stack: { gap: theme.space.m },
+  ageRow: { flexDirection: 'row', alignItems: 'flex-start', gap: theme.space.m },
+  half: { flex: 1, minWidth: 0 },
+});

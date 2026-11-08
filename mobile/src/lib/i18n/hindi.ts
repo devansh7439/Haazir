@@ -288,6 +288,8 @@ export const HINDI: Readonly<Record<string, string>> = {
   Months: 'महीने',
   Days: 'दिन',
   Sex: 'लिंग',
+  Unit: 'इकाई',
+  'Blood group': 'ब्लड ग्रुप',
   Male: 'पुरुष',
   Female: 'महिला',
   Unknown: 'पता नहीं',

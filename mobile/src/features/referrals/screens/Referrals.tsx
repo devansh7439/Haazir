@@ -36,7 +36,6 @@ export default function Referrals() {
       header={
         <ScreenHeader
           title={t('Your referrals')}
-          subtitle={t('In progress first, then earlier ones.')}
           onSearch={() => {
             animateLayout();
             setSearching((open) => !open);

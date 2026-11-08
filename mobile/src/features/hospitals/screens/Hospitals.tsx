@@ -34,36 +34,16 @@ export default function Hospitals() {
   // Google ratings load after the list, so a slow Google never delays it.
   const ratings = useLoad(FacilityRepository.ratings, []).data?.ratings ?? {};
   const rows = useMemo(() => filterFacilities(data?.facilities ?? [], query, services), [data, query, services]);
-  const stats = useMemo(
-    () =>
-      data
-        ? {
-            hospitals: data.facilities.length,
-            districts: new Set(data.facilities.map((f) => f.district ?? f.city).filter(Boolean)).size,
-            offered: data.facilities.reduce((sum, f) => sum + f.accepted, 0),
-          }
-        : null,
-    [data],
-  );
   const toggle = (code: string) => setServices((all) => (all.includes(code) ? all.filter((c) => c !== code) : [...all, code]));
 
   return (
-    <Screen
-      testID="hospitals"
-      inTabs
-      refreshing={refreshing}
-      onRefresh={reload}
-      header={<AppBar onAccount={() => navigation.navigate('MainTabs', { screen: 'AccountTab' })} />}
-    >
-      <View style={styles.intro}>
-        <View style={styles.introText}>
-          <Text accessibilityRole="header" style={styles.greeting}>
-            {boot.referrer ? t('Hello, {name}', { name: shortName(boot.referrer.name) }) : t('Home')}
-          </Text>
-          <Text style={styles.greetingSub}>
-            {data ? t('{count} hospitals in your network', { count: data.facilities.length }) : t('Search the hospitals Haazir can phone.')}
-          </Text>
-        </View>
+    <Screen testID="hospitals" inTabs refreshing={refreshing} onRefresh={reload} header={<AppBar />}>
+      <Text accessibilityRole="header" style={styles.greeting}>
+        {boot.referrer ? t('Hello, {name}', { name: shortName(boot.referrer.name) }) : t('Home')}
+      </Text>
+      <HomeHero onFind={() => navigation.navigate('FindBed')} />
+      <View style={styles.listHead}>
+        <Text style={styles.heading}>{t('Hospital network')}</Text>
         <IconButton
           icon={searching ? 'close' : 'search'}
           label={searching ? t('Close search') : t('Search')}
@@ -75,8 +55,6 @@ export default function Hospitals() {
           }}
         />
       </View>
-      <HomeHero hospitals={stats?.hospitals ?? null} districts={stats?.districts ?? null} offered={stats?.offered ?? null} onFind={() => navigation.navigate('FindBed')} />
-      <Text style={styles.heading}>{t('Hospital network')}</Text>
       {searching ? (
         <SearchField
           value={query}
@@ -129,10 +107,8 @@ export default function Hospitals() {
 }
 
 const styles = StyleSheet.create({
-  intro: { flexDirection: 'row', alignItems: 'center', gap: theme.space.m },
-  introText: { flex: 1 },
   greeting: { ...theme.type.pageTitle, color: theme.tint.heading },
-  greetingSub: { ...theme.type.secondary, color: theme.tint.muted, marginTop: theme.space.xs },
-  heading: { ...theme.type.rowTitle, color: theme.tint.heading },
+  listHead: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: theme.space.m },
+  heading: { ...theme.type.rowTitle, color: theme.tint.heading, flex: 1 },
   filters: { flexDirection: 'row', gap: theme.space.s },
 });

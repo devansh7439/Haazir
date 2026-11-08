@@ -1,6 +1,6 @@
-import { StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 import Button from '../../../components/ui/Button';
-import FilterChip from '../../../components/ui/FilterChip';
+import SelectField from '../../../components/ui/SelectField';
 import SwitchRow from '../../../components/ui/SwitchRow';
 import TextField from '../../../components/ui/TextField';
 import { LANGUAGE_LABEL } from '../../../lib/display';
@@ -33,7 +33,6 @@ export default function PatientDetails({
       />
       {open ? (
         <View style={styles.wrap}>
-          <Text style={styles.hint}>{t('Never spoken on the availability calls. A hospital gets them only after it says yes.')}</Text>
           <TextField
             appearance="plain"
             label={t('Patient name')}
@@ -57,19 +56,12 @@ export default function PatientDetails({
             placeholder={t('10-digit mobile')}
             testID="attendant_phone"
           />
-          <View style={styles.group}>
-            <Text style={styles.label}>{t('Family’s language')}</Text>
-            <View style={styles.chips}>
-              {FAMILY_LANGUAGES.map((code) => (
-                <FilterChip
-                  key={code}
-                  label={t(LANGUAGE_LABEL[code] ?? code)}
-                  selected={patient.attendant_language === code}
-                  onPress={() => set('attendant_language', code)}
-                />
-              ))}
-            </View>
-          </View>
+          <SelectField
+            label={t('Family’s language')}
+            value={patient.attendant_language}
+            options={FAMILY_LANGUAGES.map((code) => ({ value: code, label: t(LANGUAGE_LABEL[code] ?? code) }))}
+            onChange={(code) => set('attendant_language', code)}
+          />
           <SwitchRow
             title={t('The family agreed')}
             subtitle={t(
@@ -86,8 +78,4 @@ export default function PatientDetails({
 
 const styles = StyleSheet.create({
   wrap: { gap: theme.space.m },
-  group: { gap: theme.space.s },
-  label: { ...theme.type.captionStrong, color: theme.tint.ink },
-  hint: { ...theme.type.caption, color: theme.tint.muted },
-  chips: { flexDirection: 'row', flexWrap: 'wrap', gap: theme.space.s },
 });

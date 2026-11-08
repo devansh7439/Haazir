@@ -10,11 +10,11 @@ export type Step = { title: string; done: boolean };
 
 /**
  * Where the doctor is in the form: a numbered circle per step (a tick once it is done) joined by thin lines, and under
- * them "Step 2 of 5". A finished step can be tapped to go back to it.
+ * A finished step can be tapped to go back to it; the card below carries the step's number and name.
  */
 export default function StepBar({ steps, current, onJump }: { steps: Step[]; current: number; onJump: (index: number) => void }) {
   return (
-    <View style={styles.wrap}>
+    <View>
       <View style={styles.marks}>
         {steps.map((step, index) => {
           const open = index === current;
@@ -41,13 +41,11 @@ export default function StepBar({ steps, current, onJump }: { steps: Step[]; cur
           );
         })}
       </View>
-      <Text style={styles.count}>{t('Step {step} of {total}', { step: current + 1, total: steps.length })}</Text>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  wrap: { gap: theme.space.m },
   marks: { flexDirection: 'row', alignItems: 'center' },
   mark: {
     width: MARK,
@@ -65,5 +63,4 @@ const styles = StyleSheet.create({
   markTextOn: { color: theme.color.primary },
   line: { flex: 1, height: 1, marginHorizontal: theme.space.xs, backgroundColor: theme.color.border },
   lineDone: { backgroundColor: theme.color.primary },
-  count: { ...theme.type.captionStrong, color: theme.color.textSecondary },
 });

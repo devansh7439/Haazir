@@ -1,7 +1,9 @@
 import { BottomTabBarHeightCallbackContext, createBottomTabNavigator, type BottomTabBarProps } from '@react-navigation/bottom-tabs';
 import { CommonActions } from '@react-navigation/native';
 import { useContext } from 'react';
-import { View } from 'react-native';
+import { GlassContainer } from 'expo-glass-effect';
+import { StyleSheet, View } from 'react-native';
+import theme from '../theme';
 import TabBar, { type TabDef } from '../components/ui/TabBar';
 import useReducedMotion from '../components/ui/useReducedMotion';
 import { AccountScreen } from '../features/account';
@@ -14,6 +16,8 @@ import { tabSlide } from './tabTransition';
 import type { MainTabsParamList } from './types';
 
 const Tab = createBottomTabNavigator<MainTabsParamList>();
+
+const styles = StyleSheet.create({ float: { position: 'absolute', left: 0, right: 0, bottom: 0 } });
 
 /** The three places a doctor goes: the hospital directory (home, where "Find a bed" starts), their referrals, and their account. */
 const TABS: readonly TabDef<keyof MainTabsParamList>[] = [
@@ -39,14 +43,12 @@ function RoutedTabBar({ state, navigation }: BottomTabBarProps) {
   };
 
   return (
-    <View pointerEvents="box-none" onLayout={(e) => onHeightChange?.(e.nativeEvent.layout.height)}>
-      {live ? <LiveReferralBar referral={live} onOpen={() => navigation.getParent()?.navigate('ReferralBoard', { id: live.id })} /> : null}
-      <TabBar
-        tabs={TABS}
-        activeKey={(focused?.name ?? 'HospitalsTab') as keyof MainTabsParamList}
-        onTabPress={onTabPress}
-        badges={{ ReferralsTab: !!live }}
-      />
+    // The bar floats over the page (absolute), so the glass has content to blur; `Screen` pads its bottom by the height reported here.
+    <View pointerEvents="box-none" style={styles.float} onLayout={(e) => onHeightChange?.(e.nativeEvent.layout.height)}>
+      <GlassContainer spacing={theme.space.s}>
+        {live ? <LiveReferralBar referral={live} onOpen={() => navigation.getParent()?.navigate('ReferralBoard', { id: live.id })} /> : null}
+        <TabBar tabs={TABS} activeKey={(focused?.name ?? 'HospitalsTab') as keyof MainTabsParamList} onTabPress={onTabPress} />
+      </GlassContainer>
     </View>
   );
 }

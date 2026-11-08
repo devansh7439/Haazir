@@ -3,7 +3,7 @@ import FilterChip from '../../../components/ui/FilterChip';
 import TextField from '../../../components/ui/TextField';
 import { t } from '../../../lib/i18n';
 import theme from '../../../theme';
-import Pick from './Pick';
+import Pick, { Pair } from './Pick';
 import { AIRWAY, BREATHING, CONSCIOUS, GIVEN, ONSET, PAYER, YES_NO, gcsValid, spo2Valid, type Clinical } from '../clinical.helper';
 
 /**
@@ -14,10 +14,14 @@ export default function ClinicalDetails({ clinical, onChange }: { clinical: Clin
   const set = <K extends keyof Clinical>(key: K, value: Clinical[K]) => onChange({ ...clinical, [key]: value });
   return (
     <View style={styles.wrap}>
-      <Pick label={t('Awake?')} choices={CONSCIOUS} value={clinical.conscious} onChange={(v) => set('conscious', v)} />
-      <Pick label={t('Breathing')} choices={BREATHING} value={clinical.breathing} onChange={(v) => set('breathing', v)} />
-      <Pick label={t('Airway')} choices={AIRWAY} value={clinical.airway} onChange={(v) => set('airway', v)} />
-      <Pick label={t('Since it began')} choices={ONSET} value={clinical.onset} onChange={(v) => set('onset', v)} />
+      <Pair>
+        <Pick label={t('Awake?')} choices={CONSCIOUS} value={clinical.conscious} onChange={(v) => set('conscious', v)} />
+        <Pick label={t('Breathing')} choices={BREATHING} value={clinical.breathing} onChange={(v) => set('breathing', v)} />
+      </Pair>
+      <Pair>
+        <Pick label={t('Airway')} choices={AIRWAY} value={clinical.airway} onChange={(v) => set('airway', v)} />
+        <Pick label={t('Since it began')} choices={ONSET} value={clinical.onset} onChange={(v) => set('onset', v)} />
+      </Pair>
       <View style={styles.vitals}>
         <View style={styles.vital}>
           <TextField
@@ -61,8 +65,10 @@ export default function ClinicalDetails({ clinical, onChange }: { clinical: Clin
         </View>
         <View style={styles.vital} />
       </View>
-      <Pick label={t('Payment')} choices={PAYER} value={clinical.payer} onChange={(v) => set('payer', v)} />
-      <Pick label={t('Medico-legal case')} choices={YES_NO} value={clinical.medico} onChange={(v) => set('medico', v)} />
+      <Pair>
+        <Pick label={t('Payment')} choices={PAYER} value={clinical.payer} onChange={(v) => set('payer', v)} />
+        <Pick label={t('Medico-legal case')} choices={YES_NO} value={clinical.medico} onChange={(v) => set('medico', v)} />
+      </Pair>
       <View style={styles.group}>
         <Text style={styles.label}>{t('Done so far')}</Text>
         <View style={styles.chips}>
