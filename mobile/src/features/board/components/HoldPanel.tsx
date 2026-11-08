@@ -1,6 +1,8 @@
 import { useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
+import { ReferralRepository } from '../../../api/referral.repository';
 import type { AttemptView, ReferralView } from '../../../api/schema';
+import type { Run } from '../../../api/useLiveReferral';
 import Banner from '../../../components/ui/Banner';
 import Button from '../../../components/ui/Button';
 import Card from '../../../components/ui/Card';
@@ -29,7 +31,7 @@ export default function HoldPanel(props: {
   holdExpired: boolean;
   facilityName: (id: unknown) => string;
   nowMs: number;
-  act: (path: string, body?: unknown) => Promise<boolean>;
+  act: Run;
 }) {
   const { view, hold } = props;
   const r = view.referral;
@@ -169,13 +171,13 @@ export default function HoldPanel(props: {
             icon="check"
             label={t('Patient arrived')}
             testID="patient-arrived"
-            onPress={() => props.act(`/api/referrals/${r.id}/close`, { reason: 'arrived' })}
+            onPress={() => props.act(() => ReferralRepository.close(r.id, 'arrived'))}
           />
           {props.holdExpired ? (
             <Button
               label={t('Close')}
               variant="secondary"
-              onPress={() => props.act(`/api/referrals/${r.id}/close`, { reason: 'hold_expired' })}
+              onPress={() => props.act(() => ReferralRepository.close(r.id, 'hold_expired'))}
             />
           ) : null}
           <Button variant="danger" label={t('Cancel referral')} onPress={() => setCancelling(true)} />
@@ -184,7 +186,7 @@ export default function HoldPanel(props: {
       {cancelling ? (
         <CancelSheet
           onClose={() => setCancelling(false)}
-          onCancel={async (reason) => void (await props.act(`/api/referrals/${r.id}/cancel`, { reason }))}
+          onCancel={async (reason) => void (await props.act(() => ReferralRepository.cancel(r.id, reason)))}
         />
       ) : null}
     </Card>

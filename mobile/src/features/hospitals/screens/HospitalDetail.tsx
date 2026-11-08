@@ -1,6 +1,5 @@
 import { Linking, StyleSheet, Text, View } from 'react-native';
-import { api } from '../../../api/client';
-import { FacilityListSchema, RatingsSchema } from '../../../api/schema';
+import { FacilityRepository } from '../../../api/facility.repository';
 import { useLoad } from '../../../api/useLoad';
 import Button from '../../../components/ui/Button';
 import Card from '../../../components/ui/Card';
@@ -39,8 +38,8 @@ export default function HospitalDetail({ route, navigation }: RootScreenProps<'H
   const { id } = route.params;
   const { boot } = useSignedIn();
   const settings = useSettings();
-  const { data, error, loading, reload } = useLoad(() => api('/api/facilities', FacilityListSchema), []);
-  const ratings = useLoad(() => api('/api/facilities/ratings', RatingsSchema), []).data?.ratings ?? {};
+  const { data, error, loading, reload } = useLoad(FacilityRepository.list, []);
+  const ratings = useLoad(FacilityRepository.ratings, []).data?.ratings ?? {};
   const f = data?.facilities.find((x) => x.id === id);
   const rating = settings.showRatings ? ratings[id] : undefined;
   const header = <ScreenHeader title={f ? shortName(f.name) : t('Hospital')} onBack={navigation.goBack} />;

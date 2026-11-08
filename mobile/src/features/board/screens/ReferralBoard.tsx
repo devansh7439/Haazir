@@ -1,7 +1,8 @@
 import { useCallback, useMemo, useState } from 'react';
 import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
 import type { AttemptView } from '../../../api/schema';
-import { useLiveReferral } from '../../../api/useLiveReferral';
+import { ReferralRepository } from '../../../api/referral.repository';
+import { useLiveReferral, type Run } from '../../../api/useLiveReferral';
 import Banner from '../../../components/ui/Banner';
 import Button from '../../../components/ui/Button';
 import Card from '../../../components/ui/Card';
@@ -38,7 +39,7 @@ export default function ReferralBoard({ route, navigation }: RootScreenProps<'Re
   const [query, setQuery] = useState('');
 
   // Child components only need to know whether an action worked.
-  const run = useCallback(async (path: string, body?: unknown) => (await act(path, body)).ok, [act]);
+  const run: Run = useCallback(async (call) => (await act(call)).ok, [act]);
   const cards = useMemo(() => (view ? cardsOf(view.attempts) : []), [view]);
   const back = () => (navigation.canGoBack() ? navigation.goBack() : navigation.navigate('MainTabs', { screen: 'ReferralsTab' }));
 
@@ -120,7 +121,7 @@ export default function ReferralBoard({ route, navigation }: RootScreenProps<'Re
         <AlertCard
           key={al.event_id}
           alert={al}
-          onDismiss={() => void run(`/api/referrals/${r.id}/dismiss-alert`, { event_id: al.event_id })}
+          onDismiss={() => void run(() => ReferralRepository.dismissAlert(r.id, al.event_id))}
         />
       ))}
       {showHold ? (
@@ -133,9 +134,8 @@ export default function ReferralBoard({ route, navigation }: RootScreenProps<'Re
           cards={cards.map((c) => c.a)}
           nowMs={nowMs}
           onWiden={async () => {
-            const res = await act(`/api/referrals/${r.id}/widen`, { radius_km: 80 });
-            const next = res.data && typeof res.data === 'object' ? (res.data as { id?: unknown }).id : undefined;
-            if (res.ok && typeof next === 'string') navigation.replace('ReferralBoard', { id: next });
+            const res = await act(() => ReferralRepository.widen(r.id, 80));
+            if (res.ok) navigation.replace('ReferralBoard', { id: res.data.id });
           }}
         />
       ) : null}
@@ -176,17 +176,17 @@ export default function ReferralBoard({ route, navigation }: RootScreenProps<'Re
           attempt={selecting}
           onClose={() => setSelecting(null)}
           onConfirmCall={async () =>
-            void (await run(`/api/referrals/${r.id}/select`, { attempt_id: selecting.id, force: selecting.needs_review }))
+            void (await run(() => ReferralRepository.select(r.id, selecting.id, selecting.needs_review)))
           }
           onConfirmManual={async (contact) =>
-            void (await run(`/api/referrals/${r.id}/confirm-manually`, { attempt_id: selecting.id, contact_person: contact || null }))
+            void (await run(() => ReferralRepository.confirmManually(r.id, selecting.id, contact || null)))
           }
         />
       ) : null}
       {cancelling ? (
         <CancelSheet
           onClose={() => setCancelling(false)}
-          onCancel={async (reason) => void (await run(`/api/referrals/${r.id}/cancel`, { reason }))}
+          onCancel={async (reason) => void (await run(() => ReferralRepository.cancel(r.id, reason)))}
         />
       ) : null}
     </Screen>

@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
+import type { ManualOutcomeInput } from '../../../api/referral.repository';
 import type { AttemptView } from '../../../api/schema';
 import BottomSheet from '../../../components/ui/BottomSheet';
 import Button from '../../../components/ui/Button';
@@ -26,7 +27,7 @@ export default function ManualOutcome({
   onClose,
 }: {
   attempt: AttemptView;
-  onSave: (body: Record<string, unknown>) => Promise<boolean>;
+  onSave: (input: ManualOutcomeInput) => Promise<boolean>;
   onClose: () => void;
 }) {
   const start = (

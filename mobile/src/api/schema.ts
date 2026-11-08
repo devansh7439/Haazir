@@ -202,10 +202,18 @@ const CaseTemplate = z.object({
 export type Capability = z.infer<typeof Capability>;
 export type CaseTemplate = z.infer<typeof CaseTemplate>;
 
+export const ROLES = ['admin', 'doctor', 'coordinator'] as const;
+export type Role = (typeof ROLES)[number];
+
+const Referrer = z.object({ id: z.string(), name: z.string(), facility: z.string().nullable() });
+export type Referrer = z.infer<typeof Referrer>;
+
 /** GET /api/mobile/bootstrap */
 export const BootstrapSchema = z.object({
-  user: z.object({ name: z.string().nullable(), email: z.string().nullable(), role: z.enum(['admin', 'doctor']) }),
-  referrer: z.object({ id: z.string(), name: z.string(), facility: z.string().nullable() }).nullable(),
+  user: z.object({ name: z.string().nullable(), email: z.string().nullable(), role: z.enum(ROLES) }),
+  referrer: Referrer.nullable(),
+  // The doctors an admin or coordinator may refer for. Defaults to none so an older server still parses.
+  referrers: z.array(Referrer).default([]),
   templates: z.array(CaseTemplate),
   capabilities: z.array(Capability),
   bolna_ready: z.boolean(),

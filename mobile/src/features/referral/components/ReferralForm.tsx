@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
-import { api } from '../../../api/client';
-import { CreatedSchema, type Acuity, type AgeUnit, type Bootstrap, type CaseTemplate, type Draft, type Sex } from '../../../api/schema';
+import { ReferralRepository } from '../../../api/referral.repository';
+import type { Acuity, AgeUnit, Bootstrap, CaseTemplate, Draft, Referrer, Sex } from '../../../api/schema';
 import Banner from '../../../components/ui/Banner';
 import Button from '../../../components/ui/Button';
 import FilterChip from '../../../components/ui/FilterChip';
@@ -50,18 +50,20 @@ const STEP_CARD = [
  */
 export default function ReferralForm({
   boot,
+  referrer,
   onCreated,
   onBack,
   draft,
   header,
 }: {
   boot: Bootstrap;
+  /** The doctor the referral is placed for: the signed-in doctor, or the one a coordinator or admin chose. */
+  referrer: Referrer | null;
   onCreated: (id: string) => void;
   onBack: () => void;
   draft?: Draft | null;
   header?: ReactNode;
 }) {
-  const referrer = boot.referrer;
   const parsed = draft?.parsed;
   const [step, setStep] = useState(0);
   const [caseType, setCaseType] = useState(parsed?.case_type ?? '');
@@ -147,13 +149,11 @@ export default function ReferralForm({
     setSubmitError(null);
     try {
       const filled = showPatient || patient.patient_name || patient.attendant_phone;
-      const created = await api('/api/referrals', CreatedSchema, {
-        body: {
-          ...body,
-          draft_id: draft?.id,
-          client_request_id: requestId,
-          patient: filled ? { ...patient, attendant_language: patient.attendant_language || null } : undefined,
-        },
+      const created = await ReferralRepository.create({
+        ...body,
+        draft_id: draft?.id,
+        client_request_id: requestId,
+        patient: filled ? { ...patient, attendant_language: patient.attendant_language || null } : undefined,
       });
       onCreated(created.id);
     } catch (err) {

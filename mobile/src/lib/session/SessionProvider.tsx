@@ -1,6 +1,7 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
-import { ApiError, api, configureApi } from '../../api/client';
-import { BootstrapSchema, ConfigSchema, LoginSchema, type Bootstrap } from '../../api/schema';
+import { ApiError, configureApi } from '../../api/client';
+import type { Bootstrap } from '../../api/schema';
+import { SessionRepository, type Credentials } from '../../api/session.repository';
 import { normalizeServerUrl } from '../url';
 import { unregisterPush } from '../push/push';
 import { storage } from './storage';
@@ -9,7 +10,7 @@ import { t } from '../i18n';
 const SESSION_KEY = 'haazir.session';
 const SERVER_KEY = 'haazir.server';
 
-export type Credentials = { passcode: string } | { email: string; password: string };
+export type { Credentials };
 
 type State =
   | { status: 'loading' }
@@ -45,7 +46,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
   const open = useCallback(
     async (serverUrl: string, token: string | null) => {
       configureApi({ baseUrl: serverUrl, token, onUnauthorized: () => void signOut() });
-      return api('/api/mobile/bootstrap', BootstrapSchema);
+      return SessionRepository.bootstrap();
     },
     [signOut],
   );
@@ -82,12 +83,12 @@ export function SessionProvider({ children }: { children: ReactNode }) {
       authMode: async (serverUrl) => {
         const base = normalizeServerUrl(serverUrl);
         if (!base) throw new ApiError(0, 'BAD_URL', t('That doesn’t look like a server address'));
-        return (await api('/api/mobile/config', ConfigSchema, { baseUrl: base })).auth_mode;
+        return SessionRepository.authMode(base);
       },
       signIn: async (serverUrl, credentials) => {
         const base = normalizeServerUrl(serverUrl);
         if (!base) throw new ApiError(0, 'BAD_URL', t('That doesn’t look like a server address'));
-        const { token } = await api('/api/login', LoginSchema, { baseUrl: base, body: credentials, mobileLogin: true });
+        const token = await SessionRepository.login(base, credentials);
         let boot: Bootstrap;
         try {
           boot = await open(base, token);
@@ -104,7 +105,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
       reload: async () => {
         const s = state;
         if (s.status !== 'signedIn') return;
-        setState({ ...s, boot: await api('/api/mobile/bootstrap', BootstrapSchema) });
+        setState({ ...s, boot: await SessionRepository.bootstrap() });
       },
       retry: () => {
         setState({ status: 'loading' });

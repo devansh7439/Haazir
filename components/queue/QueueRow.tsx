@@ -30,6 +30,11 @@ export function QueueRow({ item, waitingSeconds }: { item: QueueItem; waitingSec
             {item.referrer_name}
             {item.entered_by_name && ` · keyed in by ${item.entered_by_name}`}
           </span>
+          {item.last_note && (
+            <span className="block truncate text-xs text-zinc-600" title={item.last_note}>
+              Note: {item.last_note} <span className="text-zinc-400">({item.last_note_by})</span>
+            </span>
+          )}
         </span>
         <span className="col-span-2 text-xs text-zinc-600 md:col-span-1">
           {item.calls_open} calling · {item.calls_answered} answered · {item.calls_accepted} yes

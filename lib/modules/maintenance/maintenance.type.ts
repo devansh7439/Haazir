@@ -3,6 +3,7 @@ export interface PurgeResult {
   patient_details: number;
   messages: number;
   attachments: number;
+  notes: number;
   intake_drafts: number;
   webhook_log: number;
 }

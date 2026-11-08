@@ -1,8 +1,7 @@
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import { useCallback, useMemo, useState } from 'react';
 import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
-import { api } from '../../../api/client';
-import { ReferralListSchema } from '../../../api/schema';
+import { ReferralRepository } from '../../../api/referral.repository';
 import { useLoad } from '../../../api/useLoad';
 import EmptyState from '../../../components/ui/EmptyState';
 import ErrorState from '../../../components/ui/ErrorState';
@@ -19,7 +18,7 @@ import ReferralRow from '../components/ReferralRow';
 /** Every referral of the organisation: the ones still in progress first, then the earlier ones. */
 export default function Referrals() {
   const navigation = useNavigation();
-  const { data, error, loading, refreshing, reload } = useLoad(() => api('/api/referrals', ReferralListSchema), []);
+  const { data, error, loading, refreshing, reload } = useLoad(ReferralRepository.list, []);
   useFocusEffect(useCallback(() => void reload(), [reload]));
   // The time the list was loaded: "5 min ago" is relative to this, and it stays steady between renders.
   const nowMs = useMemo(() => Date.now(), [data]); // eslint-disable-line react-hooks/exhaustive-deps, react-hooks/purity

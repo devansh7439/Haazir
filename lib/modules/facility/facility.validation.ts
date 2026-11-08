@@ -27,6 +27,12 @@ export const FacilityCreateBody = z.object({
   contacts: z.array(ContactCreateBody).max(5).default([]),
 });
 
+/** POST /api/facilities/import: a CSV file of hospitals. `apply: false` only checks it. */
+export const ImportBody = z.object({
+  csv: z.string().min(1).max(400_000),
+  apply: z.boolean().default(false),
+});
+
 export const FacilityPatchBody = z.object({
   name: z.string().trim().min(2).max(160).optional(),
   address: optionalText(240),

@@ -21,7 +21,8 @@ export function ReferralEntry({ referrers, initialId, ...form }: Omit<FormProps,
     <div>
       <div className="card-soft mx-auto mb-6 max-w-[780px] px-5 py-4">
         <label className="label" htmlFor="requested-by">Referring doctor</label>
-        <select id="requested-by" className="input" value={referrerId} onChange={(e) => setReferrerId(e.target.value)}>
+        {/* A coordinator starts every referral here, so the keyboard lands on the choice that has no default. */}
+        <select id="requested-by" className="input" value={referrerId} autoFocus={initialId === ""} onChange={(e) => setReferrerId(e.target.value)}>
           {referrerId === "" && <option value="">Choose the doctor this is for</option>}
           {referrers.map((r) => (
             <option key={r.id} value={r.id}>{r.facility ? `${r.name} · ${r.facility}` : r.name}</option>

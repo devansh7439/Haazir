@@ -2,9 +2,9 @@ import * as Haptics from 'expo-haptics';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { AppState } from 'react-native';
 import { isIdle, isLive } from '../lib/board';
-import { z } from 'zod';
-import { ApiError, api } from './client';
-import { ReferralViewSchema, type ReferralView } from './schema';
+import { ApiError } from './client';
+import { ReferralRepository } from './referral.repository';
+import type { ReferralView } from './schema';
 import { t } from '../lib/i18n';
 
 /** Tick interval once the bed is held and every call has finished: only the hold-expiry check is left. */
@@ -13,13 +13,11 @@ const IDLE_TICK_MS = 30_000;
 const FAST_POLL_MS = 1000;
 const MIN_TICK_MS = 1000;
 
-const AnyOk = z.unknown();
+/** What an action returned: that it failed, or that it worked with the server's answer (the new referral's id after a widen). */
+export type ActResult<T> = { ok: true; data: T } | { ok: false };
 
-/** What an action returned: whether it worked, and the server's answer (the new referral's id after a widen). */
-export interface ActResult {
-  ok: boolean;
-  data: unknown;
-}
+/** An action on the board: a repository call, run by `act` so a failure shows on the board and the board re-reads. */
+export type Run = (call: () => Promise<unknown>) => Promise<boolean>;
 
 /**
  * Keeps one referral's board current. The server only advances a referral (second wave, callbacks, hold expiry,
@@ -42,7 +40,7 @@ export function useLiveReferral(id: string) {
   const refresh = useCallback(async () => {
     const seq = ++lastRequest.current;
     try {
-      const next = await api(`/api/referrals/${id}`, ReferralViewSchema);
+      const next = await ReferralRepository.get(id);
       if (seq !== lastRequest.current) return;
       skewMs.current = new Date(next.server_time).getTime() - Date.now();
       setView(next);
@@ -58,16 +56,16 @@ export function useLiveReferral(id: string) {
   }, [id]);
 
   const act = useCallback(
-    async (path: string, body?: unknown): Promise<ActResult> => {
+    async <T,>(call: () => Promise<T>): Promise<ActResult<T>> => {
       setActionError(null);
       try {
-        const data = await api(path, AnyOk, { method: 'POST', body: body ?? {} });
+        const data = await call();
         await refresh();
         return { ok: true, data };
       } catch (err) {
         setActionError(err instanceof Error ? err.message : t('That didn’t work'));
         await refresh();
-        return { ok: false, data: null };
+        return { ok: false };
       }
     },
     [refresh],
@@ -94,7 +92,7 @@ export function useLiveReferral(id: string) {
     let stop = false;
     let timer: ReturnType<typeof setTimeout>;
     const loop = async () => {
-      if (hasView) await api(`/api/referrals/${id}/tick`, AnyOk, { method: 'POST', body: {} }).catch(() => {});
+      if (hasView) await ReferralRepository.tick(id).catch(() => {});
       await refresh();
       if (!stop) timer = setTimeout(loop, idle ? IDLE_TICK_MS : tickMs);
     };

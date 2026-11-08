@@ -57,7 +57,7 @@ const PUBLIC_ROUTES = ["mobile/config"];
 const ADMIN_ONLY = [
   "POST facilities", "PATCH facilities/[id]", "PUT facilities/[id]/capabilities", "POST facilities/[id]/contacts",
   "PATCH contacts/[id]", "POST portal-snapshots", "GET referrers", "POST referrers/[id]/verification",
-  "POST escalation-contacts", "DELETE escalation-contacts/[id]", "POST facilities/[id]/desk-link",
+  "POST escalation-contacts", "DELETE escalation-contacts/[id]", "POST facilities/[id]/desk-link", "POST facilities/import",
 ];
 
 type Handler = (req: Request, ctx: { params: Promise<{ id: string }> }) => Promise<Response>;
@@ -232,6 +232,29 @@ describe("route access control", () => {
     // Nothing changed in the other organisation's data.
     expect(JSON.stringify(await db.query(`select status, current_wave from referrals where id = $1`, [referral.id]))).toBe(before);
     expect(JSON.stringify(await db.query(`select * from facilities where id = $1`, [IDS.tamarind]))).toBe(facilityBefore);
+  });
+
+  // The id routes above can't leak by id; this covers the ones that list. Another organisation's admin reads every
+  // list-style GET and must find nothing of this organisation's referral, hospital or doctor in any of them.
+  it("no list route shows another organisation's referral, hospital or doctor", async () => {
+    vi.stubEnv("AUTH_MODE", "passcode");
+    const { referral } = await ReferralService.create(KRAIT, { orgId: DEFAULT_ORG_ID });
+    await db.query(`insert into intake_drafts (org_id, kind, transcript) values ($1, 'text', 'Ramesh krait bite')`, [DEFAULT_ORG_ID]);
+    vi.stubEnv("AUTH_MODE", "users");
+    const lists = consoleRoutes().filter((r) => r.method === "GET" && !r.path.includes("[id]"));
+    expect(lists.length).toBeGreaterThan(3);
+    // Control: this organisation's own admin does see them, so an empty answer below means isolation, not a broken route.
+    await signIn("admin@demo.org");
+    expect(await (await call(lists.find((r) => r.path === "facilities")!)).text()).toContain("Tamarind");
+    expect(await (await call(lists.find((r) => r.path === "referrals")!)).text()).toContain(referral.id);
+    await signIn("admin@other.org");
+    const foreign = [referral.id, referral.code, IDS.tamarind, IDS.referrer, "Tamarind", "Ramesh"];
+    const failures: string[] = [];
+    for (const r of lists) {
+      const text = await (await call(r)).text();
+      for (const needle of foreign) if (text.includes(needle)) failures.push(`${key(r)} shows ${needle}`);
+    }
+    expect(failures).toEqual([]);
   });
 
   it("an intake draft from another organisation can't be dismissed", async () => {
@@ -431,6 +454,27 @@ describe("database exposure (Supabase roles)", () => {
     const serverOnly = ["patient_details", "messages", "bolna_webhook_log", "app_users", "app_settings", "login_failures",
       "organisations", "haazir_migrations", "intake_drafts", "test_matrix_results"];
     expect(serverOnly.filter((t) => seen[t] !== "denied" && (seen[t] as number) > 0)).toEqual([]);
+  });
+
+  // The realtime token is a real `authenticated` JWT, so its holder can call Supabase's REST API directly and skip our routes'
+  // admin checks. An allowlist (not a blocklist of known tables), so a table added later is closed until someone opens it on purpose.
+  it("a signed-in user's token can read only the tables the live board subscribes to, plus reference data", async () => {
+    const BOARD = ["referrals", "call_attempts", "events"];
+    const seen = await visible("authenticated", DEFAULT_ORG_ID);
+    const open = Object.entries(seen).filter(([, n]) => n !== "denied").map(([rel]) => rel).sort();
+    expect(open).toEqual([...PUBLIC_REFERENCE, ...BOARD].sort());
+  });
+
+  it("a signed-in user's token never returns a family call, whose number is the attendant's phone", async () => {
+    await sb.query(
+      `update call_attempts set purpose = 'family_update', to_number = '+919800000301'
+       where id = (select id from call_attempts order by created_at limit 1)`);
+    const rows = await as("authenticated", DEFAULT_ORG_ID, async () =>
+      sb.query<{ to_number: string; purpose: string }>(`select to_number, purpose from call_attempts`));
+    expect(rows).not.toBe("denied");
+    const seen = rows as Array<{ to_number: string; purpose: string }>;
+    expect(seen.length).toBeGreaterThan(0); // the other calls are still there
+    expect(seen.filter((r) => r.purpose === "family_update" || r.to_number === "+919800000301")).toEqual([]);
   });
 
   it("neither role can write, delete or truncate anything", async () => {

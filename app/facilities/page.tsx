@@ -1,5 +1,6 @@
 import { EscalationSection } from "@/components/facilities/EscalationSection";
 import { FacilitiesAdmin } from "@/components/facilities/FacilitiesAdmin";
+import { ImportSection } from "@/components/facilities/ImportSection";
 import { EscalationService } from "@/lib/modules/escalation/escalation.service";
 import { DirectoryService } from "@/lib/modules/facility/directory.service";
 import { FacilityRepository } from "@/lib/modules/facility/facility.repository";
@@ -16,6 +17,7 @@ export default async function FacilitiesPage() {
   return (
     <>
       <FacilitiesAdmin initial={JSON.parse(JSON.stringify(facilities))} capabilities={capabilities} canEdit={s.role === "admin"} />
+      {s.role === "admin" && <ImportSection services={capabilities.map((c) => ({ code: c.code, label: c.label }))} />}
       {s.role === "admin" && <EscalationSection initial={await EscalationService.list(s.org)} />}
     </>
   );

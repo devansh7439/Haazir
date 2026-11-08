@@ -1,8 +1,7 @@
 import { useNavigation } from '@react-navigation/native';
 import { useMemo, useState } from 'react';
 import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
-import { api } from '../../../api/client';
-import { FacilityListSchema, RatingsSchema } from '../../../api/schema';
+import { FacilityRepository } from '../../../api/facility.repository';
 import { useLoad } from '../../../api/useLoad';
 import AppBar from '../../../components/ui/AppBar';
 import EmptyState from '../../../components/ui/EmptyState';
@@ -27,13 +26,13 @@ export default function Hospitals() {
   const { boot } = useSignedIn();
   const settings = useSettings();
   const navigation = useNavigation();
-  const { data, error, loading, refreshing, reload } = useLoad(() => api('/api/facilities', FacilityListSchema), []);
+  const { data, error, loading, refreshing, reload } = useLoad(FacilityRepository.list, []);
   const [services, setServices] = useState<string[]>([]);
   const [searching, setSearching] = useState(false);
   const [query, setQuery] = useState('');
   const [filtering, setFiltering] = useState(false);
   // Google ratings load after the list, so a slow Google never delays it.
-  const ratings = useLoad(() => api('/api/facilities/ratings', RatingsSchema), []).data?.ratings ?? {};
+  const ratings = useLoad(FacilityRepository.ratings, []).data?.ratings ?? {};
   const rows = useMemo(() => filterFacilities(data?.facilities ?? [], query, services), [data, query, services]);
   const stats = useMemo(
     () =>

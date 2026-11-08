@@ -3,8 +3,7 @@ import * as Device from 'expo-device';
 import * as Notifications from 'expo-notifications';
 import { Platform } from 'react-native';
 import { useSyncExternalStore } from 'react';
-import { z } from 'zod';
-import { api } from '../../api/client';
+import { PushRepository } from '../../api/push.repository';
 import { storage } from '../session/storage';
 import { t } from '../i18n';
 
@@ -15,7 +14,6 @@ import { t } from '../i18n';
 export type PushStatus = 'unknown' | 'on' | 'denied' | 'unsupported' | 'needs_project' | 'error';
 
 const TOKEN_KEY = 'haazir.push';
-const AnyOk = z.unknown();
 
 // The browser preview has no push; on a phone the status is set when registration runs.
 let status: PushStatus = Platform.OS === 'web' ? 'unsupported' : 'unknown';
@@ -76,7 +74,7 @@ export async function registerPush(): Promise<PushStatus> {
       return status;
     }
     const token = (await Notifications.getExpoPushTokenAsync({ projectId })).data;
-    await api('/api/mobile/push-token', AnyOk, { body: { token, platform: Platform.OS === 'ios' ? 'ios' : 'android' } });
+    await PushRepository.register(token, Platform.OS === 'ios' ? 'ios' : 'android');
     await storage.set(TOKEN_KEY, token);
     set('on');
   } catch {
@@ -90,7 +88,7 @@ export async function unregisterPush(): Promise<void> {
   const token = await storage.get(TOKEN_KEY);
   if (!token) return;
   try {
-    await api('/api/mobile/push-token', AnyOk, { method: 'DELETE', body: { token } });
+    await PushRepository.unregister(token);
   } catch {
     // Offline or already signed out: the server drops tokens Expo reports as dead.
   }

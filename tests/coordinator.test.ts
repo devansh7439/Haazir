@@ -22,6 +22,10 @@ import { KRAIT } from "./support/scripted-calls";
 import { IDS, fakeClock, freshDb } from "./helpers";
 import * as loginRoute from "@/app/api/login/route";
 import * as referralsRoute from "@/app/api/referrals/route";
+import * as notesRoute from "@/app/api/referrals/[id]/notes/route";
+import * as importRoute from "@/app/api/facilities/import/route";
+import { MaintenanceService } from "@/lib/modules/maintenance/maintenance.service";
+import { addMinutes, now } from "@/lib/core/clock";
 
 const B = "https://app.example";
 const ORG = "00000000-0000-4000-8000-000000000001";
@@ -42,11 +46,11 @@ function stubBolna() {
 }
 
 /** Creates a console user and signs in as them: the session cookie is then sent with every route call. */
-async function signInAs(role: "admin" | "doctor" | "coordinator", name: string, referrerId: string | null = null): Promise<string> {
+async function signInAs(role: "admin" | "doctor" | "coordinator", name: string, referrerId: string | null = null, org = ORG): Promise<string> {
   const email = `${role}-${name.toLowerCase().replace(/\W+/g, "")}@x.org`;
   const [u] = await db.query<{ id: string }>(
     `insert into app_users (org_id, email, name, password_hash, role, referrer_id) values ($1, $2, $3, $4, $5, $6) returning id`,
-    [ORG, email, name, await hashPassword("right-password-1"), role, referrerId],
+    [org, email, name, await hashPassword("right-password-1"), role, referrerId],
   );
   const login = await loginRoute.POST(json("/api/login", { email, password: "right-password-1" }));
   expect(login.status).toBe(200);
@@ -129,5 +133,111 @@ describe("the queue", () => {
     await referralsRoute.POST(json("/api/referrals", { ...KRAIT, referrer_id: IDS.referrer }));
     await db.query(`insert into organisations (id, name) values ($1, 'Other hospital network')`, [ORG_B]);
     expect(await ViewService.queue(ORG_B)).toEqual([]);
+  });
+});
+
+describe("handover notes", () => {
+  const params = (id: string) => ({ params: Promise.resolve({ id }) });
+  const get = (id: string) => notesRoute.GET(new Request(`${B}/api/referrals/${id}/notes`), params(id));
+  const post = (id: string, body: unknown) => notesRoute.POST(json(`/api/referrals/${id}/notes`, body), params(id));
+  const place = async () => (await (await referralsRoute.POST(json("/api/referrals", { ...KRAIT, referrer_id: IDS.referrer }))).json()).id as string;
+
+  it("lists a referral's notes newest first, under the name of whoever wrote them", async () => {
+    await signInAs("coordinator", "Asha Dispatcher");
+    const id = await place();
+    expect((await post(id, { body: "Called Banyan, waiting on Dr Kiran." })).status).toBe(201);
+    await signInAs("coordinator", "Ravi Night");
+    expect((await post(id, { body: "Banyan confirmed the ventilator." })).status).toBe(201);
+    const { notes } = await (await get(id)).json();
+    expect(notes.map((n: { body: string; author_name: string }) => [n.author_name, n.body])).toEqual([
+      ["Ravi Night", "Banyan confirmed the ventilator."],
+      ["Asha Dispatcher", "Called Banyan, waiting on Dr Kiran."],
+    ]);
+  });
+
+  it("refuses an empty note and one that holds a phone number, an ID or an email", async () => {
+    await signInAs("coordinator", "Asha Dispatcher");
+    const id = await place();
+    for (const body of ["   ", "family on 98450 12345", "aadhaar 1234 5678 9012", "mail me at a@b.org"]) {
+      expect((await post(id, { body })).status).toBe(422);
+    }
+    expect(await db.query(`select 1 from referral_notes`)).toHaveLength(0);
+  });
+
+  it("is invisible to another organisation, like the referral itself", async () => {
+    await signInAs("coordinator", "Asha Dispatcher");
+    const id = await place();
+    await post(id, { body: "Called Banyan." });
+    await db.query(`insert into organisations (id, name) values ($1, 'Other hospital network')`, [ORG_B]);
+    await signInAs("coordinator", "Outsider", null, ORG_B);
+    expect((await get(id)).status).toBe(404);
+    expect((await post(id, { body: "Hello" })).status).toBe(404);
+  });
+
+  it("shows the newest note on the queue", async () => {
+    await signInAs("coordinator", "Asha Dispatcher");
+    const id = await place();
+    expect((await ViewService.queue(ORG))[0]).toMatchObject({ last_note: null, last_note_by: null });
+    await post(id, { body: "Called Banyan." });
+    await post(id, { body: "Banyan said yes." });
+    expect((await ViewService.queue(ORG))[0]).toMatchObject({ last_note: "Banyan said yes.", last_note_by: "Asha Dispatcher" });
+  });
+
+  it("is deleted with the other identifiers once the referral ended long ago", async () => {
+    await signInAs("coordinator", "Asha Dispatcher");
+    const live = await place();
+    const ended = await place();
+    await post(live, { body: "Still going." });
+    await post(ended, { body: "Done." });
+    await db.query(`update referrals set status = 'closed', closed_at = $2 where id = $1`, [ended, addMinutes(now(), -40 * 24 * 60)]);
+    expect((await MaintenanceService.purgeIdentifiers(30)).notes).toBe(1);
+    expect((await db.query<{ referral_id: string }>(`select referral_id from referral_notes`)).map((r) => r.referral_id)).toEqual([live]);
+  });
+});
+
+describe("importing a hospital directory", () => {
+  const CSV = [
+    "name,kind,city,lat,lng,language,casualty_phone,services",
+    "Pine Valley Hospital,private hospital,Hoskote,13.10,77.80,en,9845012301,ICU bed; Ventilator",
+    "Broken Row,private hospital,Hoskote,13.10,77.80,en,123,ICU bed",
+  ].join("\n");
+  const post = (apply: boolean) => importRoute.POST(json("/api/facilities/import", { csv: CSV, apply }));
+  const listed = () => db.query<{ id: string; name: string }>(`select id, name from facilities where name = 'Pine Valley Hospital'`);
+
+  it("checks a file without saving anything, then lists the good rows and reports the bad one", async () => {
+    await signInAs("admin", "Admin One");
+    const check = await (await post(false)).json();
+    expect(check).toMatchObject({ applied: false, hospitals: [{ line: 2, name: "Pine Valley Hospital" }] });
+    expect(check.issues).toEqual([expect.objectContaining({ line: 3, name: "Broken Row" })]);
+    expect(await listed()).toHaveLength(0);
+
+    const done = await (await post(true)).json();
+    expect(done).toMatchObject({ applied: true, hospitals: [{ line: 2, name: "Pine Valley Hospital" }] });
+    const [f] = await listed();
+    expect(await db.query(`select 1 from facility_contacts where facility_id = $1 and phone_e164 = '+919845012301'`, [f.id])).toHaveLength(1);
+    expect((await db.query<{ capability_code: string }>(`select capability_code from facility_capabilities where facility_id = $1`, [f.id])).map((c) => c.capability_code).sort())
+      .toEqual(["icu_bed", "ventilator"]);
+  });
+
+  it("does not list a hospital twice when the same file is imported again", async () => {
+    await signInAs("admin", "Admin One");
+    await post(true);
+    const again = await (await post(true)).json();
+    expect(again.hospitals).toEqual([]);
+    expect(again.issues.map((i: { message: string }) => i.message)).toContain("Already listed.");
+    expect(await listed()).toHaveLength(1);
+  });
+
+  it("lists the hospitals under the admin's own organisation", async () => {
+    await db.query(`insert into organisations (id, name) values ($1, 'Other hospital network')`, [ORG_B]);
+    await signInAs("admin", "Admin Two", null, ORG_B);
+    await post(true);
+    expect((await db.query<{ org_id: string }>(`select org_id from facilities where name = 'Pine Valley Hospital'`)).map((f) => f.org_id)).toEqual([ORG_B]);
+  });
+
+  it("is for an admin only", async () => {
+    await signInAs("coordinator", "Asha Dispatcher");
+    expect((await post(true)).status).toBe(403);
+    expect(await listed()).toHaveLength(0);
   });
 });

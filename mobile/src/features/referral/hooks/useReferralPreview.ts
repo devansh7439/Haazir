@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
-import { api } from '../../../api/client';
-import { PreviewSchema, type Preview } from '../../../api/schema';
+import { ReferralRepository, type ReferralBody } from '../../../api/referral.repository';
+import type { Preview } from '../../../api/schema';
 import { t } from '../../../lib/i18n';
 
 /** Wait this long after the last change before asking for a preview. */
@@ -10,7 +10,7 @@ const DEBOUNCE_MS = 400;
  * "What hospitals will hear": a debounced preview of the form with no side effects. A newer change cancels the
  * request in flight. Nothing is fetched until a case is picked.
  */
-export function useReferralPreview(body: Record<string, unknown>, caseType: string) {
+export function useReferralPreview(body: ReferralBody, caseType: string) {
   const [preview, setPreview] = useState<Preview | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -22,7 +22,7 @@ export function useReferralPreview(body: Record<string, unknown>, caseType: stri
     const timer = setTimeout(async () => {
       setLoading(true);
       try {
-        const next = await api('/api/referrals/preview', PreviewSchema, { body: JSON.parse(key), signal: controller.signal });
+        const next = await ReferralRepository.preview(JSON.parse(key), controller.signal);
         setPreview(next);
         setError(null);
       } catch (err) {

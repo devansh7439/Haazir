@@ -1,6 +1,8 @@
 import { useState } from 'react';
 import { Linking, StyleSheet, Text, View } from 'react-native';
+import { ReferralRepository } from '../../../api/referral.repository';
 import type { AttemptView, ReferralView } from '../../../api/schema';
+import type { Run } from '../../../api/useLiveReferral';
 import Banner from '../../../components/ui/Banner';
 import Button from '../../../components/ui/Button';
 import Card from '../../../components/ui/Card';
@@ -26,7 +28,7 @@ export default function AttemptCard(props: {
   portalFlag: ReferralView['portal_flags'][string] | null;
   origin: { lat: number; lng: number };
   onSelect: () => void;
-  act: (path: string, body?: unknown) => Promise<boolean>;
+  act: Run;
 }) {
   const { attempt: a } = props;
   const display = attemptDisplay(a, props.nowMs);
@@ -105,10 +107,12 @@ export default function AttemptCard(props: {
             variant="secondary"
             label={t('Redial')}
             onPress={() =>
-              props.act(`/api/attempts/${a.id}/redial`, {
-                contact_id: a.contact_id ?? undefined,
-                to_number: a.contact_id ? undefined : a.to_number,
-              })
+              props.act(() =>
+                ReferralRepository.redial(a.id, {
+                  contact_id: a.contact_id ?? undefined,
+                  to_number: a.contact_id ? undefined : a.to_number,
+                }),
+              )
             }
           />
         ) : null}
@@ -158,7 +162,7 @@ export default function AttemptCard(props: {
         <ManualOutcome
           attempt={a}
           onClose={() => setManual(false)}
-          onSave={(body) => props.act(`/api/attempts/${a.id}/manual-outcome`, body)}
+          onSave={(input) => props.act(() => ReferralRepository.recordOutcome(a.id, input))}
         />
       ) : null}
     </Card>

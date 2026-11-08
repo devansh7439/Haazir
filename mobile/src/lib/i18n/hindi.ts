@@ -268,6 +268,7 @@ export const HINDI: Readonly<Record<string, string>> = {
 
   // New referral
   'Referring as {name}': '{name} के रूप में रेफ़र कर रहे हैं',
+  'Who is referring?': 'कौन रेफ़र कर रहा है?',
   'No referring doctor': 'कोई रेफ़र करने वाला डॉक्टर नहीं',
   'No referring doctor is set up for this account. Ask an admin to add one.':
     'इस खाते के लिए कोई रेफ़र करने वाला डॉक्टर तय नहीं है। एडमिन से जोड़ने को कहें।',

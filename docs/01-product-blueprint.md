@@ -50,10 +50,13 @@ When a small hospital can't treat a critically ill patient, Haazir phones every 
 
 | Persona | Context | What they need | What Haazir gives them |
 |---|---|---|---|
-| **Referring doctor** (primary): PHC/CHC medical officer, casualty MO at a small hospital, ambulance-operator coordinator | Alone on a night shift with a deteriorating patient and no capacity on site | One place that answers "who will take this patient now?" without them making ten calls | A 30-second form, a live board, a confirmed bed, and a one-tap call to any desk |
+| **Coordinator** (primary, a hypothesis): ambulance-operator dispatcher, hospital network transfer-desk nurse, 108 control-room operator | Phones around for beds all shift, for many patients at once, for doctors who are with a patient | To work a queue, not one case: who needs me now, what is pending, and a handover that does not start from scratch | A queue of every live referral with what needs a person first, intake on a doctor's behalf (recorded as keyed in by them), handover notes, and a hospital directory they can import |
+| **Referring doctor**: PHC/CHC medical officer, casualty MO at a small hospital | Alone on a night shift with a deteriorating patient and no capacity on site. Decides; may not have time to use a console at all | One place that answers "who will take this patient now?" without them making ten calls | A 30-second form (or a coordinator who fills it in for them), a live board, a confirmed bed, and a one-tap call to any desk |
 | **Receiving desk**: casualty MO, nurse in charge, referral coordinator | Busy, interrupted, wary of unknown callers | A short, clear call: who is calling, what the case is, what's needed, and no time wasted | Under 60 seconds, a named doctor, a read-back, a WhatsApp pre-arrival note once they accept |
 | **Patient's family** (attendant) | Frightened, may not read English | To know where to go and what to carry | A WhatsApp message (and, as a stretch goal, a call) in their language with the hospital, address, map link and reference code |
 | **Buyer/admin**: ambulance or emergency-response operator, hospital network transfer desk, state emergency centre | Pays for faster, accountable placement | Speed, audit trail, acceptance analytics | Time-to-bed metrics, recorded answers, per-hospital acceptance and answer rates |
+
+**Status of the coordinator choice.** It rests on one argument: a person who calls around all day gains the most from a tool that calls in parallel, and a lone doctor on a night shift gains the least. No coordinator has seen or used this yet. Until 3–5 of them have been shadowed for a shift (calls per placement, minutes per call) and one desk has run it on real cases, treat "coordinator is the primary user" as a hypothesis, not a finding. The roles in the product are `admin`, `doctor` and `coordinator` (CLAUDE.md, "Roles").
 
 ---
 

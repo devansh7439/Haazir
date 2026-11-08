@@ -9,6 +9,7 @@ import { setDb, type Db } from "@/lib/core/db";
 import { DEFAULT_ORG_ID } from "@/lib/core/types";
 import { CallRepository } from "@/lib/modules/call/call.repository";
 import { DirectoryService } from "@/lib/modules/facility/directory.service";
+import { MaintenanceService } from "@/lib/modules/maintenance/maintenance.service";
 import { MobileService } from "@/lib/modules/mobile/mobile.service";
 import { EvaluationService } from "@/lib/modules/referral/evaluation.service";
 import { HoldService } from "@/lib/modules/referral/hold.service";
@@ -27,6 +28,7 @@ import * as appFacility from "../mobile/src/lib/facility";
 import {
   BootstrapSchema, FacilityListSchema, PreviewSchema, ReferralListSchema, ReferralViewSchema,
 } from "../mobile/src/api/schema";
+import { SelectedSchema, TickSchema } from "../mobile/src/api/referral.repository";
 import { IDS, fakeClock, freshDb } from "./helpers";
 import { KRAIT, advanceCalls, fakeBolna } from "./support/scripted-calls";
 
@@ -45,25 +47,32 @@ afterEach(async () => {
 });
 
 /** Plays the krait-bite referral and returns the board view at several moments: searching, options ready, confirmed. */
-async function playKrait(): Promise<{ referralId: string; views: Array<{ at: number; view: WebView }> }> {
+async function playKrait(): Promise<{
+  referralId: string;
+  views: Array<{ at: number; view: WebView }>;
+  /** What the select and tick routes answered during the play, as JSON. */
+  answers: { select: unknown; ticks: unknown[] };
+}> {
   const clock = fakeClock();
   fakeBolna();
   const { referral } = await ReferralService.create(KRAIT);
   const views: Array<{ at: number; view: WebView }> = [];
+  const answers: { select: unknown; ticks: unknown[] } = { select: null, ticks: [] };
   let selected = false;
   for (let t = 0; t <= 240; t++) {
     await advanceCalls(referral.id);
     await EvaluationService.evaluate(referral.id);
     const r = (await ReferralRepository.get(referral.id))!;
+    if (t % 40 === 0) answers.ticks.push(json(await MaintenanceService.tickReferral(r)));
     if (!selected && r.status === "options_ready" && t >= 45) {
       const tamarind = (await CallRepository.listForReferral(referral.id)).find((a) => a.facility_id === IDS.tamarind && a.purpose === "availability")!;
-      await HoldService.select(referral.id, tamarind.id);
+      answers.select = json(await HoldService.select(referral.id, tamarind.id));
       selected = true;
     }
     if ([3, 20, 40, 100, 240].includes(t)) views.push({ at: t, view: json((await ViewService.get(referral.id))!) });
     clock.advance(1);
   }
-  return { referralId: referral.id, views };
+  return { referralId: referral.id, views, answers };
 }
 
 describe("the app's schemas accept what the server sends", () => {
@@ -89,6 +98,45 @@ describe("the app's schemas accept what the server sends", () => {
     const parsed = PreviewSchema.safeParse(json(preview));
     expect(parsed.success).toBe(true);
     expect(parsed.success && parsed.data.eligible.filter((e) => e.will_call).length).toBe(6);
+  });
+});
+
+describe("the app's repository checks the answers of actions", () => {
+  it("select and tick, as the server answers them during a krait-bite referral", async () => {
+    const { answers } = await playKrait();
+    const select = SelectedSchema.safeParse(answers.select);
+    expect(select.success, JSON.stringify(answers.select)).toBe(true);
+    expect(answers.ticks.length).toBeGreaterThan(0);
+    for (const tick of answers.ticks) expect(TickSchema.safeParse(tick).success, JSON.stringify(tick)).toBe(true);
+  });
+});
+
+describe("the bootstrap for each role", () => {
+  const session = (role: "admin" | "doctor" | "coordinator", rid: string | null) =>
+    ({ uid: null, org: DEFAULT_ORG_ID, role, rid, name: null, email: null }) as const;
+  const boot = async (role: "admin" | "doctor" | "coordinator", rid: string | null) =>
+    json(await MobileService.bootstrap(session(role, rid)));
+
+  it("is readable by the app for every role", async () => {
+    for (const role of ["admin", "doctor", "coordinator"] as const) {
+      const parsed = BootstrapSchema.safeParse(await boot(role, null));
+      expect(parsed.success, `${role}: ${parsed.success ? "" : JSON.stringify(parsed.error.issues.slice(0, 3))}`).toBe(true);
+    }
+  });
+
+  it("gives a coordinator the doctors to choose from and no default", async () => {
+    const b = BootstrapSchema.parse(await boot("coordinator", null));
+    expect(b.referrer).toBeNull();
+    expect(b.referrers.length).toBeGreaterThan(0);
+  });
+
+  it("gives a doctor only themselves, and an admin a default plus the list", async () => {
+    const doctor = BootstrapSchema.parse(await boot("doctor", IDS.referrer));
+    expect(doctor.referrer?.id).toBe(IDS.referrer);
+    expect(doctor.referrers).toEqual([]);
+    const admin = BootstrapSchema.parse(await boot("admin", null));
+    expect(admin.referrer).not.toBeNull();
+    expect(admin.referrers.length).toBeGreaterThan(0);
   });
 });
 

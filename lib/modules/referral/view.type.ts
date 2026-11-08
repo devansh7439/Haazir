@@ -84,6 +84,9 @@ export interface QueueItem {
   needs_doctor: number;
   needs_review: number;
   ttfa_seconds: number | null;
+  /** The newest handover note and who wrote it, so whoever takes over sees where it stands. Null when there is none. */
+  last_note: string | null;
+  last_note_by: string | null;
 }
 
 /** One row of the Referrals list. */

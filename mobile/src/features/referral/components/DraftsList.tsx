@@ -1,9 +1,8 @@
 import { useFocusEffect } from '@react-navigation/native';
 import { useCallback } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
-import { z } from 'zod';
-import { api } from '../../../api/client';
-import { DraftsSchema, type Draft } from '../../../api/schema';
+import { IntakeRepository } from '../../../api/intake.repository';
+import type { Draft } from '../../../api/schema';
 import { useLoad } from '../../../api/useLoad';
 import Button from '../../../components/ui/Button';
 import Card from '../../../components/ui/Card';
@@ -15,7 +14,7 @@ import theme from '../../../theme';
 
 /** Referrals doctors sent by WhatsApp text or voice note. Review pre-fills the form; nothing is started until Find a bed. */
 export default function DraftsList({ onReview }: { onReview: (draft: Draft) => void }) {
-  const { data, reload } = useLoad(() => api('/api/intake-drafts', DraftsSchema), []);
+  const { data, reload } = useLoad(IntakeRepository.drafts, []);
   useFocusEffect(useCallback(() => void reload(), [reload]));
   const drafts = data?.drafts ?? [];
   if (drafts.length === 0) return null;
@@ -47,7 +46,7 @@ export default function DraftsList({ onReview }: { onReview: (draft: Draft) => v
                 label={t('Dismiss')}
                 variant="text"
                 onPress={async () => {
-                  await api(`/api/intake-drafts/${d.id}/dismiss`, z.unknown(), { method: 'POST', body: {} }).catch(() => {});
+                  await IntakeRepository.dismiss(d.id).catch(() => {});
                   await reload();
                 }}
               />

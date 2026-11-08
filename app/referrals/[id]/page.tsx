@@ -3,9 +3,11 @@ import { LiveBoard } from "@/components/board/LiveBoard";
 import { AttachmentsPanel } from "@/components/board/AttachmentsPanel";
 import { TreatmentPanel } from "@/components/board/TreatmentPanel";
 import { AmbulancePanel } from "@/components/board/AmbulancePanel";
+import { NotesPanel } from "@/components/board/NotesPanel";
 import { SlipPanel } from "@/components/board/SlipPanel";
 import { AttachmentService } from "@/lib/modules/attachment/attachment.service";
 import { SessionService } from "@/lib/modules/auth/session.service";
+import { NoteService } from "@/lib/modules/note/note.service";
 import { ViewService } from "@/lib/modules/referral/view.service";
 import { ReferralRepository } from "@/lib/modules/referral/referral.repository";
 
@@ -19,12 +21,13 @@ export default async function ReferralBoardPage({ params }: { params: Promise<{ 
   const s = await SessionService.page();
   const r = await ReferralRepository.get(id);
   if (!r || r.org_id !== s.org) notFound();
-  const [view, attachments] = await Promise.all([ViewService.get(id), AttachmentService.list(id)]);
+  const [view, attachments, notes] = await Promise.all([ViewService.get(id), AttachmentService.list(id), NoteService.list(r)]);
   if (!view) notFound();
   // Serialise dates the same way the API does, so server and client renders match.
   return (
     <>
       <LiveBoard initial={JSON.parse(JSON.stringify(view))} />
+      <NotesPanel referralId={r.id} initial={notes} />
       <AmbulancePanel referralId={r.id} status={r.ambulance_status} />
       <TreatmentPanel referralId={r.id} startedAt={r.treatment_started_at ? new Date(r.treatment_started_at).toISOString() : null} />
       <AttachmentsPanel referralId={r.id} initial={JSON.parse(JSON.stringify(attachments))} />

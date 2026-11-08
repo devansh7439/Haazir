@@ -32,7 +32,7 @@ export const ViewRepository = {
   queue: (orgId: string): Promise<Array<Omit<QueueItem, "created_at"> & { created_at: Date }>> =>
     q(
       `select r.id, r.code, r.status, t.label as case_label, r.acuity, r.created_at, m.ttfa_seconds,
-              rr.name as referrer_name,
+              rr.name as referrer_name, ln.body as last_note, ln.author_name as last_note_by,
               case when u.id is not null and u.referrer_id is distinct from r.referrer_id then u.name end as entered_by_name,
               count(a.id) filter (where a.purpose = 'availability' and a.status in ('queued','dialing','ringing','in_progress','wrapping_up'))::int as calls_open,
               count(a.id) filter (where a.purpose = 'availability' and a.outcome is not null)::int as calls_answered,
@@ -44,9 +44,12 @@ export const ViewRepository = {
        join referral_metrics m on m.id = r.id
        join referrers rr on rr.id = r.referrer_id
        left join app_users u on u.id = r.entered_by
+       left join lateral (
+         select n.body, n.author_name from referral_notes n where n.referral_id = r.id order by n.created_at desc, n.seq desc limit 1
+       ) ln on true
        left join call_attempts a on a.referral_id = r.id
        where r.org_id = $1 and r.status in ('searching','options_ready','confirming','confirmed','exhausted')
-       group by r.id, t.label, m.ttfa_seconds, rr.name, u.id, u.name, u.referrer_id`,
+       group by r.id, t.label, m.ttfa_seconds, rr.name, u.id, u.name, u.referrer_id, ln.body, ln.author_name`,
       [orgId],
     ),
 

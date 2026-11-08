@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { AppState } from 'react-native';
-import { api } from '../../api/client';
-import { ReferralListSchema, type ReferralListItem } from '../../api/schema';
+import { ReferralRepository } from '../../api/referral.repository';
+import type { ReferralListItem } from '../../api/schema';
 import { newestInProgress } from './referrals.helper';
 
 /** How often the newest referral still in progress is looked up while the app is open. */
@@ -20,7 +20,7 @@ export function useInProgress(): ReferralListItem | null {
     const look = async () => {
       if (AppState.currentState === 'active') {
         try {
-          const { referrals } = await api('/api/referrals', ReferralListSchema);
+          const { referrals } = await ReferralRepository.list();
           if (!stop) setCurrent(newestInProgress(referrals));
         } catch {
           // Offline for a moment: the bar keeps showing the last answer.

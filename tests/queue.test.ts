@@ -5,7 +5,7 @@ import type { QueueItem } from "@/lib/modules/referral/view.type";
 const item = (o: Partial<QueueItem> = {}): QueueItem => ({
   id: "r1", code: "R-1000", status: "searching", case_label: "Snakebite", acuity: "critical", created_at: "2026-11-07T10:00:00.000Z",
   referrer_name: "Dr. Rao", entered_by_name: null, calls_open: 6, calls_answered: 0, calls_accepted: 0, needs_doctor: 0, needs_review: 0,
-  ttfa_seconds: null, ...o,
+  ttfa_seconds: null, last_note: null, last_note_by: null, ...o,
 });
 
 describe("what needs a person on the queue", () => {
