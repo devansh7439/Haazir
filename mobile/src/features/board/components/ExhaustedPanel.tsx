@@ -4,7 +4,7 @@ import Banner from '../../../components/ui/Banner';
 import Button from '../../../components/ui/Button';
 import Card from '../../../components/ui/Card';
 import Illustration from '../../../components/ui/Illustration';
-import { attemptDisplay, shortName } from '../../../lib/display';
+import { attemptDisplay, canWiden, shortName } from '../../../lib/display';
 import { t } from '../../../lib/i18n';
 import { statusText } from '../../../lib/localize';
 import theme from '../../../theme';
@@ -24,6 +24,7 @@ export default function ExhaustedPanel({
 }) {
   const calls = view.attempts.filter((a) => a.purpose === 'availability').length;
   const rounds = view.referral.current_wave;
+  const widenable = canWiden(view.referral.search_radius_km);
   return (
     <View style={styles.wrap}>
       <View style={styles.art}>
@@ -36,7 +37,7 @@ export default function ExhaustedPanel({
             ? t('No hospital accepted after 1 round ({calls} calls)', { calls })
             : t('No hospital accepted after {rounds} rounds ({calls} calls)', { rounds, calls })
         }
-        body={t('Call these desks directly, or widen the search.')}
+        body={widenable ? t('Call these desks directly, or widen the search.') : t('Call these desks directly.')}
       />
       <Card style={styles.list}>
         {[...cards]
@@ -60,7 +61,7 @@ export default function ExhaustedPanel({
             </View>
           ))}
       </Card>
-      <Button icon="redial" label={t('Widen to 80 km and try again')} onPress={onWiden} testID="widen" />
+      {widenable ? <Button icon="redial" label={t('Widen to 80 km and try again')} onPress={onWiden} testID="widen" /> : null}
       {view.nearest_ed.length > 0 ? (
         <Card style={styles.list}>
           <Text style={styles.name}>{t('Nearest emergency departments · stabilise there')}</Text>

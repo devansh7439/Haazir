@@ -64,6 +64,8 @@ const Referral = z.object({
   code: z.string(),
   status: z.enum(REFERRAL_STATUSES),
   acuity: z.enum(ACUITIES),
+  /** Left out by a server older than this app. */
+  search_radius_km: z.number().optional(),
   current_wave: z.number(),
   selected_facility_id: z.string().nullable(),
   selected_attempt_id: z.string().nullable(),

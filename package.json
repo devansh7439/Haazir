@@ -11,6 +11,7 @@
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "db:setup": "bun --conditions=react-server scripts/db-setup.ts",
+    "db:demo-history": "bun --conditions=react-server scripts/demo-history.ts",
     "user:create": "bun --conditions=react-server scripts/create-user.ts",
     "bolna:agents": "bun --conditions=react-server scripts/bolna-agents.ts",
     "bolna:kb": "bun scripts/bolna-kb.ts",

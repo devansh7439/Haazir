@@ -114,3 +114,101 @@ describe("debug regressions", () => {
     expect((await ReferralRepository.get(referral.id))!.status).toBe("searching");
   });
 });
+
+describe("a patient's name in free text (CLAUDE.md rule 1)", () => {
+  const named = { ...KRAIT, patient: { patient_name: "Ramesh Gowda", attendant_name: "Lakshmi", attendant_phone: "9845012345" } };
+
+  it.each([
+    ["the patient's first name", { note: "ramesh found near the field" }],
+    ["the patient's surname", { note: "Mr. Gowda is drowsy" }],
+    ["the attendant's name", { note: "Lakshmi saw the snake" }],
+  ])("refuses a note with %s and calls nobody", async (_what, change) => {
+    fakeClock();
+    const calls = stubBolna();
+    await expect(ReferralService.create({ ...named, ...change })).rejects.toMatchObject({ code: "NOTE_CONTAINS_IDENTIFIER" });
+    expect(calls).toHaveLength(0);
+    expect(await db.query(`select 1 from referrals`)).toHaveLength(0);
+  });
+
+  it("refuses treatment given with the patient's name, which a desk hears if it asks", async () => {
+    fakeClock();
+    const calls = stubBolna();
+    await expect(ReferralService.create({ ...named, treatment_given: "Ramesh had ASV" })).rejects.toMatchObject({
+      code: "TREATMENT_CONTAINS_IDENTIFIER",
+    });
+    expect(calls).toHaveLength(0);
+  });
+
+  it("still sends a clean note, and no availability call carries the name", async () => {
+    fakeClock();
+    const calls = stubBolna();
+    await ReferralService.create({ ...named, note: "drowsy, ptosis since 1 hour" });
+    expect(calls.length).toBeGreaterThan(0);
+    expect(JSON.stringify(calls)).not.toMatch(/ramesh|gowda|lakshmi/i);
+  });
+});
+
+describe("widening a search", () => {
+  // At 25 km only the nearest hospitals qualify, so a widen to 80 km has new ones to call.
+  const near = { ...KRAIT, search_radius_km: 25 };
+
+  // Every call ends first: a desk still on a call would be skipped as busy, which would hide what these tests check.
+  const exhaustBy = async (referralId: string, outcome: "declined" | "callback_later") => {
+    const attempts = (await CallRepository.listForReferral(referralId)).filter((a) => a.purpose === "availability");
+    for (const a of attempts) {
+      await (await WebhookService.handle({ id: a.bolna_execution_id, status: "completed" })).followUp();
+      await CallService.recordManualOutcome(a.id, { outcome });
+    }
+    await ReferralRepository.update(referralId, { status: "exhausted" });
+    return attempts.map((a) => a.facility_id);
+  };
+  const facilitiesCalled = async (referralId: string) =>
+    (await CallRepository.listForReferral(referralId)).filter((a) => a.purpose === "availability").map((a) => a.facility_id);
+
+  it("refuses a radius that is no wider, and leaves the referral as it was", async () => {
+    fakeClock();
+    stubBolna();
+    const { referral } = await ReferralService.create({ ...KRAIT, search_radius_km: 80 });
+    await exhaustBy(referral.id, "declined");
+    await expect(ReferralService.widen(referral.id, 80)).rejects.toMatchObject({ code: "ALREADY_AT_RADIUS" });
+    expect((await ReferralRepository.get(referral.id))!.status).toBe("exhausted");
+    expect(await db.query(`select 1 from referrals`)).toHaveLength(1);
+  });
+
+  it("calls only new hospitals, in the first wave and any later one", async () => {
+    fakeClock();
+    stubBolna();
+    const { referral } = await ReferralService.create(near);
+    const declined = await exhaustBy(referral.id, "declined");
+    expect(declined.length).toBeGreaterThan(0);
+
+    const widened = await ReferralService.widen(referral.id, 80);
+    const first = await facilitiesCalled(widened.id);
+    expect(first.length).toBeGreaterThan(0);
+    expect(first.filter((id) => declined.includes(id))).toEqual([]);
+
+    const second = await ReferralRepository.claimWave(widened.id, widened.current_wave);
+    await CallService.dispatchWave(await ReferralRepository.context(second!), second!.current_wave);
+    expect((await facilitiesCalled(widened.id)).filter((id) => declined.includes(id))).toEqual([]);
+  });
+
+  it("tells the doctor when everyone in range has already said no, and rings nobody", async () => {
+    fakeClock();
+    const calls = stubBolna();
+    const { referral } = await ReferralService.create({ ...KRAIT, search_radius_km: 80 });
+    await exhaustBy(referral.id, "declined");
+    const before = calls.length;
+    await expect(ReferralService.widen(referral.id, 300)).rejects.toMatchObject({ code: "NO_NEW_HOSPITALS" });
+    expect(calls).toHaveLength(before);
+    expect((await ReferralRepository.get(referral.id))!.status).toBe("exhausted");
+  });
+
+  it("tries again a hospital that never answered", async () => {
+    fakeClock();
+    stubBolna();
+    const { referral } = await ReferralService.create(near);
+    const unreached = await exhaustBy(referral.id, "callback_later");
+    const widened = await ReferralService.widen(referral.id, 80);
+    expect(await facilitiesCalled(widened.id)).toEqual(expect.arrayContaining(unreached));
+  });
+});

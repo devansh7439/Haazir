@@ -189,6 +189,36 @@ describe("the app's copy of the display logic matches the web's", () => {
     expect(appBoard.GROUP_ORDER).toEqual(webBoard.GROUP_ORDER);
   });
 
+  it("the manual-outcome form opens empty unless an answer is on record, on both", () => {
+    for (const display of [webDisplay, appDisplay]) {
+      const blank = { outcome: "", bed: "" };
+      expect(display.manualOutcomeStart({ outcome: null, bed_type: null, needs_review: false })).toEqual(blank);
+      expect(display.manualOutcomeStart({ outcome: "unclear", bed_type: "icu", needs_review: false })).toEqual(blank);
+      expect(display.manualOutcomeStart({ outcome: "needs_doctor", bed_type: null, needs_review: false })).toEqual(blank);
+      // An answer waiting for review must not be one tap from being cleared.
+      expect(display.manualOutcomeStart({ outcome: "accepted", bed_type: "icu", needs_review: true })).toEqual(blank);
+      expect(display.manualOutcomeStart({ outcome: "accepted", bed_type: "icu", needs_review: false })).toEqual({ outcome: "accepted", bed: "icu" });
+      expect(display.manualOutcomeStart({ outcome: "accepted", bed_type: "none", needs_review: false })).toEqual({ outcome: "accepted", bed: "" });
+
+      expect(display.manualOutcomeReady("", "")).toBe(false);
+      expect(display.manualOutcomeReady("", "icu")).toBe(false);
+      expect(display.manualOutcomeReady("accepted", "")).toBe(false);
+      expect(display.manualOutcomeReady("conditional", "")).toBe(false);
+      expect(display.manualOutcomeReady("accepted", "icu")).toBe(true);
+      expect(display.manualOutcomeReady("declined", "")).toBe(true);
+    }
+  });
+
+  it("offers to widen only when that would search further, on both", () => {
+    for (const display of [webDisplay, appDisplay]) {
+      expect(display.canWiden(40)).toBe(true);
+      expect(display.canWiden(79)).toBe(true);
+      expect(display.canWiden(80)).toBe(false);
+      expect(display.canWiden(120)).toBe(false);
+    }
+    expect(appDisplay.canWiden(undefined)).toBe(true); // an older server doesn't send the radius
+  });
+
   it("hospital helpers: search, grouping, first desk", async () => {
     const rows = json<WebFacility[]>(await DirectoryService.list(DEFAULT_ORG_ID));
     const app = FacilityListSchema.parse({ facilities: rows }).facilities;

@@ -27,9 +27,9 @@ export const ReferralRepository = {
           note, required_capabilities, spoken_summary, transport, search_radius_km, is_demo, created_at, updated_at,
           client_request_id, airway, spo2, gcs, on_oxygen, payer, medico_legal,
           pregnancy_weeks, trauma_mechanism, infectious_risk, treatment_given, blood_group, blood_needed,
-          transfer_consent, transfer_consent_at, transfer_reason, entered_by)
+          transfer_consent, transfer_consent_at, transfer_reason, entered_by, declined_facility_ids)
        values ('searching', $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11::text[], $12, $13, $14, $15, $16, $16, $17,
-               $18, $19, $20, $21, $22, $23, $24, $25, $26, $27, $28, $29, $30, $31, $32, $33)
+               $18, $19, $20, $21, $22, $23, $24, $25, $26, $27, $28, $29, $30, $31, $32, $33, $34::text[])
        on conflict (org_id, client_request_id) where client_request_id is not null do nothing
        returning *`,
       [
@@ -66,6 +66,7 @@ export const ReferralRepository = {
         r.transfer_consent_at,
         r.transfer_reason,
         r.entered_by,
+        r.declined_facility_ids,
       ],
     );
   },

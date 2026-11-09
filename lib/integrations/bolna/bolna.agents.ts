@@ -231,8 +231,9 @@ export function buildAgent(doc: PromptDoc, tools: ToolDef[], o: BuildOptions): R
     `Switch to ${languageList(Object.keys(doc.welcome))} as soon as the person does. ` +
     "In every language except English use polite plural forms.";
   const knowledgeBase = o.knowledgeBaseId && KNOWLEDGE_AGENTS.includes(doc.key) ? o.knowledgeBaseId : null;
-  // Calls are billed by the minute, so a reply is capped well above the prompts' "under 25 words" but below a monologue.
-  const llmConfig = { provider: o.llmProvider, model: o.llmModel, max_tokens: 100, temperature: 0.2 };
+  // This cap also covers tool calls: at 100 tokens a filled record_hospital_response was cut off mid-JSON and Bolna failed it
+  // before calling us. The prompts, not this number, keep spoken replies short.
+  const llmConfig = { provider: o.llmProvider, model: o.llmModel, max_tokens: 500, temperature: 0.2 };
   const transcriberHints = o.sttModel.startsWith("saaras:v4") ? { keywords: TRANSCRIBER_KEYWORDS, context: TRANSCRIBER_CONTEXT } : {};
   const voice = {
     model: o.ttsModel,

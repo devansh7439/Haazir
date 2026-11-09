@@ -144,6 +144,23 @@ export function shortName(name: string | null | undefined): string {
   return (name ?? 'Hospital').replace(/\s*\(Demo\)\s*/i, '');
 }
 
+/** Whether "Widen to 80 km" would search further than this referral did. */
+export const canWiden = (radiusKm: number | undefined): boolean => radiusKm === undefined || radiusKm < 80;
+
+/**
+ * What the manual-outcome form opens with: only an answer already on record, never a guess, so a stray Save can't record a
+ * yes (CLAUDE.md rule 10). A call's answer waiting for review counts as no answer: Save would clear the review.
+ */
+export function manualOutcomeStart(a: { outcome: string | null; bed_type: string | null; needs_review: boolean }) {
+  const known = !a.needs_review && ['accepted', 'conditional', 'declined', 'callback_later'].includes(a.outcome ?? '');
+  const bed = a.bed_type && !['none', 'unknown'].includes(a.bed_type) ? a.bed_type : '';
+  return { outcome: known ? a.outcome! : '', bed: known ? bed : '' };
+}
+
+/** Whether the manual-outcome form can be saved: an outcome is chosen and, for a yes, the bed it is for. */
+export const manualOutcomeReady = (outcome: string, bed: string): boolean =>
+  outcome !== '' && (!['accepted', 'conditional'].includes(outcome) || bed !== '');
+
 export interface EventLike {
   type: string;
   payload: Record<string, unknown>;

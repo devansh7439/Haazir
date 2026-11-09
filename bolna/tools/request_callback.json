@@ -6,7 +6,7 @@
     "properties": {
       "attempt_id": {
         "type": "string",
-        "description": "Internal attempt reference from the call context. Filled in automatically; never ask for it and never say it."
+        "description": "Copy the attempt_id from the call context exactly; it is not the execution_id. Never ask for it and never say it."
       },
       "minutes": {
         "type": "string",

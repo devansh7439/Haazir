@@ -178,6 +178,8 @@ export interface Referral extends ClinicalFacts, HandoverFacts, TransferRecord, 
   spoken_summary: string;
   transport: Transport;
   search_radius_km: number;
+  /** Hospitals that said no on the search this one widened; they are not called again (migration 0024). */
+  declined_facility_ids: string[];
   current_wave: number;
   wave_started_at: Date | string | null;
   selected_facility_id: string | null;

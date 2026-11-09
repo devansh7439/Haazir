@@ -92,6 +92,7 @@ export interface NewReferral extends ClinicalFacts, HandoverFacts {
   search_radius_km: number;
   is_demo: boolean;
   client_request_id: string | null;
+  declined_facility_ids: string[];
 }
 
 /** The server-only identifiers (`patient_details`). */

@@ -6,7 +6,7 @@ const AT = "2026-10-31T10:00:00Z";
 
 /** A critical snakebite referral, still searching. */
 export const referralRow = (o: Partial<Referral> = {}): Referral => ({
-  id: "r1", org_id: "o1", code: "R-4821", status: "searching", referrer_id: "d1", entered_by: null, origin_facility_id: null,
+  id: "r1", org_id: "o1", code: "R-4821", status: "searching", referrer_id: "d1", entered_by: null, origin_facility_id: null, declined_facility_ids: [],
   origin_lat: 13, origin_lng: 77, case_type: "snakebite_neuro", acuity: "critical", age_value: 34, age_unit: "years",
   sex: "male", note: null, airway: "own", spo2: 90, gcs: 15, on_oxygen: true, payer: "pmjay", medico_legal: false,
   ...NO_HANDOVER_FACTS, transfer_consent: null, transfer_consent_at: null, transfer_reason: null,

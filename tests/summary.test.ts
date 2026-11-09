@@ -61,6 +61,13 @@ describe("identifier guard", () => {
   });
   it("blocks Aadhaar-like numbers and emails", () => {
     expect(checkNote("ID 1234 5678 9012").blocked).toBe(true);
+    // A name given on the form, in any case or script, as a whole word only.
+    expect(checkNote("RAMESH is drowsy", ["Ramesh Gowda"]).blocked).toBe(true);
+    expect(checkNote("रमेश बेहोश है", ["रमेश"]).blocked).toBe(true);
+    expect(checkNote("Ramesh is drowsy").blocked).toBe(false);
+    expect(checkNote("Rameshwaram transfer", ["Ramesh"]).blocked).toBe(false);
+    // A placeholder or a relation is not a name.
+    expect(checkNote("baby is male, wife of patient present", ["Baby of unknown male", "Wife", null, ""]).blocked).toBe(false);
     expect(checkNote("mail ramesh@example.com").blocked).toBe(true);
   });
   it("allows ordinary clinical numbers", () => {

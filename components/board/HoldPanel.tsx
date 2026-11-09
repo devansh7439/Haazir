@@ -1,8 +1,9 @@
-import { Check, Lock, Mail, MessageCircle, PhoneCall } from "lucide-react";
+import { Lock, Mail, MessageCircle, PhoneCall } from "lucide-react";
 import { useState } from "react";
 import { LANGUAGE_LABEL, attemptDisplay, clock, shortName } from "@/lib/ui/display";
 import type { AttemptView, ReferralView } from "@/lib/modules/referral/view.type";
 import { StatusPill } from "@/components/ui";
+import { ArrivedButton } from "./ArrivedButton";
 import { Callout } from "./Callout";
 import { CancelButton } from "./CancelButton";
 import type { Post } from "./types";
@@ -149,9 +150,7 @@ export function HoldPanel(props: {
         {r.status === "confirmed" && (
           <div className="flex flex-wrap items-center gap-2 px-5 py-3">
             {props.holdExpired && <span className="mr-auto text-sm font-medium text-amber-800">Hold expired. Did the patient arrive?</span>}
-            <button className="btn btn-primary" onClick={() => props.post(`/api/referrals/${r.id}/close`, { reason: "arrived" })}>
-              <Check aria-hidden className="size-4" /> Patient arrived
-            </button>
+            <ArrivedButton onArrived={() => props.post(`/api/referrals/${r.id}/close`, { reason: "arrived" })} />
             {props.holdExpired && (
               <button className="btn btn-secondary" onClick={() => props.post(`/api/referrals/${r.id}/close`, { reason: "hold_expired" })}>Close</button>
             )}

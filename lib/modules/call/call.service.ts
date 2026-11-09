@@ -56,7 +56,10 @@ export const CallService = {
   dispatchWave: async (ctx: ReferralCtx, wave: number, ranked?: RankedFacility[]): Promise<Attempt[]> => {
     const r = ctx.referral;
     const existing = await CallRepository.listForReferral(r.id);
-    const called = new Set(existing.filter((a) => a.purpose === "availability").map((a) => a.facility_id));
+    const called = new Set<string | null>([
+      ...existing.filter((a) => a.purpose === "availability").map((a) => a.facility_id),
+      ...r.declined_facility_ids,
+    ]);
     const params = {
       lat: r.origin_lat,
       lng: r.origin_lng,

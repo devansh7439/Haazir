@@ -6,7 +6,7 @@ import BottomSheet from '../../../components/ui/BottomSheet';
 import Button from '../../../components/ui/Button';
 import FilterChip from '../../../components/ui/FilterChip';
 import TextField from '../../../components/ui/TextField';
-import { BED_LABEL } from '../../../lib/display';
+import { BED_LABEL, manualOutcomeReady, manualOutcomeStart } from '../../../lib/display';
 import { phrase, t } from '../../../lib/i18n';
 import theme from '../../../theme';
 
@@ -30,19 +30,19 @@ export default function ManualOutcome({
   onSave: (input: ManualOutcomeInput) => Promise<boolean>;
   onClose: () => void;
 }) {
-  const start = (
-    a.outcome && OUTCOMES.some((o) => o.value === a.outcome) && a.outcome !== 'unclear' ? a.outcome : 'accepted'
-  ) as OutcomeValue;
-  const [outcome, setOutcome] = useState<OutcomeValue>(start);
-  const [bed, setBed] = useState(a.bed_type && BEDS.includes(a.bed_type) ? a.bed_type : 'icu_with_ventilator');
+  const start = manualOutcomeStart(a);
+  const [outcome, setOutcome] = useState<OutcomeValue | ''>(start.outcome as OutcomeValue | '');
+  const [bed, setBed] = useState(start.bed);
   const [ready, setReady] = useState(a.ready_in_minutes?.toString() ?? '');
   const [contact, setContact] = useState(a.contact_person ?? '');
   const [conditions, setConditions] = useState(a.conditions ?? '');
   const [reason, setReason] = useState(a.decline_reason ?? '');
   const [busy, setBusy] = useState(false);
   const accepted = outcome === 'accepted' || outcome === 'conditional';
+  const complete = manualOutcomeReady(outcome, bed);
 
   const save = async () => {
+    if (outcome === '') return;
     setBusy(true);
     const ok = await onSave({
       outcome,
@@ -63,7 +63,8 @@ export default function ManualOutcome({
       title={t('What did the desk tell you?')}
       footer={
         <>
-          <Button label={t('Save outcome')} loading={busy} onPress={save} testID="save-outcome" />
+          {complete ? null : <Text style={styles.hint}>{t('Choose what the desk said, and the bed type if they accepted.')}</Text>}
+          <Button label={t('Save outcome')} loading={busy} disabled={!complete} onPress={save} testID="save-outcome" />
           <Button label={t('Cancel')} variant="text" onPress={onClose} />
         </>
       }
@@ -105,5 +106,6 @@ export default function ManualOutcome({
 const styles = StyleSheet.create({
   form: { gap: theme.space.m },
   label: { ...theme.type.captionStrong, color: theme.tint.ink },
+  hint: { ...theme.type.caption, color: theme.tint.muted, textAlign: 'center' },
   chips: { flexDirection: 'row', flexWrap: 'wrap', gap: theme.space.s },
 });

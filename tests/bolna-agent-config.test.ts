@@ -119,3 +119,34 @@ describe("start language", () => {
     expect(ta.welcome).toBe(ta.doc.welcome.ta);
   });
 });
+
+describe("the agent can make a save call", () => {
+  const keys = fs.readdirSync("bolna/prompts").filter((f) => f.endsWith(".md")).map((f) => f.replace(/\.md$/, ""));
+  const load = (key: string) => {
+    const doc = parsePromptDoc(key, fs.readFileSync(`bolna/prompts/${key}.md`, "utf8"));
+    return { doc, tools: doc.toolFiles.map((f) => JSON.parse(fs.readFileSync(f, "utf8")) as ToolDef) };
+  };
+
+  // A real call was cut off at about 100 tokens, 340 characters, mid-JSON. Bolna then failed with "'outcome'" and never
+  // called the server, so the agent told the desk it had a technical issue. Sized with a 60-character answer per field.
+  it.each(keys)("%s leaves room for a fully filled tool call", (key) => {
+    const { doc, tools } = load(key);
+    const agent = buildAgent(doc, tools, options) as {
+      agent_config: { tasks: Array<{ tools_config: { llm_agent: { llm_config: { max_tokens: number } } } }> };
+    };
+    const filled = (t: ToolDef) => JSON.stringify(Object.fromEntries(Object.keys(t.value.param).map((k) => [k, "x".repeat(60)]))).length;
+    const needed = Math.max(0, ...tools.map(filled)) / 3;
+    expect(agent.agent_config.tasks[0].tools_config.llm_agent.llm_config.max_tokens).toBeGreaterThanOrEqual(needed);
+  });
+
+  // Bolna adds `execution_id is "..."` to every prompt, and the LLM sent that as attempt_id on a real call.
+  it.each(keys)("%s tells the LLM attempt_id is not the execution_id", (key) => {
+    const { doc, tools } = load(key);
+    const raw = fs.readFileSync(`bolna/prompts/${key}.md`, "utf8");
+    if (raw.includes("{attempt_id}")) expect(raw).toMatch(/attempt_id.*not the execution_id.*\{attempt_id\}/);
+    for (const t of tools.filter((x) => "attempt_id" in x.value.param)) {
+      expect(JSON.stringify(t.parameters)).toContain("not the execution_id");
+    }
+    expect(doc.key).toBe(key);
+  });
+});

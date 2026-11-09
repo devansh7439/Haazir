@@ -12,7 +12,7 @@ const NOW = new Date("2026-10-31T10:00:00Z");
 const ago = (s: number) => new Date(NOW.getTime() - s * 1000).toISOString();
 
 const referral = (o: Partial<Referral> = {}): Referral => ({
-  id: "r1", org_id: "o1", code: "R-1000", status: "searching", referrer_id: "d1", entered_by: null, origin_facility_id: null,
+  id: "r1", org_id: "o1", code: "R-1000", status: "searching", referrer_id: "d1", entered_by: null, origin_facility_id: null, declined_facility_ids: [],
   origin_lat: 13, origin_lng: 77, case_type: "snakebite_neuro", acuity: "critical", age_value: 34, age_unit: "years",
   sex: "male", note: null, airway: "unknown", spo2: null, gcs: null, on_oxygen: null, payer: "unknown", medico_legal: null,
   ...NO_HANDOVER_FACTS, transfer_consent: null, transfer_consent_at: null, transfer_reason: null,

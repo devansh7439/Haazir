@@ -13,6 +13,7 @@ import { LANGUAGE_LABEL, attemptDisplay, clock, shortName } from '../../../lib/d
 import { phrase, t } from '../../../lib/i18n';
 import { statusText, wordText } from '../../../lib/localize';
 import theme from '../../../theme';
+import ArrivedSheet from './ArrivedSheet';
 import CancelSheet from './CancelSheet';
 
 const MESSAGES = [
@@ -39,6 +40,7 @@ export default function HoldPanel(props: {
   const name = shortName(selected?.facility_name ?? hold?.facility_name);
   const contact = hold?.contact_person || selected?.contact_person;
   const [cancelling, setCancelling] = useState(false);
+  const [arriving, setArriving] = useState(false);
 
   if (r.status === 'confirming') {
     const display = hold ? attemptDisplay(hold, props.nowMs) : null;
@@ -171,7 +173,7 @@ export default function HoldPanel(props: {
             icon="check"
             label={t('Patient arrived')}
             testID="patient-arrived"
-            onPress={() => props.act(() => ReferralRepository.close(r.id, 'arrived'))}
+            onPress={() => setArriving(true)}
           />
           {props.holdExpired ? (
             <Button
@@ -182,6 +184,12 @@ export default function HoldPanel(props: {
           ) : null}
           <Button variant="danger" label={t('Cancel referral')} onPress={() => setCancelling(true)} />
         </View>
+      ) : null}
+      {arriving ? (
+        <ArrivedSheet
+          onClose={() => setArriving(false)}
+          onArrived={async () => void (await props.act(() => ReferralRepository.close(r.id, 'arrived')))}
+        />
       ) : null}
       {cancelling ? (
         <CancelSheet

@@ -189,14 +189,32 @@ const AADHAAR_LIKE = /\d{4}\s?\d{4}\s?\d{4}/;
 const EMAIL = /[^\s@]+@[^\s@]+\.[^\s@]+/;
 const HONORIFIC_NAME = /\b(?:Mr|Mrs|Ms|Shri|Smt|Kumari)\.?\s+[A-Z][a-z]+/;
 
-/** Whether a clinical note may be read aloud: blocked when it looks like a phone number, an ID, an email or a name. */
-export function checkNote(note: string | null | undefined): NoteCheck {
+// Words of a placeholder or a relation ("Baby of unknown male", "Wife"): they fill the name field but identify nobody.
+const NOT_A_NAME = new Set([
+  "mr", "mrs", "ms", "dr", "shri", "smt", "kumari", "of", "the", "and", "unknown", "unnamed", "patient", "attendant", "relative", "baby",
+  "infant", "child", "boy", "girl", "man", "woman", "male", "female", "son", "daughter", "wife", "husband", "father", "mother", "brother", "sister",
+]);
+
+const wordsOf = (text: string): string[] => text.toLowerCase().split(/[^\p{L}\p{M}]+/u).filter(Boolean);
+
+const hasName = (text: string, names: Array<string | null | undefined>): boolean => {
+  const words = new Set(wordsOf(text));
+  // A single letter is an initial, too common to refuse a note over.
+  return names.flatMap((n) => wordsOf(n ?? "")).some((w) => w.length > 1 && !NOT_A_NAME.has(w) && words.has(w));
+};
+
+/**
+ * Whether a clinical note may be read aloud: blocked when it holds a phone number, an ID, an email or one of `names`,
+ * the names given on the form (CLAUDE.md rule 1). A name nobody entered can only be warned about.
+ */
+export function checkNote(note: string | null | undefined, names: Array<string | null | undefined> = []): NoteCheck {
   const text = note ?? "";
   const errors: string[] = [];
   const warnings: string[] = [];
   if (AADHAAR_LIKE.test(text)) errors.push("The note looks like it contains an ID number. Remove it.");
   else if (PHONE_LIKE.test(text)) errors.push("The note looks like it contains a phone number. Remove it.");
   if (EMAIL.test(text)) errors.push("The note contains an email address. Remove it.");
+  if (hasName(text, names)) errors.push("The note contains the patient's or attendant's name. Hospitals hear this before they accept. Remove it.");
   if (HONORIFIC_NAME.test(text)) warnings.push("The note may contain a name. Hospitals hear this note before they accept.");
   return { blocked: errors.length > 0, errors, warnings };
 }

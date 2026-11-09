@@ -1,5 +1,5 @@
 import { Phone, RotateCw, X } from "lucide-react";
-import { attemptDisplay, shortName } from "@/lib/ui/display";
+import { attemptDisplay, canWiden, shortName } from "@/lib/ui/display";
 import type { AttemptView, ReferralView } from "@/lib/modules/referral/view.type";
 import { NearestEdList } from "./StabilisePanel";
 
@@ -13,7 +13,9 @@ export function ExhaustedPanel({ view, cards, onWiden }: { view: ReferralView; c
           <h2 id="ex-h" className="text-[15px] font-semibold text-rose-950">
             No hospital accepted after {view.referral.current_wave} round{view.referral.current_wave === 1 ? "" : "s"} ({calls} calls)
           </h2>
-          <p className="mt-0.5 text-sm text-rose-900/80">Call these desks directly, or widen the search.</p>
+          <p className="mt-0.5 text-sm text-rose-900/80">
+            {canWiden(view.referral.search_radius_km) ? "Call these desks directly, or widen the search." : "Call these desks directly."}
+          </p>
         </div>
       </div>
       <ol className="divide-y divide-line">
@@ -28,9 +30,11 @@ export function ExhaustedPanel({ view, cards, onWiden }: { view: ReferralView; c
           </li>
         ))}
       </ol>
-      <div className="border-t border-line px-5 py-3">
-        <button className="btn btn-primary" onClick={onWiden}><RotateCw aria-hidden className="size-4" /> Widen to 80 km and try again</button>
-      </div>
+      {canWiden(view.referral.search_radius_km) && (
+        <div className="border-t border-line px-5 py-3">
+          <button className="btn btn-primary" onClick={onWiden}><RotateCw aria-hidden className="size-4" /> Widen to 80 km and try again</button>
+        </div>
+      )}
       {view.nearest_ed.length > 0 && (
         <div className="border-t border-line px-5 py-3">
           <div className="eyebrow mb-2">Nearest emergency departments · stabilise there</div>

@@ -46,10 +46,11 @@ const prepare = async (input: ReferralInput, orgId?: string): Promise<PreparedRe
     throw ApiError.unprocessable("UNKNOWN_CAPABILITY", "Unknown capability", { unknown: codes.filter((c) => !known.has(c)) });
   }
   if (needs.length === 0 && input.case_type !== "other") throw ApiError.unprocessable("NEEDS_REQUIRED", "Choose at least one need");
-  const noteCheck = checkNote(input.note);
+  const names = [input.patient?.patient_name, input.patient?.attendant_name];
+  const noteCheck = checkNote(input.note, names);
   if (noteCheck.blocked) throw ApiError.unprocessable("NOTE_CONTAINS_IDENTIFIER", noteCheck.errors[0], { errors: noteCheck.errors });
   // Treatment given is read to a desk that asks, so it is held to the same rule as the note.
-  const treatmentCheck = checkNote(input.treatment_given);
+  const treatmentCheck = checkNote(input.treatment_given, names);
   if (treatmentCheck.blocked) {
     throw ApiError.unprocessable("TREATMENT_CONTAINS_IDENTIFIER", treatmentCheck.errors[0], { errors: treatmentCheck.errors });
   }
@@ -116,8 +117,12 @@ export const ReferralService = {
   /**
    * Creates the referral and calls the first wave. Idempotent on `client_request_id`: a repeat returns the first
    * referral with `duplicate`. Live referrals need Bolna configured and stay under the organisation's live cap.
+   * Hospitals in `declinedFacilityIds` are never called on this referral.
    */
-  create: async (input: ReferralInput, opts: { orgId?: string; enteredBy?: string | null } = {}): Promise<Created> => {
+  create: async (
+    input: ReferralInput,
+    opts: { orgId?: string; enteredBy?: string | null; declinedFacilityIds?: string[] } = {},
+  ): Promise<Created> => {
     const p = await prepare(input, opts.orgId);
     const orgId = p.referrer.org_id;
     const repeat = await findRepeat(orgId, input.client_request_id);
@@ -125,6 +130,13 @@ export const ReferralService = {
     if (p.ranked.length === 0) {
       const suggestions = await FacilityService.suggestionsFor(p.params, p.needs);
       throw ApiError.conflict("NO_ELIGIBLE_FACILITIES", "No eligible hospital in range", { suggestions });
+    }
+    const declinedFacilityIds = opts.declinedFacilityIds ?? [];
+    if (p.ranked.every((f) => declinedFacilityIds.includes(f.facility_id))) {
+      throw ApiError.conflict(
+        "NO_NEW_HOSPITALS",
+        `Every hospital within ${p.params.radius_km} km has already said no. Call the desks directly, or use the numbers below.`,
+      );
     }
     if (!env.bolnaApiKey || !env.agentId("availability")) {
       throw ApiError.unprocessable(
@@ -173,6 +185,7 @@ export const ReferralService = {
         search_radius_km: p.params.radius_km,
         is_demo: p.origin?.is_demo ?? false,
         client_request_id: input.client_request_id ?? null,
+        declined_facility_ids: declinedFacilityIds,
       },
       t,
     );
@@ -266,12 +279,21 @@ export const ReferralService = {
     await EventRepository.add(r.id, "referral_closed", { reason });
   },
 
-  /** "Widen and try again": a new referral with the same case and patient details over a wider radius; this one closes. */
+  /**
+   * "Widen and try again": a new referral with the same case and patient details over a wider radius; this one closes.
+   * Hospitals that already said no are not rung again; one that never answered is. 409 when the radius is no wider, or
+   * when only hospitals that said no are in range. This referral stays as it was.
+   */
   widen: async (referralId: string, radiusKm: number): Promise<Referral> => {
     const r = await ReferralRepository.get(referralId);
     if (!r) throw ApiError.notFound("Referral not found");
     // Only once every call has finished, so no live call is left answering for a closed referral.
     if (r.status !== "exhausted") throw ApiError.conflict("NOT_WIDENABLE", "Widen the search once every hospital has answered");
+    if (radiusKm <= r.search_radius_km) {
+      throw ApiError.conflict("ALREADY_AT_RADIUS", `This search already covers ${r.search_radius_km} km. Call the desks directly, or use the numbers below.`);
+    }
+    const attempts = await CallRepository.listForReferral(r.id);
+    const declined = attempts.filter((a) => a.purpose === "availability" && a.outcome === "declined" && a.facility_id).map((a) => a.facility_id!);
     const patient = await ReferralRepository.patient(r.id);
     const created = await ReferralService.create(
       {
@@ -288,7 +310,7 @@ export const ReferralService = {
         transfer_consent: r.transfer_consent,
         transfer_reason: r.transfer_reason,
         transport: r.transport,
-        search_radius_km: Math.max(radiusKm, r.search_radius_km + 1),
+        search_radius_km: radiusKm,
         origin_lat: r.origin_lat,
         origin_lng: r.origin_lng,
         patient: patient
@@ -301,7 +323,7 @@ export const ReferralService = {
             }
           : undefined,
       },
-      { enteredBy: r.entered_by },
+      { enteredBy: r.entered_by, declinedFacilityIds: [...new Set([...r.declined_facility_ids, ...declined])] },
     );
     const closeReason = `widened to ${radiusKm} km: ${created.referral.code}`;
     await ReferralRepository.update(r.id, { status: "closed", closed_at: now(), close_reason: closeReason });

@@ -1,12 +1,12 @@
 import { useState } from "react";
-import { BED_TYPES } from "@/lib/core/types";
-import { BED_LABEL } from "@/lib/ui/display";
+import { BED_LABEL, manualOutcomeReady, manualOutcomeStart } from "@/lib/ui/display";
 import type { AttemptView } from "@/lib/modules/referral/view.type";
 import type { Post } from "./types";
 
 export function ManualOutcomeForm({ a, post, onDone }: { a: AttemptView; post: Post; onDone: () => void }) {
-  const [outcome, setOutcome] = useState(a.outcome && a.outcome !== "unclear" ? a.outcome : "accepted");
-  const [bed, setBed] = useState(a.bed_type ?? "icu_with_ventilator");
+  const start = manualOutcomeStart(a);
+  const [outcome, setOutcome] = useState(start.outcome);
+  const [bed, setBed] = useState(start.bed);
   const [ready, setReady] = useState(a.ready_in_minutes?.toString() ?? "");
   const [contact, setContact] = useState(a.contact_person ?? "");
   const [conditions, setConditions] = useState(a.conditions ?? "");
@@ -31,7 +31,8 @@ export function ManualOutcomeForm({ a, post, onDone }: { a: AttemptView; post: P
       <p className="text-sm font-medium text-zinc-900 sm:col-span-2">What did the desk tell you?</p>
       <div>
         <label className="label" htmlFor={`o-${a.id}`}>Outcome</label>
-        <select id={`o-${a.id}`} className="input" value={outcome} onChange={(e) => setOutcome(e.target.value as typeof outcome)}>
+        <select id={`o-${a.id}`} className="input" value={outcome} onChange={(e) => setOutcome(e.target.value)}>
+          <option value="" disabled>Choose</option>
           <option value="accepted">Accepted</option>
           <option value="conditional">Accepted with a condition</option>
           <option value="declined">Declined</option>
@@ -42,8 +43,9 @@ export function ManualOutcomeForm({ a, post, onDone }: { a: AttemptView; post: P
       {accepted && (
         <div>
           <label className="label" htmlFor={`b-${a.id}`}>Bed type</label>
-          <select id={`b-${a.id}`} className="input" value={bed} onChange={(e) => setBed(BED_TYPES.find((b) => b === e.target.value) ?? bed)}>
-            {Object.entries(BED_LABEL).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
+          <select id={`b-${a.id}`} className="input" value={bed} onChange={(e) => setBed(e.target.value)}>
+            <option value="" disabled>Choose</option>
+            {Object.entries(BED_LABEL).filter(([k]) => k !== "none").map(([k, v]) => <option key={k} value={k}>{v}</option>)}
           </select>
         </div>
       )}
@@ -70,7 +72,7 @@ export function ManualOutcomeForm({ a, post, onDone }: { a: AttemptView; post: P
         </div>
       )}
       <div className="flex gap-2 sm:col-span-2">
-        <button type="submit" className="btn btn-primary">Save outcome</button>
+        <button type="submit" className="btn btn-primary" disabled={!manualOutcomeReady(outcome, bed)}>Save outcome</button>
         <button type="button" className="btn btn-secondary" onClick={onDone}>Cancel</button>
       </div>
     </form>
