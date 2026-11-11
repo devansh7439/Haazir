@@ -1,0 +1,3 @@
+[install]
+# Expo/Metro and eslint-config-next both expect one hoisted node_modules; Bun 1.3 defaults to symlinked installs for workspaces.
+linker = "hoisted"

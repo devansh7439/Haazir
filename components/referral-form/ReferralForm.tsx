@@ -1,6 +1,5 @@
 "use client";
 
-import { Zap } from "lucide-react";
 import { useMemo, useState } from "react";
 import type { Capability, CaseTemplate } from "@/lib/core/types";
 import { parseIntake, type ParsedIntake } from "@/lib/modules/intake/intake.helper";
@@ -8,6 +7,7 @@ import { newRequestId } from "@/lib/ui/request-id";
 import { CallPreview } from "./CallPreview";
 import { CasePage } from "./CasePage";
 import { DraftBanner } from "./DraftBanner";
+import { FormHeader } from "./FormHeader";
 import { PageTabs } from "./PageTabs";
 import { PatientPage } from "./PatientPage";
 import { QuickEntry } from "./QuickEntry";
@@ -101,7 +101,9 @@ export function ReferralForm(props: {
 
   const noteErrors = preview?.errors ?? [];
   const willCall = preview?.eligible.filter((e) => e.will_call) ?? [];
-  const canSubmit = ready && noteErrors.length === 0 && willCall.length > 0 && !submitting && factsValid(facts) && handoverValid(handover) && !(age !== "" && Number.isNaN(Number(age)));
+  const ageInvalid = age !== "" && Number.isNaN(Number(age));
+  const detailsValid = factsValid(facts) && handoverValid(handover) && !ageInvalid;
+  const canSubmit = ready && noteErrors.length === 0 && willCall.length > 0 && !submitting && detailsValid;
   const missing = missingStep(caseType, acuity, needs);
   const caseMissing = missingCase(caseType, needs);
 
@@ -170,17 +172,7 @@ export function ReferralForm(props: {
 
   return (
     <form onSubmit={submit} onKeyDown={onKeyDown}>
-      <div className="mb-8 flex flex-wrap items-start justify-between gap-4">
-        <div>
-          <h1 className="text-[32px] font-semibold tracking-tight text-zinc-900">Find a bed</h1>
-          <p className="mt-2 max-w-xl text-[15px] leading-snug text-zinc-500">
-            Haazir calls every capable hospital nearby at once, in their language, and shows you who says yes.
-          </p>
-        </div>
-        <button type="button" onClick={() => setMode("quick")} className="btn btn-secondary">
-          <Zap aria-hidden className="size-4" /> Quick entry
-        </button>
-      </div>
+      <FormHeader onQuickEntry={() => setMode("quick")} />
       {props.draft && <DraftBanner parsed={props.draft.parsed} />}
       <PageTabs page={page} caseMissing={caseMissing} onGo={goTo} />
       <div className="grid grid-cols-1 items-start gap-10 xl:grid-cols-[minmax(0,1fr)_420px]">

@@ -169,6 +169,8 @@ The destination is fixed per tool, so point it at a number that works out the do
 4. Languages (en, hi, kn, each with its own welcome) are part of the agent payload (`multilingual_config`), so `--update` keeps them.
 5. `bun run bolna:extractions -- --apply` creates or updates the post-call extractions from `lib/integrations/bolna/bolna.extractions.ts`. They are separate Bolna resources, so `--update` doesn't touch them. Without a tunnel they are the only way an answer reaches the app.
 6. Anything changed only in the dashboard is lost on the next `--update`: change the files and rerun instead.
+7. `--apply` and `--update` refuse an `APP_BASE_URL` Bolna cannot reach (localhost, a private address, `.local`), because every agent keeps its webhook and tool URLs inside it. `--apply` skips an agent whose `BOLNA_AGENT_ID_*` is already set, so it never creates a duplicate.
+8. After every push the agent is read back with `GET /v2/agent/{id}` and compared with the files (webhook URL, prompt length, agent type, tools, tool URLs, languages, knowledge base). `bun run bolna:agents -- --verify` does the same without changing anything, and exits 1 on a mismatch. Run it after changing the tunnel URL. Secrets in URLs and the prompt text are never printed. The read-back shape is unverified against live Bolna: a different shape shows up as "Bolna has nothing", not as a pass.
 
 **With an AI coding assistant:** Bolna publishes Skills (`npx skills add bolna-ai/skills -a claude-code`) and an `AGENTS.md` with API gotchas **[B19][B20]**. Useful for scripting agent creation through `POST /v2/agent`. Note `toolchain.pipelines` is an array of arrays.
 

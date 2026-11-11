@@ -175,7 +175,7 @@ export function AppShell(props: {
             {props.mode === "live" ? "Live" : "Not configured"}
           </span>
         </div>
-        <nav aria-label="Main" className="flex gap-1 overflow-x-auto px-3 pb-2">
+        <nav aria-label="Main" className="flex gap-1 overflow-x-auto px-3 pb-2 [mask-image:linear-gradient(to_right,black_calc(100%-28px),transparent)]">
           {nav.map((n) => {
             const active = n.match(pathname);
             return (

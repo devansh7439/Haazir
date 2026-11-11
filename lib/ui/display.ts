@@ -45,7 +45,7 @@ export const TONE: Record<Tone, { pin: string; badge: string; dot: string; accen
   held: { pin: "#166534", badge: "bg-green-700 text-white ring-green-700", dot: "bg-white", accent: "bg-green-700" },
 };
 
-/** Icon keys rendered as line icons by components/ui.tsx (never emoji). */
+/** Icon keys rendered as line icons by components/ui/index.tsx (never emoji). */
 export type IconKey = "queued" | "ringing" | "oncall" | "check" | "x" | "phone" | "callback" | "redirect" | "ban" | "help" | "lock";
 
 export interface AttemptLike {

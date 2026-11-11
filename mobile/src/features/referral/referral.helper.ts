@@ -12,6 +12,15 @@ export function missingStep(caseType: string, acuity: string, needs: readonly st
 export const STEPS = [phrase('Patient'), phrase('Case'), phrase('Needs'), phrase('Search'), phrase('Review')] as const;
 export const REVIEW_STEP = STEPS.length - 1;
 
+/** What each step's card is called, and the line of help under it. One entry per step in STEPS. */
+export const STEP_CARD = [
+  { title: phrase('Patient'), hint: phrase('Hospitals hear all of this on the call except the private details.') },
+  { title: phrase('Case'), hint: phrase('Hospitals hear the case and your note on the call.') },
+  { title: phrase('What must the hospital have?'), hint: phrase('Filled from the case. Tap to change.') },
+  { title: phrase('Where to search'), hint: phrase('Hospitals are ranked by distance from where you search.') },
+  { title: phrase('Review and send'), hint: phrase('Haazir phones every capable hospital at once.') },
+];
+
 /** What stops the doctor going on from a step, as the line under Next; null when they can. */
 export function stepBlocker(
   step: number,

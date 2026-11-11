@@ -2,7 +2,7 @@
 
 import { Loader2 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
-import { cx } from "./ui";
+import { cx } from "@/components/ui";
 
 /**
  * A modal question with a clear way back. Replaces window.confirm and window.prompt: it can't be dismissed by a

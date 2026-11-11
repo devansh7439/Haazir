@@ -1,6 +1,6 @@
 import { Check } from "lucide-react";
 import { useState } from "react";
-import { ConfirmDialog } from "@/components/ConfirmDialog";
+import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 
 /** Records that the patient arrived, after asking: it closes the referral, and a closed referral can't be reopened. */
 export function ArrivedButton({ onArrived }: { onArrived: () => Promise<unknown> }) {

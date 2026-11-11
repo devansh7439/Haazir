@@ -61,7 +61,7 @@ export function ImportSection({ services }: { services: Array<{ code: string; la
         type="file"
         accept=".csv,text/csv"
         aria-label="Choose a CSV file"
-        className="mb-3 block text-sm"
+        className="mb-3 block w-full text-sm text-zinc-500 file:mr-3 file:cursor-pointer file:rounded-lg file:border file:border-line file:bg-white file:px-3 file:py-1.5 file:text-sm file:font-medium file:text-zinc-900 hover:file:bg-zinc-50"
         onChange={async (e) => {
           const file = e.target.files?.[0];
           if (file) {

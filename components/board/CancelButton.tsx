@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { ConfirmDialog } from "@/components/ConfirmDialog";
+import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { cx } from "@/components/ui";
 
 const REASONS = ["Patient stabilised", "Taken elsewhere", "Sent by mistake", "Other"];
