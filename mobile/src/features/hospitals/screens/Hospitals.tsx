@@ -13,9 +13,9 @@ import IconButton from '../../../components/ui/IconButton';
 import { shortName } from '../../../lib/display';
 import { filterFacilities } from '../../../lib/facility';
 import { t } from '../../../lib/i18n';
-import { animateLayout } from '../../../lib/motion';
 import { useSignedIn } from '../../../lib/session/SessionProvider';
 import { useSettings } from '../../../lib/settings';
+import { useSearch } from '../../../lib/useSearch';
 import theme from '../../../theme';
 import HomeHero from '../components/HomeHero';
 import HospitalCard from '../components/HospitalCard';
@@ -28,8 +28,7 @@ export default function Hospitals() {
   const navigation = useNavigation();
   const { data, error, loading, refreshing, reload } = useLoad(FacilityRepository.list, []);
   const [services, setServices] = useState<string[]>([]);
-  const [searching, setSearching] = useState(false);
-  const [query, setQuery] = useState('');
+  const { searching, query, setQuery, toggle: toggleSearch } = useSearch();
   const [filtering, setFiltering] = useState(false);
   // Google ratings load after the list, so a slow Google never delays it.
   const ratings = useLoad(FacilityRepository.ratings, []).data?.ratings ?? {};
@@ -48,11 +47,7 @@ export default function Hospitals() {
           icon={searching ? 'close' : 'search'}
           label={searching ? t('Close search') : t('Search')}
           variant="tinted"
-          onPress={() => {
-            animateLayout();
-            setSearching((open) => !open);
-            setQuery('');
-          }}
+          onPress={toggleSearch}
         />
       </View>
       {searching ? (

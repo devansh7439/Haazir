@@ -34,7 +34,9 @@ export const ViewRepository = {
       `select r.id, r.code, r.status, t.label as case_label, r.acuity, r.created_at, m.ttfa_seconds,
               rr.name as referrer_name, ln.body as last_note, ln.author_name as last_note_by,
               case when u.id is not null and u.referrer_id is distinct from r.referrer_id then u.name end as entered_by_name,
-              count(a.id) filter (where a.purpose = 'availability' and a.status in ('queued','dialing','ringing','in_progress','wrapping_up'))::int as calls_open,
+              count(a.id) filter (
+                where a.purpose = 'availability' and a.status in ('queued','dialing','ringing','in_progress','wrapping_up')
+              )::int as calls_open,
               count(a.id) filter (where a.purpose = 'availability' and a.outcome is not null)::int as calls_answered,
               count(a.id) filter (where a.purpose = 'availability' and a.outcome in ('accepted','conditional'))::int as calls_accepted,
               count(a.id) filter (where a.purpose = 'availability' and a.outcome = 'needs_doctor')::int as needs_doctor,

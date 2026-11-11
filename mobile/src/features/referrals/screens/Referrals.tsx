@@ -1,5 +1,5 @@
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useMemo } from 'react';
 import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
 import { ReferralRepository } from '../../../api/referral.repository';
 import { useLoad } from '../../../api/useLoad';
@@ -10,7 +10,7 @@ import SearchField from '../../../components/ui/SearchField';
 import ScreenHeader from '../../../components/ui/ScreenHeader';
 import { t } from '../../../lib/i18n';
 import { matches } from '../../../lib/search';
-import { animateLayout } from '../../../lib/motion';
+import { useSearch } from '../../../lib/useSearch';
 import theme from '../../../theme';
 import { inProgressFirst, isInProgress } from '../referrals.helper';
 import ReferralRow from '../components/ReferralRow';
@@ -22,8 +22,7 @@ export default function Referrals() {
   useFocusEffect(useCallback(() => void reload(), [reload]));
   // The time the list was loaded: "5 min ago" is relative to this, and it stays steady between renders.
   const nowMs = useMemo(() => Date.now(), [data]); // eslint-disable-line react-hooks/exhaustive-deps, react-hooks/purity
-  const [searching, setSearching] = useState(false);
-  const [query, setQuery] = useState('');
+  const { searching, query, setQuery, toggle: toggleSearch } = useSearch();
   const list = (data?.referrals ?? []).filter((r) => matches(query, r.code, r.case_label));
   const shown = inProgressFirst(list);
 
@@ -36,11 +35,7 @@ export default function Referrals() {
       header={
         <ScreenHeader
           title={t('Your referrals')}
-          onSearch={() => {
-            animateLayout();
-            setSearching((open) => !open);
-            setQuery('');
-          }}
+          onSearch={toggleSearch}
           searching={searching}
         />
       }

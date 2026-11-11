@@ -7,6 +7,7 @@ import { t } from '../../../lib/i18n';
 import { animateLayout } from '../../../lib/motion';
 import { newRequestId } from '../../../lib/request-id';
 import { getSettings } from '../../../lib/settings';
+import { useSearch } from '../../../lib/useSearch';
 import { clinicalError, composeNote, EMPTY_CLINICAL, extraLimit, factsBody, type Clinical } from '../clinical.helper';
 import { isValidAge, REVIEW_STEP, sendHint, STEP_CARD, STEPS, stepBlocker } from '../referral.helper';
 import { EMPTY_PATIENT, type PatientFields } from '../referralOptions';
@@ -60,8 +61,7 @@ export default function ReferralForm({
   const [extra, setExtra] = useState(parsed?.note ?? '');
   const [radius, setRadius] = useState(() => getSettings().radiusKm);
   const [showPatient, setShowPatient] = useState(false);
-  const [searching, setSearching] = useState(false);
-  const [query, setQuery] = useState('');
+  const { searching, query, setQuery, toggle: toggleSearch, close: closeSearch } = useSearch();
   const [patient, setPatient] = useState<PatientFields>(EMPTY_PATIENT);
   // One id per form: a double tap or a retry after a network error reuses it, so hospitals are never called twice
   // for the same patient.
@@ -77,8 +77,7 @@ export default function ReferralForm({
   const pick = (template: CaseTemplate) => {
     setCaseType(template.case_type);
     setNeeds(template.default_capabilities);
-    setSearching(false);
-    setQuery('');
+    closeSearch();
   };
   const toggleNeed = (code: string) => setNeeds((all) => (all.includes(code) ? all.filter((c) => c !== code) : [...all, code]));
 
@@ -116,8 +115,7 @@ export default function ReferralForm({
 
   const goTo = (next: number) => {
     animateLayout();
-    setSearching(false);
-    setQuery('');
+    closeSearch();
     setStep(next);
   };
 
@@ -152,15 +150,7 @@ export default function ReferralForm({
           subtitle={t('Referring as {name}', {
             name: `${shortName(referrer.name)}${referrer.facility ? ` · ${shortName(referrer.facility)}` : ''}`,
           })}
-          onSearch={
-            step === 1
-              ? () => {
-                  animateLayout();
-                  setSearching((open) => !open);
-                  setQuery('');
-                }
-              : undefined
-          }
+          onSearch={step === 1 ? toggleSearch : undefined}
           searching={searching}
         />
       }

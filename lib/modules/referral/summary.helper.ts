@@ -192,7 +192,8 @@ const HONORIFIC_NAME = /\b(?:Mr|Mrs|Ms|Shri|Smt|Kumari)\.?\s+[A-Z][a-z]+/;
 // Words of a placeholder or a relation ("Baby of unknown male", "Wife"): they fill the name field but identify nobody.
 const NOT_A_NAME = new Set([
   "mr", "mrs", "ms", "dr", "shri", "smt", "kumari", "of", "the", "and", "unknown", "unnamed", "patient", "attendant", "relative", "baby",
-  "infant", "child", "boy", "girl", "man", "woman", "male", "female", "son", "daughter", "wife", "husband", "father", "mother", "brother", "sister",
+  "infant", "child", "boy", "girl", "man", "woman", "male", "female", "son", "daughter", "wife", "husband", "father", "mother",
+  "brother", "sister",
 ]);
 
 const wordsOf = (text: string): string[] => text.toLowerCase().split(/[^\p{L}\p{M}]+/u).filter(Boolean);
@@ -214,7 +215,9 @@ export function checkNote(note: string | null | undefined, names: Array<string |
   if (AADHAAR_LIKE.test(text)) errors.push("The note looks like it contains an ID number. Remove it.");
   else if (PHONE_LIKE.test(text)) errors.push("The note looks like it contains a phone number. Remove it.");
   if (EMAIL.test(text)) errors.push("The note contains an email address. Remove it.");
-  if (hasName(text, names)) errors.push("The note contains the patient's or attendant's name. Hospitals hear this before they accept. Remove it.");
+  if (hasName(text, names)) {
+    errors.push("The note contains the patient's or attendant's name. Hospitals hear this before they accept. Remove it.");
+  }
   if (HONORIFIC_NAME.test(text)) warnings.push("The note may contain a name. Hospitals hear this note before they accept.");
   return { blocked: errors.length > 0, errors, warnings };
 }

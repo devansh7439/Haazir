@@ -1,6 +1,9 @@
 // Row shapes shared by server modules and the console. Mirrors supabase/migrations/0001_init.sql.
 
-/** What a console user may do: an admin runs the organisation, a doctor refers as themselves, a coordinator refers for any doctor of the organisation. */
+/**
+ * What a console user may do: an admin runs the organisation, a doctor refers as themselves, a coordinator refers for any
+ * doctor of the organisation.
+ */
 export const ROLES = ["admin", "doctor", "coordinator"] as const;
 export type Role = (typeof ROLES)[number];
 

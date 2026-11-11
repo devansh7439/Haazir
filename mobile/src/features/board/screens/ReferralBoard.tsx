@@ -16,7 +16,7 @@ import { GROUP_TITLE, cardsOf, groupCards, holdState, isCancellable, nextReferra
 import { REFERRAL_STATUS, mmss, shortName } from '../../../lib/display';
 import { t } from '../../../lib/i18n';
 import { matches } from '../../../lib/search';
-import { animateLayout } from '../../../lib/motion';
+import { useSearch } from '../../../lib/useSearch';
 import type { RootScreenProps } from '../../../navigation/types';
 import theme from '../../../theme';
 import AlertCard from '../components/AlertCard';
@@ -35,8 +35,7 @@ export default function ReferralBoard({ route, navigation }: RootScreenProps<'Re
   const { view, nowMs, act, actionError, loadError, stale, refresh } = useLiveReferral(id);
   const [selecting, setSelecting] = useState<AttemptView | null>(null);
   const [cancelling, setCancelling] = useState(false);
-  const [searching, setSearching] = useState(false);
-  const [query, setQuery] = useState('');
+  const { searching, query, setQuery, toggle: toggleSearch } = useSearch();
 
   // Child components only need to know whether an action worked.
   const run: Run = useCallback(async (call) => (await act(call)).ok, [act]);
@@ -75,11 +74,7 @@ export default function ReferralBoard({ route, navigation }: RootScreenProps<'Re
           title={t('Referral {code}', { code: r.code })}
           subtitle={view.referrer.name.replace(' (Demo)', '')}
           onBack={back}
-          onSearch={() => {
-            animateLayout();
-            setSearching((open) => !open);
-            setQuery('');
-          }}
+          onSearch={toggleSearch}
           searching={searching}
         />
       }

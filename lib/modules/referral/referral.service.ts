@@ -290,10 +290,15 @@ export const ReferralService = {
     // Only once every call has finished, so no live call is left answering for a closed referral.
     if (r.status !== "exhausted") throw ApiError.conflict("NOT_WIDENABLE", "Widen the search once every hospital has answered");
     if (radiusKm <= r.search_radius_km) {
-      throw ApiError.conflict("ALREADY_AT_RADIUS", `This search already covers ${r.search_radius_km} km. Call the desks directly, or use the numbers below.`);
+      throw ApiError.conflict(
+        "ALREADY_AT_RADIUS",
+        `This search already covers ${r.search_radius_km} km. Call the desks directly, or use the numbers below.`,
+      );
     }
     const attempts = await CallRepository.listForReferral(r.id);
-    const declined = attempts.filter((a) => a.purpose === "availability" && a.outcome === "declined" && a.facility_id).map((a) => a.facility_id!);
+    const declined = attempts
+      .filter((a) => a.purpose === "availability" && a.outcome === "declined" && a.facility_id)
+      .map((a) => a.facility_id!);
     const patient = await ReferralRepository.patient(r.id);
     const created = await ReferralService.create(
       {

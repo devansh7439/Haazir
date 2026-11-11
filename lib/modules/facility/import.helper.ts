@@ -92,8 +92,10 @@ export function parseCsv(text: string): CsvRow[] {
 /** "District Hospital" → "district_hospital". */
 const slug = (s: string): string => s.trim().toLowerCase().replace(/[^a-z0-9]+/g, "_");
 
+type ContactCell = { ok: true; contact: NewListing["contacts"][number] | null } | { ok: false; message: string };
+
 /** A desk number as a contact, or an issue message. Empty means none given. */
-function contactOf(raw: string | undefined, role: "casualty_desk" | "referral_desk", priority: number): { ok: true; contact: NewListing["contacts"][number] | null } | { ok: false; message: string } {
+function contactOf(raw: string | undefined, role: "casualty_desk" | "referral_desk", priority: number): ContactCell {
   const text = (raw ?? "").trim();
   if (!text) return { ok: true, contact: null };
   const phone = normalizePhone(text);
@@ -116,7 +118,8 @@ export function parseDirectoryCsv(text: string, services: Array<{ code: string; 
   const columns = table[0].cells.map((h) => HEADER_ALIASES[headerKey(h)] ?? null);
   const missing = ["name", "kind", "lat", "lng"].filter((f) => !columns.includes(f));
   if (missing.length > 0) {
-    return { rows, issues: [{ line: table[0].line, name: null, message: `The first row must name these columns: ${missing.join(", ")}.` }] };
+    const message = `The first row must name these columns: ${missing.join(", ")}.`;
+    return { rows, issues: [{ line: table[0].line, name: null, message }] };
   }
 
   const byService = new Map<string, string>();
@@ -170,7 +173,10 @@ export function parseDirectoryCsv(text: string, services: Array<{ code: string; 
       fail(`${issue.path.join(".") || "row"}: ${issue.message}`);
       continue;
     }
-    if (new Set(contacts.map((c) => c.phone)).size !== contacts.length) { fail("The casualty and referral numbers are the same."); continue; }
+    if (new Set(contacts.map((c) => c.phone)).size !== contacts.length) {
+      fail("The casualty and referral numbers are the same.");
+      continue;
+    }
     seen.add(name.toLowerCase());
     rows.push({ line, listing: parsed.data });
   }

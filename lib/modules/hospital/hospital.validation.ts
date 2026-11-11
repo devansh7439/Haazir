@@ -7,5 +7,5 @@ export const FullBody = z.object({
   hours: z.number().int().min(1).max(HOSPITAL_FULL_MAX_HOURS).optional(),
 });
 
-/** POST /api/hospital/[token]/withdraw: "we can no longer take this patient". */
-export const WithdrawBody = z.object({ code: z.string().trim().min(3).max(32) });
+/** POST /api/hospital/[token]/withdraw ("we can no longer take this patient") and /treatment: the referral code, nothing else. */
+export const ReferralCodeBody = z.object({ code: z.string().trim().min(3).max(32) });
